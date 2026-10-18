@@ -28,14 +28,18 @@ class MetadataTest extends TestCase {
 		$this->assertTrue(class_exists('OCA\\Totem\\AppInfo\\Application'));
 	}
 
-	public function testTheMenuEntryPointsAtARealRoute(): void {
+	public function testEveryMenuEntryPointsAtARealRoute(): void {
 		$info = simplexml_load_file(self::APP_DIR . '/appinfo/info.xml');
-		$route = (string)$info->navigations->navigation->route;
-		[$app, $controller, $action] = explode('.', $route);
 		$names = array_column((require self::APP_DIR . '/appinfo/routes.php')['routes'], 'name');
 
-		$this->assertSame('totem', $app);
-		$this->assertContains("$controller#$action", $names);
+		$entries = [];
+		foreach ($info->navigations->navigation as $navigation) {
+			$entries[(string)$navigation->name] = (string)$navigation->route;
+			[$app, $controller, $action] = explode('.', (string)$navigation->route);
+			$this->assertSame('totem', $app);
+			$this->assertContains("$controller#$action", $names);
+		}
+		$this->assertSame(['Totem' => 'totem.page.box', 'Estadísticas' => 'totem.page.stats'], $entries);
 	}
 
 	/** @return array<string, array{string, string}> */

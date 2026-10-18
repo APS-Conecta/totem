@@ -57,6 +57,41 @@ class TurnoMapper extends QBMapper {
 		return (int)$count;
 	}
 
+	/**
+	 * How many turnos each (day, servicio, preferente, estado) holds between two
+	 * days, both included: the raw material of the statistics board. Counts only;
+	 * a turno has nothing else to report.
+	 *
+	 * @return list<array{day: string, servicio_id: int, preferente: bool, estado: string, n: int}>
+	 */
+	public function countsBetween(string $from, string $to): array {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('day', 'servicio_id', 'preferente', 'estado')
+			->selectAlias($qb->func()->count('*'), 'n')
+			->from($this->getTableName())
+			->where($qb->expr()->gte('day', $qb->createNamedParameter($from)))
+			->andWhere($qb->expr()->lte('day', $qb->createNamedParameter($to)))
+			->groupBy('day', 'servicio_id', 'preferente', 'estado')
+			->orderBy('day')
+			->addOrderBy('servicio_id')
+			->addOrderBy('preferente')
+			->addOrderBy('estado');
+		$result = $qb->executeQuery();
+		$counts = [];
+		while ($row = $result->fetch()) {
+			$counts[] = [
+				'day' => (string)$row['day'],
+				'servicio_id' => (int)$row['servicio_id'],
+				'preferente' => (bool)$row['preferente'],
+				'estado' => (string)$row['estado'],
+				'n' => (int)$row['n'],
+			];
+		}
+		$result->closeCursor();
+
+		return $counts;
+	}
+
 	/** @return Turno[] oldest first */
 	public function findWaiting(int $servicioId, string $day): array {
 		$qb = $this->db->getQueryBuilder();

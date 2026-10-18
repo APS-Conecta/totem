@@ -23,8 +23,8 @@ class SurfaceTest extends TestCase {
 	/** The only endpoints an anonymous person may reach: the kiosk and the waiting-room display. */
 	private const PUBLIC = ['page#totem', 'page#display', 'turno#create', 'turno#servicios', 'display#feed'];
 
-	/** Logged-in staff, not admins: the box console. */
-	private const STAFF = ['page#box', 'call#boxes', 'call#state', 'call#call', 'call#recall', 'call#start', 'call#finish', 'call#absent'];
+	/** Logged-in staff, not admins: the box console and the statistics board. */
+	private const STAFF = ['page#box', 'call#boxes', 'call#state', 'call#call', 'call#recall', 'call#start', 'call#finish', 'call#absent', 'page#stats', 'stats#board', 'stats#csv'];
 
 	/** @return list<array{name: string, url: string, verb: string}> */
 	private static function routes(): array {
@@ -45,6 +45,13 @@ class SurfaceTest extends TestCase {
 	public function testEveryRouteNamesAControllerActionThatExists(): void {
 		foreach (self::routes() as $route) {
 			$this->assertTrue(self::method($route['name'])->isPublic(), $route['name']);
+		}
+	}
+
+	public function testEveryAllowListedEndpointIsARealRoute(): void {
+		$names = array_column(self::routes(), 'name');
+		foreach ([...self::PUBLIC, ...self::STAFF] as $name) {
+			$this->assertContains($name, $names, "$name is allow-listed but has no route");
 		}
 	}
 
@@ -70,7 +77,7 @@ class SurfaceTest extends TestCase {
 			$m = self::method($name);
 			$this->assertTrue(self::has($m, NoAdminRequired::class), "$name should not need an admin");
 			$this->assertFalse(self::has($m, PublicPage::class), "$name must not be public");
-			if ($name !== 'page#box') {
+			if (!str_starts_with($name, 'page#')) {
 				$this->assertTrue(self::has($m, UserRateLimit::class), "$name needs #[UserRateLimit]");
 			}
 		}
@@ -86,9 +93,9 @@ class SurfaceTest extends TestCase {
 	}
 
 	public function testOnlyThePagesSkipTheCsrfToken(): void {
-		// A top-level navigation carries no request token. The anonymous kiosk POST has none either:
+		// A top-level navigation carries no request token, nor does the CSV download link. The anonymous kiosk POST has none either:
 		// it only issues a number, and the threat model says why that is acceptable.
-		$allowed = ['page#totem', 'page#display', 'page#box', 'page#admin', 'turno#create', 'turno#servicios', 'display#feed'];
+		$allowed = ['page#totem', 'page#display', 'page#box', 'page#admin', 'page#stats', 'turno#create', 'turno#servicios', 'display#feed', 'stats#csv'];
 		foreach (self::routes() as $route) {
 			$this->assertSame(
 				in_array($route['name'], $allowed, true),

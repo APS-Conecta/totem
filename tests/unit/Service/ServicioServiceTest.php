@@ -54,9 +54,28 @@ class ServicioServiceTest extends TestCase {
 		});
 
 		$this->assertSame(
-			['id' => 5, 'name' => 'Farmacia', 'prefix' => 'FAR', 'color' => '#0b6e69', 'opens' => '07:30', 'closes' => '16:30', 'dailyQuota' => null, 'active' => true],
+			['id' => 5, 'name' => 'Farmacia', 'prefix' => 'FAR', 'color' => '#0b6e69', 'opens' => '07:30', 'closes' => '16:30', 'dailyQuota' => null, 'active' => true, 'isSector' => false],
 			$this->service->create($this->input()),
 		);
+	}
+
+	public function testAServicioMarkedAsASectorIsStoredAndPresentedAsOne(): void {
+		$this->mapper->expects($this->once())->method('insert')->with($this->callback(
+			static fn (Servicio $s) => $s->getIsSector() === true,
+		))->willReturnCallback(static function (Servicio $s): Servicio {
+			$s->setId(6);
+
+			return $s;
+		});
+
+		$this->assertTrue($this->service->create($this->input(['name' => 'Sector Azul', 'prefix' => 'azu', 'isSector' => true]))['isSector']);
+	}
+
+	public function testAServicioIsNotASectorUnlessItSaysSo(): void {
+		$this->mapper->method('insert')->willReturnArgument(0);
+
+		$this->assertFalse($this->service->create($this->input(['isSector' => 'yes']))['isSector']);
+		$this->assertFalse($this->service->create($this->input())['isSector']);
 	}
 
 	public function testTheSlugFoldsAccentsAndCaseSoNamesCannotDifferByThem(): void {

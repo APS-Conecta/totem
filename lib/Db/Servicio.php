@@ -27,6 +27,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setDailyQuota(?int $dailyQuota)
  * @method bool getActive()
  * @method void setActive(bool $active)
+ * @method bool getIsSector()
+ * @method void setIsSector(bool $isSector)
  */
 class Servicio extends Entity {
 	protected $slug = '';
@@ -37,9 +39,11 @@ class Servicio extends Entity {
 	protected $closes = '23:59';
 	protected $dailyQuota = null;
 	protected $active = true;
+	protected $isSector = false;
 
 	public function __construct() {
 		$this->addType('dailyQuota', 'integer');
 		$this->addType('active', 'boolean');
+		$this->addType('isSector', 'boolean');
 	}
 }

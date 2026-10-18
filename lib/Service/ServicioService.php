@@ -77,6 +77,7 @@ class ServicioService {
 		$servicio->setCloses($closes);
 		$servicio->setDailyQuota(Fields::quota($data['dailyQuota'] ?? null));
 		$servicio->setActive(($data['active'] ?? true) === true || ($data['active'] ?? null) === 1);
+		$servicio->setIsSector(($data['isSector'] ?? false) === true);
 	}
 
 	/** Another servicio (not this one) must not already have the name or the prefix. */
@@ -96,7 +97,7 @@ class ServicioService {
 		}
 	}
 
-	/** @return array{id: int, name: string, prefix: string, color: string, opens: string, closes: string, dailyQuota: int|null, active: bool} */
+	/** @return array{id: int, name: string, prefix: string, color: string, opens: string, closes: string, dailyQuota: int|null, active: bool, isSector: bool} */
 	private function present(Servicio $s): array {
 		return [
 			'id' => (int)$s->getId(),
@@ -107,6 +108,7 @@ class ServicioService {
 			'closes' => $s->getCloses(),
 			'dailyQuota' => $s->getDailyQuota(),
 			'active' => $s->getActive(),
+			'isSector' => $s->getIsSector(),
 		];
 	}
 }

@@ -20,7 +20,7 @@ use OCP\IRequest;
 use OCP\Util;
 
 /**
- * The four pages, each its own small bundle. A top-level navigation carries no
+ * The five pages, each its own small bundle. A top-level navigation carries no
  * request token, so every page is NoCSRFRequired (NC 34 would answer 412).
  * The kiosk and the display are chromeless (the base layout: scripts but no Nextcloud chrome) and public. Thin glue
  * around framework statics, so it is covered by the e2e walking skeleton rather
@@ -54,6 +54,12 @@ class PageController extends Controller {
 	#[NoCSRFRequired]
 	public function box(): TemplateResponse {
 		return $this->page('box');
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function stats(): TemplateResponse {
+		return $this->page('stats');
 	}
 
 	#[NoCSRFRequired]
