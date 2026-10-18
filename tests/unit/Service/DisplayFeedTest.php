@@ -92,6 +92,13 @@ class DisplayFeedTest extends TestCase {
 		$this->feed->since('sala', 17);
 	}
 
+	public function testAPantallaWithNoServiciosAsksForEveryServicio(): void {
+		$this->links->method('ids')->willReturn([]);
+		$this->llamados->expects($this->once())->method('findSince')->with([], '2026-10-18', 0, 30)->willReturn([$this->llamado(21)]);
+
+		$this->assertCount(1, $this->feed->since('sala', 0)['llamados']);
+	}
+
 	public function testItDescribesEachLlamadoWithTheWordsTheDisplayAndTheVoiceNeed(): void {
 		$this->links->method('ids')->willReturn([]);
 		$this->llamados->method('findSince')->willReturn([$this->llamado(21)]);
