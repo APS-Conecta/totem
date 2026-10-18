@@ -54,6 +54,14 @@ class PantallaServiceTest extends TestCase {
 		$this->service->create(['name' => 'Central', 'volume' => 100, 'voice' => 'mujer', 'servicioIds' => []]);
 	}
 
+	public function testAPantallaCreatedWithoutAVoiceSpeaksWithMujer(): void {
+		$this->pantallas->method('insert')->willReturnArgument(0);
+
+		$created = $this->service->create(['name' => 'Central', 'volume' => 100, 'servicioIds' => []]);
+
+		$this->assertSame('mujer', $created['voice']);
+	}
+
 	public function testAPantallaWithTheSameNameIsRefused(): void {
 		$pantallas = $this->createMock(PantallaMapper::class);
 		$pantallas->method('findBySlug')->willReturn(new Pantalla());
