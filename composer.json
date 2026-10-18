@@ -1,0 +1,44 @@
+{
+    "name": "aps-conecta/totem",
+    "description": "Totem de turnos para la atención de CESFAM, CECOSF y SAPU",
+    "license": "AGPL-3.0-or-later",
+    "type": "project",
+    "require": {
+        "php": "^8.2",
+        "aps/common": "^1.0"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../aps-common",
+            "options": {
+                "symlink": false
+            }
+        }
+    ],
+    "require-dev": {
+        "nextcloud/ocp": "^34.0",
+        "phpunit/phpunit": "^10.0",
+        "doctrine/dbal": "^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "OCA\\Totem\\": "lib/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "OCA\\Totem\\Tests\\Unit\\": "tests/unit/",
+            "OCA\\Totem\\Tests\\Integration\\": "tests/integration/",
+            "OCP\\": "vendor/nextcloud/ocp/OCP/",
+            "NCU\\": "vendor/nextcloud/ocp/NCU/"
+        }
+    },
+    "config": {
+        "platform": {
+            "php": "8.2"
+        },
+        "sort-packages": true,
+        "optimize-autoloader": true
+    }
+}

@@ -1,0 +1,137 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { piperEngine } from './piper.js'
+
+/** A worker that answers the way tts/worker.js does: ready after init, one PCM buffer per say. */
+function fakeWorker({ initError = null, never = false } = {}) {
+	const sent = []
+	const worker = {
+		sent,
+		onmessage: null,
+		onerror: null,
+		terminate: vi.fn(),
+		postMessage(message) {
+			sent.push(message)
+			if (never) return
+			queueMicrotask(() => {
+				if (message.type === 'init') worker.onmessage({ data: initError ? { type: 'failed', error: initError } : { type: 'ready' } })
+				if (message.type === 'say') worker.onmessage({ data: { type: 'audio', id: message.id, pcm: new Float32Array([0, 0.5, -0.5, 0]), sampleRate: 22050 } })
+			})
+		},
+	}
+	return worker
+}
+
+/** A WebAudio stand-in that records what was played and ends the sound by itself. */
+function fakeAudio() {
+	const played = []
+	const ctx = {
+		state: 'running',
+		destination: {},
+		resume: vi.fn(),
+		createBuffer: (channels, length, rate) => ({ channels, length, rate, getChannelData: () => new Float32Array(length) }),
+		createGain: () => ({ gain: { value: 1 }, connect: vi.fn() }),
+		createBufferSource: () => {
+			const source = { buffer: null, connect: vi.fn(), start: vi.fn(() => { played.push(source); queueMicrotask(() => source.onended?.()) }) }
+			return source
+		},
+	}
+	return { ctx, played }
+}
+
+describe('piperEngine', () => {
+	let audio
+	beforeEach(() => { audio = fakeAudio() })
+
+	const engine = (voice, worker, extra = {}) => piperEngine(voice, { base: '/apps/totem/js/tts/', createWorker: () => worker, getContext: () => audio.ctx, ...extra })
+
+	it('is available once the worker has loaded the model for the pantalla voice', async () => {
+		const worker = fakeWorker()
+
+		expect(await engine('mujer', worker).available()).toBe(true)
+		expect(worker.sent[0]).toEqual({ type: 'init', base: '/apps/totem/js/tts/', model: 'es_MX-claude-high' })
+	})
+
+	it('loads the model of the voice it was asked for: Hombre is Davefx', async () => {
+		const worker = fakeWorker()
+		await engine('hombre', worker).available()
+
+		expect(worker.sent[0].model).toBe('es_ES-davefx-medium')
+	})
+
+	it('loads the model only once however often it is asked', async () => {
+		const worker = fakeWorker()
+		const e = engine('mujer', worker)
+		await e.available()
+		await e.available()
+
+		expect(worker.sent.filter((m) => m.type === 'init')).toHaveLength(1)
+	})
+
+	it('is unavailable when the worker cannot load the model (files missing, no WASM)', async () => {
+		expect(await engine('mujer', fakeWorker({ initError: '404' })).available()).toBe(false)
+	})
+
+	it('is unavailable when loading takes too long, so the browser voice can take over', async () => {
+		vi.useFakeTimers()
+		const e = engine('mujer', fakeWorker({ never: true }), { loadTimeoutMs: 20000 })
+		const result = e.available()
+		await vi.advanceTimersByTimeAsync(20000)
+
+		expect(await result).toBe(false)
+		vi.useRealTimers()
+	})
+
+	it('speaks by synthesizing in the worker and playing the audio at the pantalla volume', async () => {
+		const worker = fakeWorker()
+		const e = engine('mujer', worker)
+		await e.available()
+		await e.say('Turno Farmacia, preferente 12. Diríjase al Box 2.', 60)
+
+		expect(worker.sent.find((m) => m.type === 'say').text).toBe('Turno Farmacia, preferente 12. Diríjase al Box 2.')
+		expect(audio.played).toHaveLength(1)
+		expect(audio.played[0].buffer.rate).toBe(22050)
+	})
+
+	it('synthesizes a phrase once: the second saying and any repeat of the call reuse it', async () => {
+		const worker = fakeWorker()
+		const e = engine('mujer', worker)
+		await e.available()
+		await e.say('hola', 100)
+		await e.say('hola', 100)
+
+		expect(worker.sent.filter((m) => m.type === 'say')).toHaveLength(1)
+		expect(audio.played).toHaveLength(2)
+	})
+
+	it('can synthesize ahead, so the voice is ready when the chime ends', async () => {
+		const worker = fakeWorker()
+		const e = engine('mujer', worker)
+		await e.available()
+		await e.prepare('hola')
+		await e.say('hola', 100)
+
+		expect(worker.sent.filter((m) => m.type === 'say')).toHaveLength(1)
+	})
+
+	it('fails the saying, so the chain can fall back, when the worker reports a synthesis error', async () => {
+		const worker = fakeWorker()
+		const e = engine('mujer', worker)
+		await e.available()
+		worker.postMessage = (m) => { worker.sent.push(m); queueMicrotask(() => worker.onmessage({ data: { type: 'error', id: m.id, error: 'phonemizer failed' } })) }
+
+		await expect(e.say('hola', 100)).rejects.toThrow('phonemizer failed')
+	})
+
+	it('forgets a failed phrase so the next call may try again', async () => {
+		const worker = fakeWorker()
+		const e = engine('mujer', worker)
+		await e.available()
+		const ok = worker.postMessage.bind(worker)
+		worker.postMessage = (m) => { worker.sent.push(m); queueMicrotask(() => worker.onmessage({ data: { type: 'error', id: m.id, error: 'boom' } })) }
+		await expect(e.say('hola', 100)).rejects.toThrow()
+		worker.postMessage = ok
+
+		await e.say('hola', 100)
+		expect(audio.played).toHaveLength(1)
+	})
+})

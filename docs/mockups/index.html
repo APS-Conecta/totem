@@ -1,0 +1,679 @@
+<title>Maquetas Totem</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Review shell (themed) around screens that fill whatever size they are given.
+   Totem and display size everything from --k (one design pixel, fitted to the screen) and switch layout by orientation.
+   Box and admin are ordinary responsive pages. The product reads the real viewport; the mockup reads the chosen stage. */
+:root {
+  --bg: #f4f5f7; --fg: #13202b; --muted: #55606b; --line: #d5d9de; --panel: #ffffff; --accent: #6a12e0; --accent-fg: #ffffff;
+  --font: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* product tokens (screens) */
+  --ink: #13202b; --paper: #f6f7f4; --violet: #6a12e0; --gold: #f2b134; --ok: #2e7d4f; --err: #b3261e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0e151c; --fg: #e8edf1; --muted: #9aa7b3; --line: #2a3744; --panel: #16212b; --accent: #a97bff; --accent-fg: #13202b; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #0e151c; --fg: #e8edf1; --muted: #9aa7b3; --line: #2a3744; --panel: #16212b; --accent: #a97bff; --accent-fg: #13202b; color-scheme: dark; }
+
+*, *::before, *::after { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 16px; line-height: 1.45;
+  padding-block: 28px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1 { font-size: 1.75rem; line-height: 1.15; margin: 0; text-wrap: balance; }
+.lede { margin: 0; color: var(--muted); max-width: 68ch; }
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.tab { font: inherit; font-weight: 700; padding: 10px 16px; border: 2px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 8px; cursor: pointer; }
+.tab[aria-selected="true"] { border-color: var(--accent); background: var(--accent); color: var(--accent-fg); }
+.tab:focus-visible, .ctl:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px); gap: 28px; align-items: start; }
+@media (max-width: 800px) { .panel { grid-template-columns: minmax(0, 1fr); } }
+.stagebox { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.sizebar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: 14px; color: var(--muted); }
+.sizebar select, .sizebar input { font: inherit; font-size: 14px; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.sizebar input { width: 5.5em; }
+.viewport { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: #000; align-self: center; }
+.native { position: absolute; top: 0; left: 0; transform-origin: top left; container: scr / size; }
+.screen { width: 100%; height: 100%; }
+.notes { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.notes h2 { font-size: 1rem; margin: 0; }
+.notes ul { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 6px; color: var(--muted); }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.ctl { font: inherit; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--fg); cursor: pointer; }
+.ctl:disabled { opacity: .45; cursor: not-allowed; }
+.hint { color: var(--muted); align-self: center; font-size: 14px; }
+.simbox { display: flex; flex-direction: column; gap: 8px; border: 1px dashed var(--line); border-radius: 8px; padding: 10px 12px; }
+.simbox b { font-size: 14px; }
+
+/* ===== TOTEM: portrait is designed at 1080x1920, landscape at 1920x1080; k = one design pixel ===== */
+.totem { --k: min(100cqw / 1080, 100cqh / 1920); background: var(--paper); color: var(--ink); font-family: var(--font); display: flex; flex-direction: column; position: relative; overflow: hidden; }
+.t-head { padding: calc(64 * var(--k)) calc(72 * var(--k)) calc(36 * var(--k)); font-size: calc(72 * var(--k)); font-weight: 700; line-height: 1.1; }
+.t-sub { padding: 0 calc(72 * var(--k)) calc(28 * var(--k)); font-size: calc(40 * var(--k)); color: #46525e; }
+.t-bars { flex: 1; display: flex; flex-direction: column; gap: calc(14 * var(--k)); padding: 0 calc(40 * var(--k)); min-height: 0; }
+.t-bar { flex: 1; min-height: 0; line-height: 1.05; text-wrap: balance; border: 0; display: flex; align-items: center; justify-content: space-between; gap: calc(24 * var(--k)); padding: 0 calc(56 * var(--k)); font: inherit; font-size: calc(72 * var(--k)); font-weight: 700; cursor: pointer; text-align: left; }
+.t-bar .pre { font-size: calc(52 * var(--k)); font-weight: 400; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
+.t-foot { padding: calc(28 * var(--k)) calc(72 * var(--k)) calc(44 * var(--k)); font-size: calc(34 * var(--k)); color: #46525e; display: flex; justify-content: space-between; }
+.t-band { padding: calc(36 * var(--k)) calc(72 * var(--k)); display: flex; align-items: center; justify-content: space-between; gap: calc(24 * var(--k)); font-size: calc(64 * var(--k)); font-weight: 700; }
+.t-back { font: inherit; font-size: calc(44 * var(--k)); font-weight: 700; background: transparent; border: calc(4 * var(--k)) solid currentColor; color: inherit; padding: calc(18 * var(--k)) calc(36 * var(--k)); min-height: calc(120 * var(--k)); cursor: pointer; }
+.t-q { padding: calc(56 * var(--k)) calc(72 * var(--k)) calc(40 * var(--k)); font-size: calc(68 * var(--k)); font-weight: 700; line-height: 1.15; }
+.t-choices { padding: 0 calc(72 * var(--k)) calc(72 * var(--k)); display: flex; flex-direction: column; gap: calc(36 * var(--k)); flex: 1; min-height: 0; }
+.t-choice { flex: 1; font: inherit; font-size: calc(76 * var(--k)); font-weight: 700; line-height: 1.1; border: calc(8 * var(--k)) solid var(--ink); background: transparent; color: var(--ink); cursor: pointer; padding: 0 calc(48 * var(--k)); text-align: left; }
+.t-choice.yes { background: var(--violet); border-color: var(--violet); color: #fff; }
+.t-bar:active, .t-choice:active { transform: translateY(calc(6 * var(--k))); }
+.t-ticket { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: calc(72 * var(--k)); gap: calc(28 * var(--k)); }
+.t-ticket .lbl { font-size: calc(64 * var(--k)); }
+.t-ticket .num { font-size: calc(146 * var(--k)); font-weight: 700; line-height: 1; letter-spacing: .01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.t-ticket .srv { font-size: calc(80 * var(--k)); font-weight: 700; }
+.t-chip { align-self: flex-start; background: var(--gold); color: var(--ink); font-size: calc(52 * var(--k)); font-weight: 700; padding: calc(10 * var(--k)) calc(28 * var(--k)); }
+.t-ticket .inst { font-size: calc(56 * var(--k)); line-height: 1.25; max-width: 24ch; }
+.t-ticket .cnt { font-size: calc(44 * var(--k)); }
+.t-offline { position: absolute; inset: 0; background: var(--ink); color: #fff; display: flex; flex-direction: column; justify-content: center; gap: calc(36 * var(--k)); padding: calc(96 * var(--k)); }
+.t-offline h3 { margin: 0; font-size: calc(120 * var(--k)); line-height: 1.05; }
+.t-offline p { margin: 0; font-size: calc(60 * var(--k)); line-height: 1.25; }
+.t-offline .dot { font-size: calc(44 * var(--k)); color: var(--gold); }
+@container scr (aspect-ratio > 1) {
+  .totem { --k: min(100cqw / 1920, 100cqh / 1080); }
+  .t-head { padding: calc(32 * var(--k)) calc(64 * var(--k)) calc(8 * var(--k)); font-size: calc(60 * var(--k)); }
+  .t-sub { padding: 0 calc(64 * var(--k)) calc(16 * var(--k)); font-size: calc(32 * var(--k)); }
+  .t-bars { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: calc(16 * var(--k)); padding: 0 calc(40 * var(--k)); }
+  .t-bar { font-size: calc(54 * var(--k)); padding: 0 calc(40 * var(--k)); }
+  .t-bar:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .t-bar .pre { font-size: calc(40 * var(--k)); }
+  .t-foot { padding: calc(14 * var(--k)) calc(64 * var(--k)) calc(22 * var(--k)); font-size: calc(28 * var(--k)); }
+  .t-band { padding: calc(20 * var(--k)) calc(64 * var(--k)); font-size: calc(52 * var(--k)); }
+  .t-back { font-size: calc(36 * var(--k)); min-height: calc(96 * var(--k)); padding: calc(10 * var(--k)) calc(28 * var(--k)); }
+  .t-q { padding: calc(32 * var(--k)) calc(64 * var(--k)) calc(24 * var(--k)); font-size: calc(54 * var(--k)); }
+  .t-choices { flex-direction: row; padding: 0 calc(64 * var(--k)) calc(48 * var(--k)); gap: calc(32 * var(--k)); }
+  .t-choice { font-size: calc(60 * var(--k)); padding: 0 calc(40 * var(--k)); border-width: calc(6 * var(--k)); }
+  .t-ticket { padding: calc(40 * var(--k)) calc(96 * var(--k)); gap: calc(14 * var(--k)); }
+  .t-ticket .lbl { font-size: calc(48 * var(--k)); }
+  .t-ticket .num { font-size: calc(270 * var(--k)); }
+  .t-ticket .srv { font-size: calc(64 * var(--k)); }
+  .t-chip { font-size: calc(42 * var(--k)); }
+  .t-ticket .inst { font-size: calc(44 * var(--k)); max-width: 40ch; }
+  .t-ticket .cnt { font-size: calc(36 * var(--k)); }
+  .t-offline { padding: calc(80 * var(--k)); }
+  .t-offline h3 { font-size: calc(110 * var(--k)); }
+  .t-offline p { font-size: calc(52 * var(--k)); }
+}
+
+/* ===== DISPLAY: landscape is designed at 1920x1080, portrait at 1080x1920 ===== */
+.display { --k: min(100cqw / 1920, 100cqh / 1080); background: var(--ink); color: #fff; font-family: var(--font); display: grid; grid-template-columns: minmax(0, 66fr) minmax(0, 34fr); grid-template-rows: minmax(0, 1fr) calc(92 * var(--k)); overflow: hidden; }
+.d-now { grid-row: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; padding: 0 calc(56 * var(--k)); gap: calc(8 * var(--k)); }
+.d-now .srv { font-size: calc(68 * var(--k)); font-weight: 700; letter-spacing: .04em; text-wrap: balance; }
+.d-now .num { font-size: calc(184 * var(--k)); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.d-now .box { font-size: calc(150 * var(--k)); font-weight: 700; line-height: 1.05; text-wrap: balance; overflow-wrap: anywhere; }
+.d-now .chip { align-self: flex-start; background: var(--gold); color: var(--ink); font-size: calc(52 * var(--k)); font-weight: 700; padding: calc(8 * var(--k)) calc(26 * var(--k)); margin-top: calc(16 * var(--k)); }
+/* new-call cue for people who cannot hear: a gold frame breathing at 1 Hz for 6 s (static under reduced motion) */
+.d-now.pulse { animation: ring 1s ease-in-out 6; }
+@keyframes ring { 0%, 100% { box-shadow: inset 0 0 0 calc(10 * var(--k)) var(--gold); } 50% { box-shadow: inset 0 0 0 calc(36 * var(--k)) var(--gold); } }
+.d-list { grid-row: 1; min-width: 0; min-height: 0; overflow: hidden; padding: calc(48 * var(--k)) calc(40 * var(--k)); display: flex; flex-direction: column; gap: calc(4 * var(--k)); }
+.d-list h3 { margin: 0 0 calc(16 * var(--k)); font-size: calc(44 * var(--k)); font-weight: 400; color: #9fb0bf; }
+.d-row { display: flex; align-items: center; gap: calc(18 * var(--k)); padding: calc(14 * var(--k)) 0; border-top: calc(2 * var(--k)) solid #2a3b4a; font-size: calc(60 * var(--k)); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.d-row .sw { width: calc(18 * var(--k)); height: calc(60 * var(--k)); border-radius: 0; flex: none; }
+.d-row .b { margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 400; font-size: calc(48 * var(--k)); color: #c9d5df; }
+.d-foot { grid-column: 1 / -1; background: #0d1720; display: flex; align-items: center; justify-content: space-between; gap: calc(32 * var(--k)); padding: 0 calc(48 * var(--k)); font-size: calc(34 * var(--k)); color: #9fb0bf; min-width: 0; }
+.d-foot .cap { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+@container scr (aspect-ratio <= 1) {
+  .display { --k: min(100cqw / 1080, 100cqh / 1920); grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 56fr) minmax(0, 44fr) calc(84 * var(--k)); }
+  .d-now { grid-row: 1; padding: 0 calc(56 * var(--k)); }
+  .d-now .srv { font-size: calc(56 * var(--k)); }
+  .d-now .num { font-size: calc(150 * var(--k)); }
+  .d-now .box { font-size: calc(124 * var(--k)); }
+  .d-now .chip { font-size: calc(44 * var(--k)); }
+  .d-list { grid-row: 2; padding: calc(36 * var(--k)) calc(56 * var(--k)); }
+  .d-list h3 { font-size: calc(38 * var(--k)); }
+  .d-row { font-size: calc(56 * var(--k)); padding: calc(12 * var(--k)) 0; }
+  .d-foot { grid-row: 3; font-size: calc(30 * var(--k)); padding: 0 calc(40 * var(--k)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .d-now.pulse { animation: none; box-shadow: inset 0 0 0 calc(24 * var(--k)) var(--gold); }
+}
+
+/* ===== NEXTCLOUD-STYLE pages (box, admin): plain responsive layout ===== */
+.nc { height: 100%; background: #fff; color: #222; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 16px; display: flex; flex-direction: column; }
+.nc-top { height: 50px; background: var(--violet); color: #fff; display: flex; align-items: center; padding: 0 20px; gap: 20px; font-weight: 700; flex: none; }
+.nc-top span { font-weight: 400; opacity: .85; }
+.nc-body { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 340px); min-height: 0; }
+.b-main { padding: 28px 36px; display: flex; flex-direction: column; gap: 22px; min-width: 0; overflow: auto; }
+.b-who { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; color: #555; font-size: 18px; }
+.b-who button, .a-btn { font: inherit; padding: 8px 14px; border: 1px solid #bbb; background: #fff; border-radius: 6px; cursor: pointer; }
+.b-cur { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 6px; min-height: 120px; }
+.b-cur .num { font-size: clamp(48px, 11cqw, 124px); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.b-cur .meta { font-size: 22px; color: #555; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.b-cur .none { font-size: 34px; color: #666; }
+.sw { display: inline-block; width: 14px; height: 14px; border-radius: 50%; }
+.b-primary { font: inherit; font-size: clamp(24px, 3.4cqw, 40px); font-weight: 700; min-height: 120px; border: 0; border-radius: 10px; background: var(--violet); color: #fff; cursor: pointer; }
+.b-primary.ok { background: #2e7d4f; }
+.b-sec { display: flex; flex-wrap: wrap; gap: 16px; }
+.b-sec button { flex: 1 1 200px; font: inherit; font-size: 24px; font-weight: 700; min-height: 72px; border: 2px solid #444; background: #fff; border-radius: 10px; cursor: pointer; color: #222; }
+.b-sec button:disabled, .b-primary:disabled { opacity: .35; cursor: not-allowed; }
+.b-side { border-left: 1px solid #ddd; background: #fafafa; padding: 24px; display: flex; flex-direction: column; gap: 10px; overflow: auto; min-width: 0; }
+.b-side h3 { margin: 0 0 6px; font-size: 20px; }
+.q-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #e2e2e2; font-variant-numeric: tabular-nums; font-size: 18px; font-weight: 700; }
+.q-row .w { margin-left: auto; font-weight: 400; color: #666; white-space: nowrap; }
+.kind { width: 26px; height: 26px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; flex: none; }
+.kind.p { background: var(--gold); color: #13202b; } .kind.g { background: #dfe3e7; color: #333; }
+.legend { margin-top: auto; color: #666; font-size: 14px; }
+.a-main { padding: 24px 36px; display: flex; flex-direction: column; gap: 18px; flex: 1; min-height: 0; overflow: auto; }
+.a-tabs { display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 2px solid #ddd; }
+.a-tab { font: inherit; font-size: 18px; padding: 10px 18px; border: 0; background: transparent; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; color: #444; }
+.a-tab[aria-selected="true"] { border-bottom-color: var(--violet); font-weight: 700; color: #222; }
+.a-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 440px); gap: 32px; align-items: start; }
+.a-scroll { overflow-x: auto; min-width: 0; }
+.a-table { width: 100%; min-width: 480px; border-collapse: collapse; font-size: 17px; }
+.a-table th { text-align: left; color: #666; font-weight: 400; padding: 6px 8px; border-bottom: 1px solid #ccc; }
+.a-table td { padding: 11px 8px; border-bottom: 1px solid #e6e6e6; }
+.a-table tr.sel td { background: #f1ebff; }
+.a-form { border: 1px solid #ccc; border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.a-form label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: #555; }
+.a-form label.inline { flex-direction: row; align-items: center; gap: 10px; font-size: 16px; color: #222; }
+.a-form input[type=text], .a-form input[type=time], .a-form input[type=number] { font: inherit; font-size: 17px; padding: 8px 10px; border: 1px solid #aaa; border-radius: 6px; min-width: 0; }
+.a-form input[type=range] { width: 100%; accent-color: var(--violet); }
+.a-form fieldset { border: 1px solid #ddd; border-radius: 8px; padding: 8px 12px; margin: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.a-form legend { font-size: 14px; color: #555; padding: 0 4px; }
+.a-row { display: flex; flex-wrap: wrap; gap: 12px; } .a-row > * { flex: 1 1 120px; min-width: 0; }
+.a-color { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.a-color input[type=color] { width: 56px; height: 40px; padding: 0; border: 1px solid #aaa; border-radius: 6px; }
+.a-prev { padding: 6px 14px; font-weight: 700; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
+.a-ratio { font-size: 14px; } .a-ratio.bad { color: var(--err); font-weight: 700; } .a-ratio.good { color: var(--ok); }
+.a-save { align-self: flex-start; font: inherit; font-weight: 700; padding: 10px 20px; border: 0; border-radius: 8px; background: var(--violet); color: #fff; cursor: pointer; }
+.a-save.alt { background: #fff; color: #222; border: 1px solid #888; }
+.b-hint { min-height: 54px; font-size: 17px; line-height: 1.35; color: #444; }
+.q-row.next { background: #f1ebff; outline: 2px solid var(--violet); outline-offset: -2px; padding-left: 6px; padding-right: 6px; }
+.q-row .tag { font-size: 12px; color: var(--violet); font-weight: 700; }
+@container scr (max-width: 900px) {
+  .nc-body { display: block; overflow: auto; }
+  .b-main { padding: 20px 18px; overflow: visible; }
+  .b-side { border-left: 0; border-top: 1px solid #ddd; overflow: visible; }
+  .a-main { padding: 18px; }
+  .a-grid { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .b-primary { min-height: 96px; }
+}
+
+/* ===== PRINTED TICKET (80 mm) ===== */
+.paper-wrap { height: 100%; background: #d9dcdf; display: flex; justify-content: center; padding-top: 40px; font-family: var(--font); }
+.paper { width: 384px; height: 640px; background: #fff; color: #000; text-align: center; padding: 28px 22px; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), 96% 100%, 92% calc(100% - 10px), 88% 100%, 84% calc(100% - 10px), 80% 100%, 76% calc(100% - 10px), 72% 100%, 68% calc(100% - 10px), 64% 100%, 60% calc(100% - 10px), 56% 100%, 52% calc(100% - 10px), 48% 100%, 44% calc(100% - 10px), 40% 100%, 36% calc(100% - 10px), 32% 100%, 28% calc(100% - 10px), 24% 100%, 20% calc(100% - 10px), 16% 100%, 12% calc(100% - 10px), 8% 100%, 4% calc(100% - 10px), 0 100%); }
+.paper .est { font-size: 18px; }
+.paper .big { font-size: 66px; font-weight: 700; line-height: 1; margin-top: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.paper .srv { font-size: 34px; font-weight: 700; }
+.paper .pref { border: 3px solid #000; padding: 4px 14px; font-size: 22px; font-weight: 700; }
+.paper hr { width: 100%; border: 0; border-top: 2px dashed #000; margin: 10px 0; }
+.paper .fine { font-size: 18px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Maquetas del totem de turnos</h1>
+    <p class="lede">Pantallas navegables con los textos, colores y tipografía reales. No sabemos qué pantalla tendrá cada establecimiento: cada marco se adapta a su tamaño y a su orientación. Elija otro tamaño sobre el marco, o escriba uno propio, para probarlo.</p>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Pantallas">
+    <button class="tab" role="tab" id="tab-totem" aria-selected="true" aria-controls="p-totem">Totem</button>
+    <button class="tab" role="tab" id="tab-display" aria-selected="false" aria-controls="p-display">Pantalla de sala</button>
+    <button class="tab" role="tab" id="tab-box" aria-selected="false" aria-controls="p-box">Box</button>
+    <button class="tab" role="tab" id="tab-admin" aria-selected="false" aria-controls="p-admin">Administración</button>
+    <button class="tab" role="tab" id="tab-ticket" aria-selected="false" aria-controls="p-ticket">Ticket impreso</button>
+  </div>
+
+  <section class="panel" id="p-totem" role="tabpanel" aria-labelledby="tab-totem">
+    <div class="stagebox" data-kind="totem">
+      <div class="viewport" data-w="1080" data-h="1920"><div class="native"><div class="screen totem" id="totem"></div></div></div>
+      <div class="controls">
+        <button class="ctl" id="btn-offline" type="button">Simular sin conexión</button>
+        <button class="ctl" id="btn-reset" type="button">Volver al inicio</button>
+      </div>
+    </div>
+    <div class="notes">
+      <h2>Qué revisar</h2>
+      <ul>
+        <li>Cada servicio es una barra completa con su color; el texto cambia a oscuro sobre amarillo.</li>
+        <li>Sin RUN: dos toques (servicio y atención preferente) y el ticket sale. Sirve también a quien no tiene RUN.</li>
+        <li>En vertical las barras van en una columna. En horizontal van en dos y las dos opciones preferente quedan lado a lado.</li>
+        <li>Todo crece o se achica con el tamaño de la pantalla. Los botones se miden contra ese tamaño: al menos 96 unidades de diseño de alto.</li>
+        <li>La pantalla final vuelve sola al inicio en 8 s.</li>
+        <li>Con más de 7 servicios aparecen los botones Anterior y Siguiente.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="panel" id="p-display" role="tabpanel" aria-labelledby="tab-display" hidden>
+    <div class="stagebox" data-kind="display">
+      <div class="viewport" data-w="1920" data-h="1080"><div class="native"><div class="screen display" id="display"></div></div></div>
+      <div class="simbox">
+        <b>Simulación (no es parte de la pantalla)</b>
+        <div class="controls" id="sim-ctl"></div>
+      </div>
+    </div>
+    <div class="notes">
+      <h2>Qué revisar</h2>
+      <ul>
+        <li>El número y el box se leen desde el fondo de la sala. Solo aparecen número y box. En vertical, el llamado va arriba y la lista abajo.</li>
+        <li>Los llamados siguen la regla real. En cada servicio, después de dos turnos preferentes toca uno general; si no hay del otro tipo, sigue el que haya. Cada botón dice qué turno llamaría.</li>
+        <li>Aviso para el oído: dos pares de tonos (cuatro toques) y después la voz, dos veces: "Turno Farmacia, preferente 12. Diríjase al Box 2." En la app la voz la genera un modelo de código abierto incluido en la app, sin internet. Aquí, en los llamados simulados, la voz es la del navegador; la voz real se escucha con "Probar aviso" en Administración > Pantallas.</li>
+        <li>Aviso para la vista: un marco dorado que respira una vez por segundo durante 6 s. Con "reducir movimiento" queda fijo, sin animación. Lo que se dice aparece escrito abajo.</li>
+        <li>El volumen y la voz (Mujer o Hombre) se ajustan por pantalla en Administración > Pantallas. El tope real lo fija el volumen del equipo.</li>
+        <li>Un turno que saca en el totem entra a la cola y se llama cuando le toca. Llamar de nuevo (pestaña Box) repite el aviso sin sumar otra fila.</li>
+        <li>La lista guarda los últimos 6 turnos distintos, con el color de cada servicio.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="panel" id="p-box" role="tabpanel" aria-labelledby="tab-box" hidden>
+    <div class="stagebox" data-kind="box">
+      <div class="viewport" data-w="1366" data-h="768"><div class="native"><div class="screen nc" id="box"></div></div></div>
+    </div>
+    <div class="notes">
+      <h2>Qué revisar</h2>
+      <ul>
+        <li>Un solo botón grande que cambia con el estado: Llamar siguiente, Iniciar atención, Finalizar atención.</li>
+        <li>Llamar de nuevo y No se presentó solo se activan cuando hay un turno llamado.</li>
+        <li>Este box atiende Farmacia y Toma de Muestras. La lista junta ambas colas y marca el siguiente.</li>
+        <li>El texto bajo el turno explica por qué toca ese: la regla de dos preferentes por un general en cada servicio, y entre los dos servicios gana el turno que más espera.</li>
+        <li>En pantallas angostas la lista de espera pasa debajo del turno actual.</li>
+        <li>Con la cola vacía, el botón principal se apaga.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="panel" id="p-admin" role="tabpanel" aria-labelledby="tab-admin" hidden>
+    <div class="stagebox" data-kind="admin">
+      <div class="viewport" data-w="1366" data-h="768"><div class="native"><div class="screen nc" id="admin"></div></div></div>
+    </div>
+    <div class="notes">
+      <h2>Qué revisar</h2>
+      <ul>
+        <li>Cambie el color del servicio: el texto del totem se elige solo y el formulario avisa si el contraste es menor a 4,5:1.</li>
+        <li>Boxes y Pantallas usan la misma lista con formulario.</li>
+        <li>Una pantalla sin servicios marcados muestra todos.</li>
+        <li>Pantallas: volumen del aviso, voz (Mujer, Hombre o sin voz) y un botón "Probar aviso" que toca los tonos y la grabación real de esa voz.</li>
+        <li>La pestaña Analítica llega en la segunda etapa.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="panel" id="p-ticket" role="tabpanel" aria-labelledby="tab-ticket" hidden>
+    <div class="stagebox">
+      <div class="viewport" data-w="480" data-h="760"><div class="native"><div class="screen paper-wrap" id="ticket"></div></div></div>
+    </div>
+    <div class="notes">
+      <h2>Qué revisar</h2>
+      <ul>
+        <li>Ancho de papel térmico de 80 mm, impreso con el controlador del sistema.</li>
+        <li>El número usa la misma tipografía del totem, donde 0 y O se distinguen.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var INK = "#13202b";
+  var SERV = [
+    { id: "farmacia", name: "Farmacia", pre: "FAR", color: "#0b6e69" },
+    { id: "muestras", name: "Toma de Muestras", pre: "MUE", color: "#a32035" },
+    { id: "vacunatorio", name: "Vacunatorio", pre: "VAC", color: "#8a5a00" },
+    { id: "azul", name: "Sector Azul", pre: "AZU", color: "#1f4fb4" },
+    { id: "verde", name: "Sector Verde", pre: "VER", color: "#2e7d32" },
+    { id: "amarillo", name: "Sector Amarillo", pre: "AMA", color: "#f2c400" },
+    { id: "some", name: "SOME", pre: "SOM", color: "#4a4f57" }
+  ];
+  var byId = function (id) { return SERV.filter(function (s) { return s.id === id; })[0]; };
+
+  function lum(hex) {
+    var n = parseInt(hex.slice(1), 16), c = [n >> 16 & 255, n >> 8 & 255, n & 255].map(function (v) {
+      v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
+  function ratio(a, b) { var x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+  function readableOn(hex) { return ratio(hex, "#ffffff") >= ratio(hex, INK) ? "#ffffff" : INK; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function pad3(n) { return ("00" + n).slice(-3); }
+
+  /* ---------- shared model: the real call rules over a small seeded day ---------- */
+  var BOX = {
+    b2: { name: "Box 2", srv: ["farmacia"] },
+    b3: { name: "Box 3", srv: ["farmacia", "muestras"] },
+    b5: { name: "Box 5", srv: ["muestras"] }
+  };
+  var M = { turnos: [], llamados: [], tick: 0, nextId: 1 }, T0 = Date.now(), pulseUntil = 0;
+  var P = { vol: 100, voice: "mujer" }; /* per-Pantalla sound settings; voice is "mujer", "hombre" or "off" */
+  var VOICES = { mujer: { label: "Mujer (Claude, México)", clip: "voz/mujer-claude.wav" }, hombre: { label: "Hombre (Davefx, España)", clip: "voz/hombre-davefx.wav" } };
+  function addTurno(s, p, seq, estado, minAgo, box) {
+    var t = { id: M.nextId++, s: s, p: p, seq: seq, estado: estado, created: T0 - minAgo * 60000, box: box || null, calledAt: 0, since: T0 };
+    M.turnos.push(t); return t;
+  }
+  function callAt(t, box) { t.box = box; M.tick += 1; if (!t.calledAt) t.calledAt = M.tick; t.since = Date.now(); M.llamados.push({ t: t.id, box: box, at: M.tick }); }
+  function lbl(t) { return byId(t.s).pre + "-" + (t.p ? "P" : "G") + "-" + pad3(t.seq); }
+  function waiting(s) { return M.turnos.filter(function (t) { return t.s === s && t.estado === "waiting"; }).sort(function (a, b) { return a.created - b.created; }); }
+  /* the two most recent turnos called in a servicio today; a re-llamado is not a new call */
+  function lastTwo(s) { return M.turnos.filter(function (t) { return t.s === s && t.calledAt; }).sort(function (a, b) { return b.calledAt - a.calledAt; }).slice(0, 2); }
+  function wantsGeneral(s) { var l = lastTwo(s); return l.length === 2 && l[0].p && l[1].p; }
+  function candidate(s) {
+    var q = waiting(s), Pr = q.filter(function (t) { return t.p; })[0], G = q.filter(function (t) { return !t.p; })[0];
+    return wantsGeneral(s) ? (G || Pr) : (Pr || G);
+  }
+  function nextFor(b) {
+    return BOX[b].srv.map(candidate).filter(Boolean).sort(function (a, c) { return a.created - c.created; })[0] || null;
+  }
+  function activeOf(b) { return M.turnos.filter(function (t) { return t.box === b && (t.estado === "called" || t.estado === "in_service"); })[0] || null; }
+  function issue(s, p) {
+    var seq = M.turnos.filter(function (t) { return t.s === s && t.p === p; }).reduce(function (m, t) { return Math.max(m, t.seq); }, 0) + 1;
+    return addTurno(s, p, seq, "waiting", 0);
+  }
+  function explain(b) {
+    var t = nextFor(b); if (!t) return "No hay turnos en espera en los servicios de este box.";
+    var g = wantsGeneral(t.s), why;
+    if (t.p) why = g ? "no hay atención general en espera, sigue la preferente" : "toca atención preferente";
+    else why = g ? "las 2 últimas llamadas fueron preferentes, toca atención general" : "no hay atención preferente en espera";
+    var out = "Siguiente: " + lbl(t) + " (" + byId(t.s).name + "): " + why + ".";
+    var others = BOX[b].srv.filter(function (x) { return x !== t.s && candidate(x); });
+    if (others.length) out += " Entre los servicios del box, es el que más espera.";
+    return out;
+  }
+  /* what the room hears, and the same words shown as a caption */
+  function phrase(t, b) { return "Turno " + byId(t.s).name + ", " + (t.p ? "preferente" : "general") + " " + t.seq + ". Diríjase al " + BOX[b].name + "."; }
+  function announce(t, b) {
+    pulseUntil = Date.now() + 6000; setTimeout(displayRender, 6100);
+    if (!document.getElementById("p-display").hidden) playAnnouncement(phrase(t, b));
+  }
+  function callNext(b) { var t = nextFor(b); if (!t) return null; t.estado = "called"; callAt(t, b); announce(t, b); return t; }
+  function refresh() { displayRender(); boxRender(); ctlRender(); }
+
+  (function seed() {
+    [["farmacia", false, 29, "completed", 95, "b2"], ["muestras", false, 5, "completed", 90, "b5"], ["farmacia", true, 11, "completed", 88, "b3"],
+     ["muestras", true, 6, "completed", 85, "b5"], ["muestras", true, 7, "in_service", 80, "b5"], ["farmacia", true, 12, "called", 70, "b2"]].forEach(function (r) {
+      callAt(addTurno(r[0], r[1], r[2], r[3], r[4], r[5]), r[5]);
+    });
+    [["farmacia", true, 13, 20], ["farmacia", true, 14, 15], ["farmacia", false, 30, 24], ["farmacia", false, 31, 18], ["farmacia", false, 32, 10], ["farmacia", false, 33, 6],
+     ["muestras", true, 8, 11], ["muestras", false, 6, 16], ["muestras", false, 7, 5]].forEach(function (r) { addTurno(r[0], r[1], r[2], "waiting", r[3]); });
+    pulseUntil = 0;
+  })();
+
+  /* ---------- sound: two two-tone chimes, then the voice twice ---------- */
+  var audio, session = 0;
+  /* Tones sit between 650 and 1400 Hz, the band people with hearing loss keep longest, with overtones for bite.
+     A compressor lifts the average level; the ceiling is still the volume of the device. Returns the length in seconds. */
+  function chime() {
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === "suspended") audio.resume();
+      var comp = audio.createDynamicsCompressor(), master = audio.createGain(), t0 = audio.currentTime + 0.05;
+      comp.threshold.value = -24; comp.knee.value = 8; comp.ratio.value = 10; comp.attack.value = 0.003; comp.release.value = 0.2;
+      master.gain.value = Math.max(0, Math.min(1, P.vol / 100)) * 0.95;
+      comp.connect(master); master.connect(audio.destination);
+      var notes = [[659, 0], [988, 0.42], [659, 1.1], [988, 1.52]]; /* ding-dong, ding-dong */
+      notes.forEach(function (n) {
+        [[1, 1], [2, 0.5], [3, 0.25]].forEach(function (h) {
+          var o = audio.createOscillator(), g = audio.createGain(), t = t0 + n[1];
+          o.type = "sine"; o.frequency.value = n[0] * h[0];
+          g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5 * h[1], t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.62);
+          o.connect(g); g.connect(comp); o.start(t); o.stop(t + 0.65);
+        });
+      });
+      return 2.2;
+    } catch (err) { return 0; }
+  }
+  var voiceBox = null;
+  function spanishVoice() {
+    var vs = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    return vs.filter(function (v) { return /^es[-_]CL/i.test(v.lang); })[0] || vs.filter(function (v) { return /^es/i.test(v.lang); })[0] || null;
+  }
+  /* mockup stand-in: the app bundles an open-source offline voice model and does not use the browser voice */
+  function speak(text, times) {
+    var s = window.speechSynthesis; if (!s || !times) return;
+    var u = new SpeechSynthesisUtterance(text), v = spanishVoice();
+    u.lang = "es-CL"; if (v) u.voice = v; u.rate = 0.85; u.volume = Math.max(0, Math.min(1, P.vol / 100));
+    u.onend = function () { setTimeout(function () { speak(text, times - 1); }, 700); };
+    s.speak(u);
+  }
+  function playAnnouncement(text) {
+    var id = ++session;
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (P.vol <= 0) return;
+    var dur = chime();
+    if (P.voice !== "off") setTimeout(function () { if (id === session) speak(text, 2); }, (dur + 0.2) * 1000);
+  }
+
+  /* "Probar aviso" in Administración: chimes, then the real Piper recording of the chosen voice, twice.
+     The recording says one fixed phrase; the app synthesizes each call's own phrase with the same model. */
+  function testAnnouncement() {
+    var id = ++session; if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (P.vol <= 0) return;
+    var dur = chime();
+    if (P.voice === "off") return;
+    var a = new Audio(VOICES[P.voice].clip), n = 2; a.volume = Math.max(0, Math.min(1, P.vol / 100));
+    a.onended = function () { n -= 1; if (n > 0 && id === session) setTimeout(function () { a.currentTime = 0; a.play(); }, 700); };
+    setTimeout(function () { if (id === session) a.play().catch(function () {}); }, (dur + 0.2) * 1000);
+  }
+
+  /* ---------- stage sizing: the chosen screen size, shown scaled to fit ---------- */
+  var PRESETS = {
+    totem: [["1080x1920", "Vertical 1080 × 1920 (totem 21″)"], ["720x1280", "Vertical 720 × 1280"], ["768x1024", "Vertical 768 × 1024 (tablet)"], ["1920x1080", "Horizontal 1920 × 1080"], ["1366x768", "Horizontal 1366 × 768"], ["1024x1024", "Cuadrada 1024 × 1024"]],
+    display: [["1920x1080", "Horizontal 1920 × 1080 (televisor)"], ["1366x768", "Horizontal 1366 × 768"], ["1024x768", "4:3 1024 × 768"], ["2560x1080", "Ultraancha 2560 × 1080"], ["1080x1920", "Vertical 1080 × 1920"], ["800x480", "Pequeña 800 × 480"]],
+    box: [["1366x768", "Notebook 1366 × 768"], ["1024x768", "Tablet horizontal 1024 × 768"], ["768x1024", "Tablet vertical 768 × 1024"], ["390x844", "Teléfono 390 × 844"]]
+  };
+  PRESETS.admin = PRESETS.box;
+  function sizeBars() {
+    document.querySelectorAll(".stagebox[data-kind]").forEach(function (box) {
+      var kind = box.dataset.kind, v = box.querySelector(".viewport"), bar = document.createElement("div");
+      bar.className = "sizebar";
+      bar.innerHTML = '<label>Tamaño de pantalla <select>' + PRESETS[kind].map(function (p) { return '<option value="' + p[0] + '">' + p[1] + "</option>"; }).join("") + '<option value="custom">Otro tamaño…</option></select></label>' +
+        '<span class="cust" hidden><input type="number" min="240" max="4000" value="1280" aria-label="Ancho en píxeles"> × <input type="number" min="240" max="4000" value="720" aria-label="Alto en píxeles"> px</span>';
+      box.insertBefore(bar, v);
+      var sel = bar.querySelector("select"), cust = bar.querySelector(".cust"), ins = cust.querySelectorAll("input");
+      function apply() {
+        var w, h;
+        if (sel.value === "custom") { cust.hidden = false; w = Math.max(240, +ins[0].value || 240); h = Math.max(240, +ins[1].value || 240); }
+        else { cust.hidden = true; var a = sel.value.split("x"); w = +a[0]; h = +a[1]; }
+        v.dataset.w = w; v.dataset.h = h; fit();
+      }
+      sel.addEventListener("change", apply); ins.forEach(function (i) { i.addEventListener("input", apply); });
+      var first = PRESETS[kind][0][0].split("x"); v.dataset.w = first[0]; v.dataset.h = first[1];
+    });
+  }
+  function fit() {
+    document.querySelectorAll(".viewport").forEach(function (v) {
+      if (v.offsetParent === null) return;
+      var w = +v.dataset.w, h = +v.dataset.h, n = v.firstElementChild;
+      var maxH = Math.max(360, window.innerHeight * 0.78), avail = Math.min(v.parentElement.clientWidth, maxH * w / h), s = avail / w;
+      n.style.width = w + "px"; n.style.height = h + "px";
+      v.style.width = avail + "px"; v.style.height = Math.round(h * s) + "px";
+      n.style.transform = "scale(" + s + ")";
+    });
+  }
+  window.addEventListener("resize", fit);
+
+  /* ---------- tabs ---------- */
+  var tabs = document.querySelectorAll(".tab");
+  tabs.forEach(function (t) {
+    t.addEventListener("click", function () {
+      tabs.forEach(function (o) {
+        var on = o === t; o.setAttribute("aria-selected", on);
+        document.getElementById(o.getAttribute("aria-controls")).hidden = !on;
+      });
+      refresh(); fit();
+    });
+  });
+
+  /* ---------- TOTEM ---------- */
+  var T = { step: "home", srv: null, pref: null, label: "", left: 8, offline: false, timer: null };
+  var totemEl = document.getElementById("totem");
+
+  function totemRender() {
+    var s = T.srv, h = "";
+    if (T.step === "home") {
+      h = '<div class="t-head">¿A qué servicio viene?</div><div class="t-sub">Toque el servicio para sacar su turno.</div><div class="t-bars">' +
+        SERV.map(function (x) {
+          return '<button class="t-bar" data-act="srv" data-id="' + x.id + '" style="background:' + x.color + ";color:" + readableOn(x.color) + '"><span>' + esc(x.name) + '</span><span class="pre">' + x.pre + "</span></button>";
+        }).join("") + '</div><div class="t-foot"><span>CESFAM Ejemplo</span><span id="clock"></span></div>';
+    } else if (T.step === "pref") {
+      h = band(s) + '<div class="t-q">¿Tiene 60 años o más, una discapacidad o cuida a una persona con discapacidad?</div><div class="t-choices">' +
+        '<button class="t-choice yes" data-act="pref" data-v="1">Sí, atención preferente</button>' +
+        '<button class="t-choice" data-act="pref" data-v="0">No, atención general</button></div>';
+    } else if (T.step === "ticket") {
+      var fg = readableOn(s.color);
+      h = '<div class="t-ticket" style="background:' + s.color + ";color:" + fg + '"><div class="lbl">Su turno</div><div class="num">' + T.label + '</div><div class="srv">' + esc(s.name) + "</div>" +
+        (T.pref ? '<div class="t-chip">Atención preferente</div>' : "") +
+        '<div class="inst">Retire su ticket impreso y espere su llamado en la sala de espera.</div><div class="cnt">Volviendo al inicio en <span id="cnt">' + T.left + "</span> s</div></div>";
+    }
+    if (T.offline) {
+      h += '<div class="t-offline" role="alert"><h3>Sin conexión</h3><p>Acérquese a SOME para sacar su turno.</p><p class="dot">Reintentando…</p></div>';
+    }
+    totemEl.innerHTML = h;
+    tick();
+  }
+  function band(s) {
+    return '<div class="t-band" style="background:' + s.color + ";color:" + readableOn(s.color) + '"><span>' + esc(s.name) + '</span><button class="t-back" data-act="back">‹ Volver</button></div>';
+  }
+  function tick() { var c = document.getElementById("clock"); if (c) { var d = new Date(); c.textContent = ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2); } }
+  function totemReset() { clearInterval(T.timer); T.step = "home"; T.srv = null; T.pref = null; totemRender(); }
+
+  totemEl.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-act]"); if (!b || T.offline) return;
+    var a = b.dataset.act;
+    if (a === "srv") { T.srv = byId(b.dataset.id); T.step = "pref"; }
+    else if (a === "pref") {
+      T.pref = b.dataset.v === "1";
+      var t = issue(T.srv.id, T.pref); T.label = lbl(t); T.step = "ticket"; T.left = 8; refresh();
+      clearInterval(T.timer);
+      T.timer = setInterval(function () { T.left -= 1; if (T.left <= 0) totemReset(); else { var c = document.getElementById("cnt"); if (c) c.textContent = T.left; } }, 1000);
+    }
+    else if (a === "back") totemReset();
+    totemRender();
+  });
+  document.getElementById("btn-offline").addEventListener("click", function () { T.offline = !T.offline; this.textContent = T.offline ? "Restablecer conexión" : "Simular sin conexión"; totemRender(); });
+  document.getElementById("btn-reset").addEventListener("click", totemReset);
+  setInterval(tick, 20000);
+
+  /* ---------- DISPLAY ---------- */
+  var dEl = document.getElementById("display"), ctlEl = document.getElementById("sim-ctl");
+  /* newest first, one row per turno: a re-llamado moves the turno up, it does not add a row */
+  function recent() {
+    var seen = {}, out = [];
+    for (var i = M.llamados.length - 1; i >= 0; i--) { var l = M.llamados[i]; if (!seen[l.t]) { seen[l.t] = 1; out.push(l); } }
+    return out;
+  }
+  function turnoById(id) { return M.turnos.filter(function (t) { return t.id === id; })[0]; }
+  function displayRender() {
+    var r = recent(), c = turnoById(r[0].t), s = byId(c.s), fg = readableOn(s.color), pulse = Date.now() < pulseUntil;
+    var rows = r.slice(1, 7).map(function (l) {
+      var t = turnoById(l.t), sv = byId(t.s);
+      return '<div class="d-row"><span class="sw" style="background:' + sv.color + '"></span><span>' + lbl(t) + '</span><span class="b">' + BOX[l.box].name + "</span></div>";
+    }).join("");
+    var now = new Date();
+    dEl.innerHTML = '<div class="d-now' + (pulse ? " pulse" : "") + '" role="status" style="background:' + s.color + ";color:" + fg + '"><div class="srv">' + esc(s.name.toUpperCase()) + '</div><div class="num">' + lbl(c) + '</div><div class="box">→ ' + esc(BOX[r[0].box].name.toUpperCase()) + "</div>" + (c.p ? '<div class="chip">Atención preferente</div>' : "") + "</div>" +
+      '<div class="d-list"><h3>Últimos llamados</h3>' + rows + "</div>" +
+      '<div class="d-foot"><span>' + ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2) + '</span><span class="cap">' + (P.vol > 0 ? (P.voice !== "off" ? "Sonido y voz activados · " : "Sonido activado · ") : "Sonido apagado · ") + esc(phrase(c, r[0].box)) + "</span></div>";
+  }
+  function ctlRender() {
+    ctlEl.innerHTML = ["b2", "b5"].map(function (b) {
+      var t = nextFor(b);
+      return '<button class="ctl" type="button" data-b="' + b + '"' + (t ? "" : " disabled") + ">" + (t ? BOX[b].name + " llama: " + lbl(t) : BOX[b].name + ": sin turnos en espera") + "</button>";
+    }).join("") + '<button class="ctl" type="button" data-b="again">Repetir último aviso</button><span class="hint">Box 3 se opera en la pestaña Box.</span>';
+  }
+  ctlEl.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-b]"); if (!b || b.disabled) return;
+    var id = b.dataset.b;
+    if (id === "again") { var l = recent()[0]; announce(turnoById(l.t), l.box); displayRender(); return; }
+    var prev = activeOf(id);
+    if (!nextFor(id)) return;
+    if (prev) prev.estado = "completed";
+    callNext(id); refresh();
+  });
+
+  /* ---------- BOX (Box 3, covers Farmacia and Toma de Muestras) ---------- */
+  var boxEl = document.getElementById("box");
+  function mmss(s) { return ("0" + Math.floor(s / 60)).slice(-2) + ":" + ("0" + (s % 60)).slice(-2); }
+  function boxRender() {
+    var cur = activeOf("b3"), nxt = nextFor("b3"), st = !cur ? "idle" : cur.estado === "called" ? "called" : "in";
+    var list = BOX.b3.srv.reduce(function (a, sid) { return a.concat(waiting(sid)); }, []).sort(function (a, b) { return a.created - b.created; });
+    var curHtml = cur ? '<div class="num">' + lbl(cur) + '</div><div class="meta"><span class="sw" style="background:' + byId(cur.s).color + '"></span>' + esc(byId(cur.s).name) + (cur.p ? " · Atención preferente" : "") + " · " + (st === "called" ? "Llamado" : "En atención") + " " + mmss(Math.floor((Date.now() - cur.since) / 1000)) + "</div>"
+      : '<div class="none">Sin turno en atención.</div>';
+    var label = st === "idle" ? (nxt ? "Llamar siguiente" : "No hay turnos en espera") : st === "called" ? "Iniciar atención" : "Finalizar atención";
+    var rows = list.map(function (t) {
+      var isNext = nxt && t.id === nxt.id && st === "idle";
+      return '<div class="q-row' + (isNext ? " next" : "") + '"><span class="kind ' + (t.p ? "p" : "g") + '">' + (t.p ? "P" : "G") + "</span><span>" + lbl(t) + '</span><span class="sw" style="background:' + byId(t.s).color + '"></span>' +
+        (isNext ? '<span class="tag">SIGUIENTE</span>' : "") + '<span class="w">' + Math.max(0, Math.round((Date.now() - t.created) / 60000)) + " min</span></div>";
+    }).join("");
+    boxEl.innerHTML = '<div class="nc-top">Totem <span>Box</span></div><div class="nc-body"><div class="b-main"><div class="b-who"><span>Box 3 · Farmacia, Toma de Muestras</span><button type="button">Cambiar box</button></div>' +
+      '<div class="b-cur" aria-live="polite">' + curHtml + '</div><div class="b-hint">' + (st === "idle" ? esc(explain("b3")) : "") + '</div><button class="b-primary' + (st === "in" ? " ok" : "") + '" data-act="main"' + (st === "idle" && !nxt ? " disabled" : "") + ">" + label + "</button>" +
+      '<div class="b-sec"><button data-act="again"' + (st === "called" ? "" : " disabled") + '>Llamar de nuevo</button><button data-act="absent"' + (st === "called" ? "" : " disabled") + ">No se presentó</button></div></div>" +
+      '<aside class="b-side"><h3>En espera (' + list.length + ")</h3>" + rows + '<div class="legend">P atención preferente · G atención general</div></aside></div>';
+  }
+  boxEl.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-act]"); if (!b || b.disabled) return;
+    var a = b.dataset.act, cur = activeOf("b3");
+    if (a === "main") {
+      if (!cur) callNext("b3");
+      else if (cur.estado === "called") { cur.estado = "in_service"; cur.since = Date.now(); }
+      else cur.estado = "completed";
+    } else if (a === "again" && cur && cur.estado === "called") { callAt(cur, "b3"); announce(cur, "b3"); }
+    else if (a === "absent" && cur && cur.estado === "called") cur.estado = "no_show";
+    refresh();
+  });
+  setInterval(function () { if (!document.getElementById("p-box").hidden) boxRender(); }, 1000);
+
+  /* ---------- ADMIN ---------- */
+  var A = { tab: "servicios", sel: "farmacia" };
+  var adminEl = document.getElementById("admin");
+  var hours = { farmacia: ["07:30", "16:30", ""], muestras: ["07:30", "10:30", "80"], vacunatorio: ["08:00", "16:00", ""], azul: ["08:00", "17:00", ""], verde: ["08:00", "17:00", ""], amarillo: ["08:00", "17:00", ""], some: ["08:00", "17:00", ""] };
+  function adminRender() {
+    var body = "";
+    if (A.tab === "servicios") {
+      var s = byId(A.sel), hr = hours[s.id];
+      body = '<div class="a-grid"><div class="a-scroll"><table class="a-table"><thead><tr><th>Servicio</th><th>Prefijo</th><th>Horario</th><th>Cupo</th><th>Estado</th></tr></thead><tbody>' +
+        SERV.map(function (x) {
+          var h = hours[x.id];
+          return '<tr data-act="pick" data-id="' + x.id + '" class="' + (x.id === A.sel ? "sel" : "") + '" style="cursor:pointer"><td><span class="sw" style="background:' + x.color + ';margin-right:8px"></span>' + esc(x.name) + "</td><td>" + x.pre + "</td><td>" + h[0] + "–" + h[1] + "</td><td>" + (h[2] || "Sin límite") + "</td><td>Activo</td></tr>";
+        }).join("") + "</tbody></table></div>" +
+        '<form class="a-form" id="a-form" onsubmit="return false"><label for="f-name">Nombre<input type="text" id="f-name" maxlength="28" value="' + esc(s.name) + '"></label>' +
+        '<div class="a-row"><label for="f-pre">Prefijo<input type="text" id="f-pre" value="' + s.pre + '" maxlength="4"></label><label for="f-quota">Cupo diario<input type="number" id="f-quota" value="' + hr[2] + '" placeholder="Sin límite"></label></div>' +
+        '<div class="a-row"><label for="f-open">Abre<input type="time" id="f-open" value="' + hr[0] + '"></label><label for="f-close">Cierra<input type="time" id="f-close" value="' + hr[1] + '"></label></div>' +
+        '<label for="f-color">Color<span class="a-color"><input type="color" id="f-color" value="' + s.color + '"><span class="a-prev" id="a-prev"></span><span class="a-ratio" id="a-ratio"></span></span></label>' +
+        '<button type="submit" class="a-save">Guardar servicio</button></form></div>';
+    } else if (A.tab === "boxes") {
+      body = '<div class="a-scroll"><table class="a-table"><thead><tr><th>Box</th><th>Atiende</th></tr></thead><tbody><tr><td>Box 1</td><td>Sector Azul</td></tr><tr><td>Box 2</td><td>Farmacia</td></tr><tr><td>Box 3</td><td>Farmacia, Toma de Muestras</td></tr><tr><td>Box 4</td><td>Vacunatorio</td></tr></tbody></table></div>';
+    } else {
+      body = '<div class="a-grid"><div class="a-scroll"><table class="a-table"><thead><tr><th>Pantalla</th><th>Muestra</th><th>Aviso</th></tr></thead><tbody><tr class="sel"><td>Sala Farmacia</td><td>Farmacia</td><td>Volumen <span id="t-vol">' + P.vol + '</span> %, <span id="t-voice">' + (P.voice === "off" ? "sin voz" : "voz de " + P.voice) + '</span></td></tr><tr><td>Central</td><td>Todos los servicios</td><td>Volumen 100 %, voz de mujer</td></tr><tr><td>Sala Sector Azul</td><td>Sector Azul</td><td>Volumen 100 %, voz de hombre</td></tr></tbody></table></div>' +
+        '<form class="a-form" onsubmit="return false"><label for="f-pname">Nombre<input type="text" id="f-pname" value="Sala Farmacia"></label>' +
+        '<fieldset><legend>Servicios que muestra (ninguno marcado = todos)</legend><label class="inline"><input type="checkbox" checked> Farmacia</label><label class="inline"><input type="checkbox"> Toma de Muestras</label><label class="inline"><input type="checkbox"> Vacunatorio</label></fieldset>' +
+        '<label for="f-vol">Volumen del aviso: <b id="f-volv">' + P.vol + " %</b><input type=\"range\" id=\"f-vol\" min=\"0\" max=\"100\" step=\"5\" value=\"" + P.vol + '"></label>' +
+        '<label for="f-voice">Voz del aviso<select id="f-voice">' + [["mujer", VOICES.mujer.label], ["hombre", VOICES.hombre.label], ["off", "Sin voz, solo tonos"]].map(function (o) { return '<option value="' + o[0] + '"' + (P.voice === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + '</select></label>' +
+        '<div class="a-row"><button type="button" class="a-save alt" data-act="test">Probar aviso</button><button type="submit" class="a-save">Guardar pantalla</button></div></form></div>';
+    }
+    adminEl.innerHTML = '<div class="nc-top">Totem <span>Administración</span></div><div class="a-main"><div class="a-tabs" role="tablist">' +
+      ["servicios", "boxes", "pantallas"].map(function (t) { return '<button class="a-tab" role="tab" data-act="tab" data-t="' + t + '" aria-selected="' + (A.tab === t) + '">' + t.charAt(0).toUpperCase() + t.slice(1) + "</button>"; }).join("") + "</div>" + body + "</div>";
+    updColor();
+  }
+  function updColor() {
+    var c = document.getElementById("f-color"); if (!c) return;
+    var fg = readableOn(c.value), r = ratio(c.value, fg), p = document.getElementById("a-prev"), t = document.getElementById("a-ratio");
+    p.style.background = c.value; p.style.color = fg; p.textContent = (document.getElementById("f-pre").value || "—").toUpperCase();
+    var ok = r >= 4.5; t.className = "a-ratio " + (ok ? "good" : "bad");
+    t.textContent = ok ? "Contraste " + r.toFixed(1).replace(".", ",") + ":1" : "Contraste " + r.toFixed(1).replace(".", ",") + ":1. Elija un color más oscuro o más claro.";
+  }
+  adminEl.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-act]"); if (!b) return;
+    if (b.dataset.act === "tab") { A.tab = b.dataset.t; adminRender(); }
+    else if (b.dataset.act === "pick") { A.sel = b.dataset.id; adminRender(); }
+    else if (b.dataset.act === "test") testAnnouncement();
+  });
+  adminEl.addEventListener("input", function (e) {
+    if (e.target.id === "f-vol") { P.vol = +e.target.value; document.getElementById("f-volv").textContent = P.vol + " %"; var tv = document.getElementById("t-vol"); if (tv) tv.textContent = P.vol; }
+    else if (e.target.id === "f-voice") { P.voice = e.target.value; var tr = document.getElementById("t-voice"); if (tr) tr.textContent = P.voice === "off" ? "sin voz" : "voz de " + P.voice; }
+    else updColor();
+  });
+
+  /* ---------- TICKET ---------- */
+  document.getElementById("ticket").innerHTML = '<div class="paper"><div class="est">CESFAM Ejemplo</div><div class="big">FAR-P-014</div><div class="srv">Farmacia</div><div class="pref">ATENCIÓN PREFERENTE</div><hr><div class="fine">18-10-2026 · 14:30</div><div class="fine">Espere su llamado en la sala de espera. Mire la pantalla y escuche el aviso.</div></div>';
+
+  window.__mock = { SERV: SERV, BOX: BOX, refresh: refresh, fit: fit };
+  sizeBars(); totemRender(); refresh(); adminRender(); fit();
+})();
+</script>
