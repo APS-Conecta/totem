@@ -22,7 +22,7 @@ describe('the totem entry', () => {
 		await import('./main.js')
 		await flushPromises()
 
-		expect(mount.textContent).toContain('¿A qué unidad viene?')
+		expect(mount.textContent).toContain('Seleccione la unidad a la que acude.')
 		expect(mount.textContent).toContain('Farmacia')
 	})
 })
