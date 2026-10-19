@@ -52,7 +52,7 @@ class CallService {
 		}
 		$servicioIds = $this->links->ids(ServicioLinks::BOX, $boxId);
 		if ($servicioIds === []) {
-			throw new Refused('Este box no tiene servicios asignados.');
+			throw new Refused('Esta ventanilla no tiene unidades asignadas.');
 		}
 
 		for ($attempt = 1; $attempt <= self::ATTEMPTS; $attempt++) {
@@ -67,7 +67,7 @@ class CallService {
 			}
 		}
 
-		throw new Refused('Otro box tomó ese turno. Intente de nuevo.');
+		throw new Refused('Otra ventanilla tomó ese turno. Intente de nuevo.');
 	}
 
 	/** Announce the held turno again: another llamado, the turno itself unchanged. */
@@ -115,12 +115,12 @@ class CallService {
 		if ($held === null) {
 			$pick = $this->pick($servicioIds);
 			if ($pick === null) {
-				$why = 'No hay turnos en espera en los servicios de este box.';
+				$why = 'No hay turnos en espera en las unidades de esta ventanilla.';
 			} else {
 				$next = $this->present($pick['turno']);
 				$why = sprintf('Siguiente: %s (%s): %s.', $next['label'], $next['servicio'], NextCall::why($pick['queued'], $pick['generalDue']));
 				if ($pick['competed']) {
-					$why .= ' Entre los servicios del box, es el que más espera.';
+					$why .= ' Entre las unidades de la ventanilla, es el que más espera.';
 				}
 			}
 		}

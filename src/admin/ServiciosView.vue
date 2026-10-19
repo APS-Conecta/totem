@@ -2,11 +2,11 @@
 <template>
 	<div class="totem-grid">
 		<div class="totem-scroll">
-			<ListNotice plural="servicios" :failed="loadFailed" :empty="loaded && !servicios.length" />
+			<ListNotice plural="unidades" :failed="loadFailed" :empty="loaded && !servicios.length" />
 			<table class="totem-table">
 				<thead>
 					<tr>
-						<th>Servicio</th>
+						<th>Unidad</th>
 						<th>Prefijo</th>
 						<th>Horario</th>
 						<th>Cupo</th>
@@ -29,15 +29,15 @@
 						<td>{{ servicio.prefix }}</td>
 						<td>{{ servicio.opens }}–{{ servicio.closes }}</td>
 						<td>{{ servicio.dailyQuota ?? 'Sin límite' }}</td>
-						<td>{{ servicio.active ? 'Activo' : 'Inactivo' }}</td>
-						<td>{{ servicio.isSector ? 'Sector' : 'Servicio' }}</td>
+						<td>{{ servicio.active ? 'Activa' : 'Inactiva' }}</td>
+						<td>{{ servicio.isSector ? 'Sector' : 'Unidad' }}</td>
 					</tr>
 				</tbody>
 			</table>
 		</div>
 		<form class="totem-form" @submit.prevent="save">
 			<NcButton type="button" variant="secondary" @click="startNew">
-				Nuevo servicio
+				Nueva unidad
 			</NcButton>
 			<NcTextField v-model="form.name" label="Nombre" maxlength="28" />
 			<div class="totem-row">
@@ -70,14 +70,14 @@
 				</span>
 			</div>
 			<NcCheckboxRadioSwitch v-model="form.active" type="switch">
-				Activo
+				Activa
 			</NcCheckboxRadioSwitch>
 			<NcCheckboxRadioSwitch v-model="form.isSector">
 				Es un sector
 			</NcCheckboxRadioSwitch>
 			<FormOutcome :error="error" :notice="notice" />
 			<NcButton type="submit" variant="primary">
-				Guardar servicio
+				Guardar unidad
 			</NcButton>
 		</form>
 	</div>
@@ -138,7 +138,7 @@ export default {
 			try {
 				stored = await admin.servicios.save(id, { ...rest, dailyQuota: dailyQuota === '' ? null : Number(dailyQuota) })
 			} catch (error) {
-				this.error = await reasonFor(error, { gone: 'Este servicio ya no existe.', fallback: 'No se pudo guardar el servicio.' })
+				this.error = await reasonFor(error, { gone: 'Esta unidad ya no existe.', fallback: 'No se pudo guardar la unidad.' })
 				if (isGone(error)) await this.load()
 				return
 			}

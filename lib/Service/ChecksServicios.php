@@ -24,7 +24,7 @@ trait ChecksServicios {
 			try {
 				$this->servicios->find($id);
 			} catch (DoesNotExistException) {
-				throw new Refused('Algún servicio elegido ya no existe.');
+				throw new Refused('Alguna unidad elegida ya no existe.');
 			}
 		}
 	}

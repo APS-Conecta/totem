@@ -37,7 +37,7 @@ class TurnoController extends Controller {
 	#[NoCSRFRequired]
 	#[AnonRateLimit(limit: 120, period: 60)]
 	public function create(int $servicioId, bool $preferente): JSONResponse {
-		return $this->attempt(fn () => $this->turnos->issue($servicioId, $preferente), 'Ese servicio ya no existe.');
+		return $this->attempt(fn () => $this->turnos->issue($servicioId, $preferente), 'Esa unidad ya no existe.');
 	}
 
 	#[PublicPage]

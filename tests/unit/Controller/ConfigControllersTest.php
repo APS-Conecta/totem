@@ -40,7 +40,7 @@ class ConfigControllersTest extends ControllerTestCase {
 
 	public function testAServicioRefusalIsA422AndAMissingOneA404(): void {
 		$service = $this->createMock(ServicioService::class);
-		$service->method('create')->willThrowException(new Refused('Ya existe un servicio con ese nombre.'));
+		$service->method('create')->willThrowException(new Refused('Ya existe una unidad con ese nombre.'));
 		$service->method('update')->willThrowException(new DoesNotExistException('x'));
 		$controller = new ServicioController($this->body([]), $service);
 
@@ -64,12 +64,12 @@ class ConfigControllersTest extends ControllerTestCase {
 
 	public function testABoxHoldingATurnoRefusesToBeDeletedWithA422(): void {
 		$service = $this->createMock(BoxService::class);
-		$service->method('delete')->willThrowException(new Refused('Este box tiene un turno en curso.'));
+		$service->method('delete')->willThrowException(new Refused('Esta ventanilla tiene un turno en curso.'));
 
 		$response = (new BoxController($this->request(), $service))->destroy(4);
 
 		$this->assertSame(Http::STATUS_UNPROCESSABLE_ENTITY, $response->getStatus());
-		$this->assertSame(['message' => 'Este box tiene un turno en curso.'], $response->getData());
+		$this->assertSame(['message' => 'Esta ventanilla tiene un turno en curso.'], $response->getData());
 	}
 
 	public function testPantallasListCreateUpdateAndDelete(): void {

@@ -58,26 +58,26 @@
 					</div>
 
 					<section>
-						<h2>Sectores <small>Servicios marcados como sector</small></h2>
+						<h2>Sectores <small>Unidades marcadas como sector</small></h2>
 						<StatsTable v-if="board.sectores.rows.length"
 							caption="Tickets por sector"
 							first-heading="Sector"
 							:rows="serviciosOf(board.sectores)"
 							:foot="{ label: 'Total sectores', figure: board.sectores.total }" />
 						<p v-else class="totem-stats__state">
-							Ningún servicio está marcado como sector. Márquelo en Administración, en la pestaña Servicios.
+							Ninguna unidad está marcada como sector. Márquela en Configuración, en Unidades.
 						</p>
 					</section>
 
 					<section>
-						<h2>Otros servicios</h2>
+						<h2>Otras unidades</h2>
 						<StatsTable v-if="board.servicios.rows.length"
-							caption="Tickets por servicio"
-							first-heading="Servicio"
+							caption="Tickets por unidad"
+							first-heading="Unidad"
 							:rows="serviciosOf(board.servicios)"
-							:foot="{ label: 'Total otros servicios', figure: board.servicios.total }" />
+							:foot="{ label: 'Total otras unidades', figure: board.servicios.total }" />
 						<p v-else class="totem-stats__state">
-							No hay otros servicios.
+							No hay otras unidades.
 						</p>
 					</section>
 

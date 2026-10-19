@@ -40,7 +40,7 @@ async function world(page, { pantalla = { volume: 0, voice: 'off' }, servicioNam
 	const servicio = await call(page, 'POST', '/apps/totem/servicios', {
 		name: servicioName ? servicioName(run) : `Farmacia ${run}`, prefix, color: '#0b6e69', opens: '00:00', closes: '23:59', dailyQuota: null,
 	})
-	const box = await call(page, 'POST', '/apps/totem/boxes', { name: boxName ?? `Box ${run.slice(-3)}`, servicioIds: [servicio.id] })
+	const box = await call(page, 'POST', '/apps/totem/boxes', { name: boxName ?? `Ventanilla ${run.slice(-3)}`, servicioIds: [servicio.id] })
 	const screen = await call(page, 'POST', '/apps/totem/pantallas', { name: `Sala ${run}`, servicioIds: [servicio.id], ...pantalla })
 
 	return {

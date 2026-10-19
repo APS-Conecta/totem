@@ -2,11 +2,11 @@
 <template>
 	<div class="totem-grid">
 		<div class="totem-scroll">
-			<ListNotice plural="boxes" :failed="loadFailed" :empty="loaded && !boxes.length" />
+			<ListNotice plural="ventanillas" :failed="loadFailed" :empty="loaded && !boxes.length" />
 			<table class="totem-table">
 				<thead>
 					<tr>
-						<th>Box</th>
+						<th>Ventanilla</th>
 						<th>Atiende</th>
 					</tr>
 				</thead>
@@ -26,17 +26,17 @@
 		</div>
 		<form class="totem-form" @submit.prevent="save">
 			<NcButton type="button" variant="secondary" @click="startNew">
-				Nuevo box
+				Nueva ventanilla
 			</NcButton>
 			<NcTextField v-model="form.name" label="Nombre" maxlength="14" />
 			<ServicioChecks v-model="form.servicioIds" legend="Atiende" :servicios="servicios" />
 			<FormOutcome :error="error" :notice="notice" />
 			<NcButton type="submit" variant="primary">
-				Guardar box
+				Guardar ventanilla
 			</NcButton>
 			<ConfirmDelete v-if="form.id !== null"
 				:key="form.id"
-				label="Eliminar box"
+				label="Eliminar ventanilla"
 				:question="`¿Eliminar ${savedName}?`"
 				@confirm="remove" />
 		</form>
@@ -81,7 +81,7 @@ export default {
 			try {
 				stored = await admin.boxes.save(id, body)
 			} catch (error) {
-				this.error = await reasonFor(error, { gone: 'Este box ya no existe.', fallback: 'No se pudo guardar el box.' })
+				this.error = await reasonFor(error, { gone: 'Esta ventanilla ya no existe.', fallback: 'No se pudo guardar la ventanilla.' })
 				if (isGone(error)) await this.load()
 				return
 			}
@@ -106,12 +106,12 @@ export default {
 			try {
 				await admin.boxes.remove(this.form.id)
 			} catch (error) {
-				this.error = await reasonFor(error, { gone: 'Este box ya no existe.', fallback: 'No se pudo eliminar el box.' })
+				this.error = await reasonFor(error, { gone: 'Esta ventanilla ya no existe.', fallback: 'No se pudo eliminar la ventanilla.' })
 				if (isGone(error)) await this.load()
 				return
 			}
 			this.form = blankForm()
-			this.notice = 'Box eliminado.'
+			this.notice = 'Ventanilla eliminada.'
 			await this.load()
 		},
 		async load() {

@@ -42,7 +42,7 @@ class TurnoService {
 		$day = $this->today->day();
 
 		if (!$servicio->getActive()) {
-			throw new Refused('Este servicio no está disponible.');
+			throw new Refused('Esta unidad no está disponible.');
 		}
 		$time = $this->today->time();
 		if ($time < $servicio->getOpens() || $time > $servicio->getCloses()) {

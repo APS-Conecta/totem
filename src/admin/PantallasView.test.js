@@ -48,7 +48,7 @@ describe('PantallasView list', () => {
 
 		expect(wrapper.findAll('tbody tr').map((row) => row.findAll('td').map((cell) => cell.text()))).toEqual([
 			['Sala Farmacia', 'Farmacia', 'Volumen 60 %, voz de hombre'],
-			['Central', 'Todos los servicios', 'Volumen 100 %, voz de mujer'],
+			['Central', 'Todas las unidades', 'Volumen 100 %, voz de mujer'],
 			['Silenciosa', 'Farmacia, Toma de Muestras', 'Volumen 40 %, sin voz'],
 		])
 	})
@@ -59,7 +59,7 @@ describe('PantallasView form', () => {
 		const wrapper = await mountView()
 
 		expect(field(wrapper, 'Nombre').maxLength).toBe(32)
-		expect(wrapper.find('fieldset legend').text()).toBe('Servicios que muestra (ninguno marcado = todos)')
+		expect(wrapper.find('fieldset legend').text()).toBe('Unidades que muestra (ninguna marcada = todas)')
 		expect(field(wrapper, 'Farmacia').checked).toBe(false)
 		expect(field(wrapper, 'Toma de Muestras').checked).toBe(false)
 		const volume = field(wrapper, 'Volumen del aviso')

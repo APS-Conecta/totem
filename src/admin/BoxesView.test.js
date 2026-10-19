@@ -51,7 +51,7 @@ describe('BoxesView loading', () => {
 
 		const wrapper = await mountView()
 
-		expect(wrapper.find('[role="alert"]').text()).toBe('No se pudo cargar la lista de boxes.')
+		expect(wrapper.find('[role="alert"]').text()).toBe('No se pudo cargar la lista de ventanillas.')
 	})
 
 	it('invites the admin to create the first box when there are none', async () => {
@@ -59,7 +59,7 @@ describe('BoxesView loading', () => {
 
 		const wrapper = await mountView()
 
-		expect(wrapper.text()).toContain('Todavía no hay boxes. Complete el formulario para crear el primero.')
+		expect(wrapper.text()).toContain('Todavía no hay ventanillas. Complete el formulario para crear la primera.')
 	})
 })
 
@@ -73,7 +73,7 @@ describe('BoxesView form', () => {
 		expect(boxes).toHaveLength(2)
 		expect(field(wrapper, 'Farmacia').checked).toBe(false)
 		expect(field(wrapper, 'Toma de Muestras').checked).toBe(false)
-		expect(wrapper.find('button[type="submit"]').text()).toBe('Guardar box')
+		expect(wrapper.find('button[type="submit"]').text()).toBe('Guardar ventanilla')
 	})
 })
 
@@ -92,11 +92,11 @@ describe('BoxesView picking', () => {
 		expect(field(wrapper, 'Toma de Muestras').checked).toBe(true)
 	})
 
-	it('"Nuevo box" clears the form', async () => {
+	it('"Nueva ventanilla" clears the form', async () => {
 		const wrapper = await mountView()
 		await pick(wrapper, 'Box 3')
 
-		await wrapper.findAll('button').find((button) => button.text() === 'Nuevo box').trigger('click')
+		await wrapper.findAll('button').find((button) => button.text() === 'Nueva ventanilla').trigger('click')
 
 		expect(field(wrapper, 'Nombre').value).toBe('')
 		expect(field(wrapper, 'Farmacia').checked).toBe(false)
@@ -153,7 +153,7 @@ describe('BoxesView saving', () => {
 
 		await submit(wrapper)
 
-		expect(wrapper.find('[role="alert"]').text()).toBe('Este box ya no existe.')
+		expect(wrapper.find('[role="alert"]').text()).toBe('Esta ventanilla ya no existe.')
 		expect(admin.boxes.list).toHaveBeenCalledTimes(1)
 	})
 
@@ -172,13 +172,13 @@ describe('BoxesView saving', () => {
 describe('BoxesView deleting', () => {
 	const button = (wrapper, text) => wrapper.findAll('button').find((candidate) => candidate.text() === text)
 
-	it('offers "Eliminar box" only for a box that already exists', async () => {
+	it('offers "Eliminar ventanilla" only for a box that already exists', async () => {
 		const wrapper = await mountView()
-		expect(button(wrapper, 'Eliminar box')).toBeUndefined()
+		expect(button(wrapper, 'Eliminar ventanilla')).toBeUndefined()
 
 		await pick(wrapper, 'Box 3')
 
-		expect(button(wrapper, 'Eliminar box')).toBeDefined()
+		expect(button(wrapper, 'Eliminar ventanilla')).toBeDefined()
 	})
 
 	it('asks inline first, with a question, "Sí, eliminar" and "Cancelar", and deletes nothing yet', async () => {
@@ -186,7 +186,7 @@ describe('BoxesView deleting', () => {
 		const wrapper = await mountView()
 		await pick(wrapper, 'Box 3')
 
-		await button(wrapper, 'Eliminar box').trigger('click')
+		await button(wrapper, 'Eliminar ventanilla').trigger('click')
 
 		expect(wrapper.text()).toContain('¿Eliminar Box 3?')
 		expect(button(wrapper, 'Sí, eliminar')).toBeDefined()
@@ -195,15 +195,15 @@ describe('BoxesView deleting', () => {
 		expect(confirm).not.toHaveBeenCalled()
 	})
 
-	it('goes back to "Eliminar box" on "Cancelar", deleting nothing', async () => {
+	it('goes back to "Eliminar ventanilla" on "Cancelar", deleting nothing', async () => {
 		const wrapper = await mountView()
 		await pick(wrapper, 'Box 3')
-		await button(wrapper, 'Eliminar box').trigger('click')
+		await button(wrapper, 'Eliminar ventanilla').trigger('click')
 
 		await button(wrapper, 'Cancelar').trigger('click')
 
 		expect(wrapper.text()).not.toContain('¿Eliminar Box 3?')
-		expect(button(wrapper, 'Eliminar box')).toBeDefined()
+		expect(button(wrapper, 'Eliminar ventanilla')).toBeDefined()
 		expect(admin.boxes.remove).not.toHaveBeenCalled()
 	})
 
@@ -212,7 +212,7 @@ describe('BoxesView deleting', () => {
 		await pick(wrapper, 'Box 3')
 		await wrapper.find('input[maxlength="14"]').setValue('Otro nombre')
 
-		await button(wrapper, 'Eliminar box').trigger('click')
+		await button(wrapper, 'Eliminar ventanilla').trigger('click')
 
 		expect(wrapper.text()).toContain('¿Eliminar Box 3?')
 	})
@@ -221,7 +221,7 @@ describe('BoxesView deleting', () => {
 		const wrapper = await mountView()
 		await pick(wrapper, 'Box 3')
 
-		await button(wrapper, 'Eliminar box').trigger('click')
+		await button(wrapper, 'Eliminar ventanilla').trigger('click')
 		await flushPromises()
 
 		expect(document.activeElement.textContent.trim()).toBe('Cancelar')
@@ -229,7 +229,7 @@ describe('BoxesView deleting', () => {
 
 	async function confirmDeletion(wrapper) {
 		await pick(wrapper, 'Box 3')
-		await button(wrapper, 'Eliminar box').trigger('click')
+		await button(wrapper, 'Eliminar ventanilla').trigger('click')
 		await button(wrapper, 'Sí, eliminar').trigger('click')
 		await flushPromises()
 	}
@@ -244,8 +244,8 @@ describe('BoxesView deleting', () => {
 		expect(admin.boxes.remove).toHaveBeenCalledWith(30)
 		expect(wrapper.findAll('tbody tr')).toHaveLength(1)
 		expect(field(wrapper, 'Nombre').value).toBe('')
-		expect(button(wrapper, 'Eliminar box')).toBeUndefined()
-		expect(wrapper.find('[role="status"]').text()).toBe('Box eliminado.')
+		expect(button(wrapper, 'Eliminar ventanilla')).toBeUndefined()
+		expect(wrapper.find('[role="status"]').text()).toBe('Ventanilla eliminada.')
 	})
 
 	it('shows the sentence when the server refuses the delete (a box in use)', async () => {
@@ -265,7 +265,7 @@ describe('BoxesView deleting', () => {
 
 		await confirmDeletion(wrapper)
 
-		expect(wrapper.find('[role="alert"]').text()).toBe('Este box ya no existe.')
+		expect(wrapper.find('[role="alert"]').text()).toBe('Esta ventanilla ya no existe.')
 		expect(admin.boxes.list).toHaveBeenCalledTimes(1)
 	})
 })

@@ -133,12 +133,12 @@ describe('the tables', () => {
 
 	it('lists the other servicios apart, marking one that is switched off', async () => {
 		await open()
-		const servicios = tableOf('Tickets por servicio')
+		const servicios = tableOf('Tickets por unidad')
 		expect(bodyRows(servicios)).toEqual([
 			['Farmacia', '24', '1.200', '1.224', '1.214', '6', '4'],
 			['Dental desactivado', '1', '2', '3', '3', '0', '0'],
 		])
-		expect(cells(servicios.find('tfoot tr'))[0]).toBe('Total otros servicios')
+		expect(cells(servicios.find('tfoot tr'))[0]).toBe('Total otras unidades')
 	})
 
 	it('shows each row with its servicio colour', async () => {
@@ -166,7 +166,7 @@ describe('the tables', () => {
 	it('says so when no servicio is marked as a sector', async () => {
 		stats.board.mockResolvedValue({ ...WEEK, sectores: block([]) })
 		await open()
-		expect(wrapper.text()).toContain('Ningún servicio está marcado como sector. Márquelo en Administración')
+		expect(wrapper.text()).toContain('Ninguna unidad está marcada como sector. Márquela en Configuración')
 		expect(tableOf('Tickets por sector')).toBeUndefined()
 	})
 

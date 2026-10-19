@@ -41,14 +41,14 @@ describe('the menu', () => {
 		const groups = wrapper.findAll('ul[aria-labelledby]')
 		expect(groups.map((g) => document.getElementById(g.attributes('aria-labelledby')).textContent.trim())).toEqual(['Operación', 'Configuración'])
 		expect(groups.map((g) => g.findAll('.app-navigation-entry').map((e) => e.text()))).toEqual([
-			['Box', 'Estadísticas'],
-			['Servicios', 'Boxes', 'Pantallas'],
+			['Ventanilla', 'Estadísticas'],
+			['Unidades', 'Ventanillas', 'Pantallas'],
 		])
 	})
 
 	it('is the same for everybody: configuration is there without any admin flag', () => {
 		open()
-		expect(item('Servicios')).toBeDefined()
+		expect(item('Unidades')).toBeDefined()
 		expect(item('Pantallas')).toBeDefined()
 	})
 
@@ -66,7 +66,7 @@ describe('the menu entries', () => {
 	it('are real links to the address of their section, so they can be opened in a new tab', () => {
 		open()
 
-		expect(['Box', 'Estadísticas', 'Servicios', 'Boxes', 'Pantallas'].map((name) => link(name).attributes('href'))).toEqual([
+		expect(['Ventanilla', 'Estadísticas', 'Unidades', 'Ventanillas', 'Pantallas'].map((name) => link(name).attributes('href'))).toEqual([
 			'/index.php/apps/totem/box',
 			'/index.php/apps/totem/estadisticas',
 			'/index.php/apps/totem/admin#servicios',
@@ -105,7 +105,7 @@ describe('the section showing', () => {
 		open('estadisticas', '/index.php/apps/totem/estadisticas')
 
 		expect(link('Estadísticas').attributes('aria-current')).toBe('page')
-		expect(link('Box').attributes('aria-current')).toBeUndefined()
+		expect(link('Ventanilla').attributes('aria-current')).toBeUndefined()
 	})
 
 	it('opens the configuration section the address names after the #', () => {
@@ -132,13 +132,13 @@ describe('moving between sections', () => {
 		expect(showing()).toBe('estadisticas')
 		expect(window.location.pathname).toBe('/index.php/apps/totem/estadisticas')
 		expect(link('Estadísticas').attributes('aria-current')).toBe('page')
-		expect(link('Box').attributes('aria-current')).toBeUndefined()
+		expect(link('Ventanilla').attributes('aria-current')).toBeUndefined()
 	})
 
 	it('gives each configuration section its own # on the shared address', async () => {
 		open()
 
-		await link('Boxes').trigger('click')
+		await link('Ventanillas').trigger('click')
 
 		expect(window.location.pathname + window.location.hash).toBe('/index.php/apps/totem/admin#boxes')
 		expect(showing()).toBe('boxes')
@@ -147,7 +147,7 @@ describe('moving between sections', () => {
 	it('follows the back button to the section before', async () => {
 		open()
 		await link('Estadísticas').trigger('click')
-		await link('Servicios').trigger('click')
+		await link('Unidades').trigger('click')
 
 		window.history.back()
 		await vi.waitFor(() => expect(showing()).toBe('estadisticas'))

@@ -34,8 +34,8 @@ describe('ServiciosView list', () => {
 
 		const rows = wrapper.findAll('tbody tr')
 		expect(rows.map((row) => row.findAll('td').map((cell) => cell.text()))).toEqual([
-			['Farmacia', 'FAR', '07:30–16:30', 'Sin límite', 'Activo', 'Servicio'],
-			['Toma de Muestras', 'MUE', '07:30–10:30', '80', 'Inactivo', 'Servicio'],
+			['Farmacia', 'FAR', '07:30–16:30', 'Sin límite', 'Activa', 'Unidad'],
+			['Toma de Muestras', 'MUE', '07:30–10:30', '80', 'Inactiva', 'Unidad'],
 		])
 	})
 
@@ -44,7 +44,7 @@ describe('ServiciosView list', () => {
 
 		const wrapper = await mountView()
 
-		expect(wrapper.findAll('tbody tr').map((row) => row.findAll('td').at(-1).text())).toEqual(['Servicio', 'Sector'])
+		expect(wrapper.findAll('tbody tr').map((row) => row.findAll('td').at(-1).text())).toEqual(['Unidad', 'Sector'])
 	})
 })
 
@@ -55,7 +55,7 @@ describe('ServiciosView loading', () => {
 
 		const wrapper = await mountView()
 
-		expect(wrapper.find('[role="alert"]').text()).toBe('No se pudo cargar la lista de servicios.')
+		expect(wrapper.find('[role="alert"]').text()).toBe('No se pudo cargar la lista de unidades.')
 	})
 
 	it('invites the admin to create the first servicio when there are none', async () => {
@@ -63,7 +63,7 @@ describe('ServiciosView loading', () => {
 
 		const wrapper = await mountView()
 
-		expect(wrapper.text()).toContain('Todavía no hay servicios. Complete el formulario para crear el primero.')
+		expect(wrapper.text()).toContain('Todavía no hay unidades. Complete el formulario para crear la primera.')
 	})
 })
 
@@ -77,7 +77,7 @@ describe('ServiciosView form', () => {
 		expect(field(wrapper, 'Abre').type).toBe('time')
 		expect(field(wrapper, 'Cierra').type).toBe('time')
 		expect(field(wrapper, 'Color').type).toBe('color')
-		expect(wrapper.find('button[type="submit"]').text()).toBe('Guardar servicio')
+		expect(wrapper.find('button[type="submit"]').text()).toBe('Guardar unidad')
 	})
 
 	it('offers "Es un sector", off for a new servicio', async () => {
@@ -127,31 +127,31 @@ describe('ServiciosView picking', () => {
 		expect(field(wrapper, 'Abre').value).toBe('07:30')
 		expect(field(wrapper, 'Cierra').value).toBe('10:30')
 		expect(field(wrapper, 'Color').value).toBe('#7a3e9d')
-		expect(field(wrapper, 'Activo').checked).toBe(false)
+		expect(field(wrapper, 'Activa').checked).toBe(false)
 		expect(field(wrapper, 'Es un sector').checked).toBe(false)
 	})
 
-	it('loads a sector with "Es un sector" on, and "Nuevo servicio" turns it off again', async () => {
+	it('loads a sector with "Es un sector" on, and "Nueva unidad" turns it off again', async () => {
 		admin.servicios.list.mockResolvedValue([FARMACIA, AZUL])
 		const wrapper = await mountView()
 
 		await pick(wrapper, 'Sector Azul')
 		expect(field(wrapper, 'Es un sector').checked).toBe(true)
 
-		await wrapper.findAll('button').find((button) => button.text() === 'Nuevo servicio').trigger('click')
+		await wrapper.findAll('button').find((button) => button.text() === 'Nueva unidad').trigger('click')
 		expect(field(wrapper, 'Es un sector').checked).toBe(false)
 	})
 
-	it('"Nuevo servicio" clears the form back to a new one, active by default', async () => {
+	it('"Nueva unidad" clears the form back to a new one, active by default', async () => {
 		const wrapper = await mountView()
 		await pick(wrapper, 'Toma de Muestras')
 
-		await wrapper.findAll('button').find((button) => button.text() === 'Nuevo servicio').trigger('click')
+		await wrapper.findAll('button').find((button) => button.text() === 'Nueva unidad').trigger('click')
 
 		expect(field(wrapper, 'Nombre').value).toBe('')
 		expect(field(wrapper, 'Prefijo').value).toBe('')
 		expect(field(wrapper, 'Cupo diario').value).toBe('')
-		expect(field(wrapper, 'Activo').checked).toBe(true)
+		expect(field(wrapper, 'Activa').checked).toBe(true)
 	})
 })
 
@@ -213,12 +213,12 @@ describe('ServiciosView saving', () => {
 	})
 
 	it('shows the sentence of a refusal next to the form and does not claim it saved', async () => {
-		admin.servicios.save.mockRejectedValue({ response: { status: 422, data: { message: 'Ya existe un servicio con el prefijo FAR.' } } })
+		admin.servicios.save.mockRejectedValue({ response: { status: 422, data: { message: 'Ya existe una unidad con el prefijo FAR.' } } })
 		const wrapper = await mountView()
 
 		await submit(wrapper)
 
-		expect(wrapper.find('[role="alert"]').text()).toBe('Ya existe un servicio con el prefijo FAR.')
+		expect(wrapper.find('[role="alert"]').text()).toBe('Ya existe una unidad con el prefijo FAR.')
 		expect(wrapper.text()).not.toContain('Guardado.')
 	})
 
@@ -230,7 +230,7 @@ describe('ServiciosView saving', () => {
 
 		await submit(wrapper)
 
-		expect(wrapper.find('[role="alert"]').text()).toBe('Este servicio ya no existe.')
+		expect(wrapper.find('[role="alert"]').text()).toBe('Esta unidad ya no existe.')
 		expect(admin.servicios.list).toHaveBeenCalledTimes(1)
 	})
 

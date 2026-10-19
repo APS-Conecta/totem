@@ -5,10 +5,10 @@ import { GROUPS, SECTIONS } from './sections.js'
 describe('the sections of the staff app', () => {
 	it('are the five a staff member uses, in the order the menu shows them', () => {
 		expect(SECTIONS.map((s) => [s.group, s.id, s.name])).toEqual([
-			['Operación', 'box', 'Box'],
+			['Operación', 'box', 'Ventanilla'],
 			['Operación', 'estadisticas', 'Estadísticas'],
-			['Configuración', 'servicios', 'Servicios'],
-			['Configuración', 'boxes', 'Boxes'],
+			['Configuración', 'servicios', 'Unidades'],
+			['Configuración', 'boxes', 'Ventanillas'],
 			['Configuración', 'pantallas', 'Pantallas'],
 		])
 	})

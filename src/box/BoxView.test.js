@@ -55,9 +55,9 @@ describe('the box picker', () => {
 	it('offers the boxes in a labeled select with a placeholder', async () => {
 		await open()
 		const select = wrapper.find('select')
-		expect(wrapper.find('label[for="' + select.attributes('id') + '"]').text()).toBe('Box')
+		expect(wrapper.find('label[for="' + select.attributes('id') + '"]').text()).toBe('Ventanilla')
 		const options = select.findAll('option').map((o) => o.text())
-		expect(options).toEqual(['Elija su box', 'Box 3', 'Box 4'])
+		expect(options).toEqual(['Elija su ventanilla', 'Box 3', 'Box 4'])
 	})
 })
 
@@ -67,7 +67,7 @@ const idle = (extra = {}) => ({
 	current: null,
 	waiting: [],
 	next: null,
-	why: 'No hay turnos en espera en los servicios de este box.',
+	why: 'No hay turnos en espera en las unidades de esta ventanilla.',
 	...extra,
 })
 
@@ -145,11 +145,11 @@ describe('restoring the remembered box', () => {
 
 const button = (name) => wrapper.findAll('button').find((b) => b.text() === name)
 
-describe('Cambiar box', () => {
+describe('Cambiar ventanilla', () => {
 	it('returns to the picker and stops reading the state', async () => {
 		box.state.mockResolvedValue(idle())
 		await choose()
-		await button('Cambiar box').trigger('click')
+		await button('Cambiar ventanilla').trigger('click')
 		expect(wrapper.find('select').exists()).toBe(true)
 		const calls = box.state.mock.calls.length
 		await vi.advanceTimersByTimeAsync(9000)
@@ -402,7 +402,7 @@ describe('leaving a box', () => {
 		await choose()
 		await button('Llamar siguiente').trigger('click')
 		await settle()
-		await button('Cambiar box').trigger('click')
+		await button('Cambiar ventanilla').trigger('click')
 		await wrapper.find('select').findAll('option').find((o) => o.text() === 'Box 4').setSelected()
 		await settle()
 		expect(wrapper.find('[role="alert"]').exists()).toBe(false)
@@ -413,7 +413,7 @@ describe('when the list of boxes cannot be read', () => {
 	it('says so instead of showing an empty picker silently', async () => {
 		box.boxes.mockRejectedValue(new Error('Network Error'))
 		await open()
-		expect(wrapper.find('[role="alert"]').text()).toBe('No se pudo cargar la lista de boxes. Recargue la página.')
+		expect(wrapper.find('[role="alert"]').text()).toBe('No se pudo cargar la lista de ventanillas. Recargue la página.')
 	})
 })
 
@@ -424,7 +424,7 @@ describe('changing box while a request is in flight', () => {
 		box.act.mockReturnValue(new Promise((resolve) => { answer = resolve }))
 		await choose()
 		await button('Llamar siguiente').trigger('click')
-		await button('Cambiar box').trigger('click')
+		await button('Cambiar ventanilla').trigger('click')
 		box.state.mockResolvedValue(idle({ box: STATE_BOXES[1], why: 'Nada en espera en Box 4.' }))
 		await wrapper.find('select').findAll('option').find((o) => o.text() === 'Box 4').setSelected()
 		await settle()

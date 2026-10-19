@@ -19,7 +19,7 @@ use APS\Common\Csv;
  * spreadsheet formulas. Depends on no OCP class.
  */
 class StatsCsv {
-	private const HEADING = ['Fecha', 'Bloque', 'Servicio', 'Atención', 'Emitidos', 'Atendidos', 'No se presentó', 'Sin atender'];
+	private const HEADING = ['Fecha', 'Bloque', 'Unidad', 'Atención', 'Emitidos', 'Atendidos', 'No se presentó', 'Sin atender'];
 
 	/**
 	 * @param list<array{day: string, servicio_id: int, preferente: bool, emitidos: int, atendidos: int, noShow: int, sinAtender: int}> $cells see Tally::cells()
@@ -32,7 +32,7 @@ class StatsCsv {
 			$servicio = $byId[$cell['servicio_id']];
 			$lines[] = self::line([
 				$cell['day'],
-				$servicio['isSector'] ? 'Sector' : 'Servicio',
+				$servicio['isSector'] ? 'Sector' : 'Unidad',
 				Csv::text($servicio['name']),
 				$cell['preferente'] ? 'Preferente' : 'General',
 				(string)$cell['emitidos'],

@@ -11,7 +11,7 @@ use OCA\Totem\Service\StatsCsv;
 use PHPUnit\Framework\TestCase;
 
 class StatsCsvTest extends TestCase {
-	private const HEADING = 'Fecha;Bloque;Servicio;Atención;Emitidos;Atendidos;No se presentó;Sin atender';
+	private const HEADING = 'Fecha;Bloque;Unidad;Atención;Emitidos;Atendidos;No se presentó;Sin atender';
 
 	/** @return array{id: int, name: string, prefix: string, color: string, isSector: bool, active: bool} */
 	private function servicio(int $id, string $name, bool $isSector = false): array {
@@ -44,7 +44,7 @@ class StatsCsvTest extends TestCase {
 		$this->assertSame([
 			self::HEADING,
 			'2026-10-19;Sector;Sector Azul;Preferente;3;2;1;0',
-			'2026-10-19;Servicio;Farmacia;General;5;5;0;0',
+			'2026-10-19;Unidad;Farmacia;General;5;5;0;0',
 		], $this->lines($csv));
 	}
 
@@ -54,7 +54,7 @@ class StatsCsvTest extends TestCase {
 			[$this->servicio(1, 'Box "A"; sala')],
 		);
 
-		$this->assertSame('2026-10-19;Servicio;"Box ""A""; sala";General;1;1;0;0', $this->lines($csv)[1]);
+		$this->assertSame('2026-10-19;Unidad;"Box ""A""; sala";General;1;1;0;0', $this->lines($csv)[1]);
 	}
 
 	public function testANameASpreadsheetWouldRunAsAFormulaIsDefused(): void {

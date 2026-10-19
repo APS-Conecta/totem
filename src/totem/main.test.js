@@ -21,7 +21,7 @@ describe('the totem entry', () => {
 
 		const mount = document.getElementById('totem-totem')
 		expect(mount.textContent).not.toContain('la aplicación no pudo cargar')
-		expect(mount.textContent).toContain('¿A qué servicio viene?')
+		expect(mount.textContent).toContain('¿A qué unidad viene?')
 		expect(mount.textContent).toContain('Farmacia')
 	})
 })

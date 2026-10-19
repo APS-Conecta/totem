@@ -10,10 +10,10 @@ const engine = (name, { available = true, fails = false } = {}) => ({
 describe('speak', () => {
 	it('says the phrase twice, because a room is noisy and a voice is gone once spoken', async () => {
 		const piper = engine('piper')
-		await speak('Turno Farmacia, preferente 12. Diríjase al Box 2.', { engines: [piper], volume: 100, pauseMs: 0 })
+		await speak('Turno Farmacia, preferente 12. Diríjase a Ventanilla 2.', { engines: [piper], volume: 100, pauseMs: 0 })
 
 		expect(piper.say).toHaveBeenCalledTimes(2)
-		expect(piper.say).toHaveBeenCalledWith('Turno Farmacia, preferente 12. Diríjase al Box 2.', 100)
+		expect(piper.say).toHaveBeenCalledWith('Turno Farmacia, preferente 12. Diríjase a Ventanilla 2.', 100)
 	})
 
 	it('falls back to the next engine when the first is unavailable', async () => {

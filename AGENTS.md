@@ -5,7 +5,7 @@ Turnos de atención para CESFAM, CECOSF y SAPU, a Nextcloud app: the patient tak
 ## Working rules
 
 - **TDD, no exceptions:** no production code without a failing test first. Watch each test fail for the right reason, write the minimum, run the whole suite. The walking skeleton `e2e/walking-skeleton.spec.js` stays red until slice 1 is complete.
-- **Names:** code is English, but a domain term keeps the spelling `CONTEXT.md` gives it (`Servicio`, `Turno`, `Llamado`, `Pantalla`, `Box`, `Estado`). Rename an existing name only inside code a change already touches, and never a table, column, route or controller action.
+- **Names:** code is English, but a domain term keeps the spelling `CONTEXT.md` gives it (`Servicio`, `Turno`, `Llamado`, `Pantalla`, `Box`, `Estado`). Rename an existing name only inside code a change already touches, and never a table, column, route or controller action. **On screen a Servicio is a _Unidad_ and a Box is a _Ventanilla_** (feminine: "Nueva unidad", "Esta ventanilla"); the code keeps Servicio and Box.
 - **Threat model:** read `docs/threat-model.md` before any security work.
 - **Gate before opening a PR:** `git clone --depth 1 https://github.com/APS-Conecta/aps-common.git ../aps-common` if it is missing; `make aps-drift`; `npm ci`; `npm run lint-js`; `npm test`; `npm run build`, then `git diff --exit-code js/`; `make test`; `make instance-up && make test-integration && make e2e`, then `make instance-clean`. A step you could not run is named in the PR, never reported as passed.
 - **`src/` changed → `npm run build`** and commit the regenerated `js/totem-*.js` in the same PR. Never commit `*.js.map` or `node_modules/`.

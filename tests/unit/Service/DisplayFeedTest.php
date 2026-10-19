@@ -108,7 +108,7 @@ class DisplayFeedTest extends TestCase {
 		$this->assertSame([[
 			'id' => 21,
 			'label' => 'FAR-P-012',
-			'spoken' => 'Turno Farmacia, preferente 12. Diríjase al Box 2.',
+			'spoken' => 'Turno Farmacia, preferente 12. Diríjase a Box 2.',
 			'servicio' => 'Farmacia',
 			'color' => '#0b6e69',
 			'preferente' => true,

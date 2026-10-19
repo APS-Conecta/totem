@@ -64,7 +64,7 @@ class BoxService {
 	public function delete(int $id): void {
 		$box = $this->boxes->find($id);
 		if ($this->turnos->findActiveForBox($id, $this->today->day()) !== null) {
-			throw new Refused('Este box tiene un turno en curso.');
+			throw new Refused('Esta ventanilla tiene un turno en curso.');
 		}
 		$this->boxes->delete($box);
 		$this->links->replace(ServicioLinks::BOX, $id, []);
@@ -78,7 +78,7 @@ class BoxService {
 		$name = Fields::text($data['name'] ?? '', 'El nombre', 14);
 		$servicioIds = Fields::ids($data['servicioIds'] ?? []);
 		if ($servicioIds === []) {
-			throw new Refused('Elija al menos un servicio para el box.');
+			throw new Refused('Elija al menos una unidad para la ventanilla.');
 		}
 		$this->assertServiciosExist($servicioIds);
 

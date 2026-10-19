@@ -83,7 +83,7 @@ class PantallaServiceTest extends TestCase {
 		$this->servicios->method('find')->willThrowException(new DoesNotExistException('x'));
 
 		$this->expectException(Refused::class);
-		$this->expectExceptionMessage('Algún servicio elegido ya no existe.');
+		$this->expectExceptionMessage('Alguna unidad elegida ya no existe.');
 		$this->service->create(['name' => 'Sala', 'volume' => 100, 'voice' => 'mujer', 'servicioIds' => [99]]);
 	}
 

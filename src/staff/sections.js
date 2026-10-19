@@ -6,9 +6,9 @@
 export const GROUPS = ['Operación', 'Configuración']
 
 export const SECTIONS = [
-	{ id: 'box', group: 'Operación', name: 'Box' },
+	{ id: 'box', group: 'Operación', name: 'Ventanilla' },
 	{ id: 'estadisticas', group: 'Operación', name: 'Estadísticas' },
-	{ id: 'servicios', group: 'Configuración', name: 'Servicios' },
-	{ id: 'boxes', group: 'Configuración', name: 'Boxes' },
+	{ id: 'servicios', group: 'Configuración', name: 'Unidades' },
+	{ id: 'boxes', group: 'Configuración', name: 'Ventanillas' },
 	{ id: 'pantallas', group: 'Configuración', name: 'Pantallas' },
 ]

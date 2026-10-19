@@ -3,7 +3,6 @@
 	<div class="totem-grid">
 		<div class="totem-scroll">
 			<ListNotice plural="pantallas"
-				feminine
 				:failed="loadFailed"
 				:empty="loaded && !pantallas.length" />
 			<table class="totem-table">
@@ -23,7 +22,7 @@
 								{{ pantalla.name }}
 							</NcButton>
 						</td>
-						<td>{{ pantalla.servicioIds.length ? namesOf(pantalla.servicioIds) : 'Todos los servicios' }}</td>
+						<td>{{ pantalla.servicioIds.length ? namesOf(pantalla.servicioIds) : 'Todas las unidades' }}</td>
 						<td>Volumen {{ pantalla.volume }} %, {{ VOICE_SUMMARY[pantalla.voice] }}</td>
 					</tr>
 				</tbody>
@@ -35,7 +34,7 @@
 			</NcButton>
 			<NcTextField v-model="form.name" label="Nombre" maxlength="32" />
 			<ServicioChecks v-model="form.servicioIds"
-				legend="Servicios que muestra (ninguno marcado = todos)"
+				legend="Unidades que muestra (ninguna marcada = todas)"
 				:servicios="servicios" />
 			<label class="totem-label">
 				<span>Volumen del aviso: <b>{{ form.volume }} %</b></span>

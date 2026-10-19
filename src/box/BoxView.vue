@@ -8,10 +8,10 @@
 				</NcNoteCard>
 
 				<div v-if="!chosen" class="totem-box__picker">
-					<label for="totem-box-select">Box</label>
+					<label for="totem-box-select">Ventanilla</label>
 					<select id="totem-box-select" class="totem-box__select" @change="pick($event.target.value)">
 						<option value="">
-							Elija su box
+							Elija su ventanilla
 						</option>
 						<option v-for="b in boxes" :key="b.id" :value="b.id">
 							{{ b.name }}
@@ -29,7 +29,7 @@
 							<div class="totem-box__who">
 								<span>{{ chosen.name }}<template v-if="view"> · {{ view.box.servicios.join(', ') }}</template></span>
 								<NcButton class="totem-box__change" @click="change">
-									Cambiar box
+									Cambiar ventanilla
 								</NcButton>
 							</div>
 
@@ -138,7 +138,7 @@ export default {
 			this.boxes = await box.boxes()
 		} catch (exception) {
 			warnError('box list failed', exception)
-			this.error = 'No se pudo cargar la lista de boxes. Recargue la página.'
+			this.error = 'No se pudo cargar la lista de ventanillas. Recargue la página.'
 			return
 		}
 		const stored = this.boxes.find((b) => String(b.id) === remembered())

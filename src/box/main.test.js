@@ -13,5 +13,5 @@ it('replaces the fallback line in #totem-box with the console', async () => {
 	await import('./main.js')
 	const mount = document.getElementById('totem-box')
 	expect(mount.textContent).not.toContain('Si este mensaje no desaparece')
-	expect(mount.textContent).toContain('Elija su box')
+	expect(mount.textContent).toContain('Elija su ventanilla')
 })
