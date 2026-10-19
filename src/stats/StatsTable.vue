@@ -48,7 +48,7 @@
 						<NcButton v-else
 							variant="tertiary"
 							alignment="start"
-							:pressed="row.key === selectedKey"
+							:aria-pressed="String(row.key === selectedKey)"
 							@click="$emit('select', row.key)">
 							<template v-if="row.color" #icon>
 								<span class="totem-stats__dot" :style="{ background: row.color }" aria-hidden="true" />

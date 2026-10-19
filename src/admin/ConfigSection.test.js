@@ -30,6 +30,15 @@ describe('a configuration section', () => {
 		expect(wrapper.find('.totem-pane__titles p').text()).toBe('Las unidades del CESFAM.')
 	})
 
+	it('gives the list its width back while the sidebar is open', async () => {
+		section()
+		expect(wrapper.find('.totem-pane').classes()).not.toContain('totem-pane--docked')
+
+		await wrapper.setProps({ editing: true })
+
+		expect(wrapper.find('.totem-pane').classes()).toContain('totem-pane--docked')
+	})
+
 	it('shows the list, and asks for a new record with one primary button', async () => {
 		section()
 
@@ -58,6 +67,12 @@ describe('the sidebar of a configuration section', () => {
 		expect(aside.find('h2').text()).toBe('Farmacia')
 		expect(aside.text()).toContain('Editar unidad')
 		expect(aside.find('#the-form').exists()).toBe(true)
+	})
+
+	it('pads the form away from the edges of the sidebar', () => {
+		section({ editing: true, sidebarName: 'Farmacia' })
+
+		expect(wrapper.find('aside .totem-side #the-form').exists()).toBe(true)
 	})
 
 	it('asks to close from its own close button', async () => {

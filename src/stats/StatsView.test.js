@@ -224,6 +224,14 @@ describe('the detail in the sidebar', () => {
 		])
 	})
 
+	it('pads its content away from the edges of the sidebar', async () => {
+		await open()
+
+		await pick('Sector Azul')
+
+		expect(sidebar().find('.totem-side').exists()).toBe(true)
+	})
+
 	it('shows the split of a day when a day is picked', async () => {
 		await open()
 

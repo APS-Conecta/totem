@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <template>
 	<NcAppContent>
-		<div class="totem-pane">
+		<div class="totem-pane" :class="{ 'totem-pane--docked': editing }">
 			<PaneHeader :title="title" :subtitle="subtitle">
 				<template #actions>
 					<NcButton variant="primary" @click="$emit('new')">
@@ -18,7 +18,9 @@
 		:name="sidebarName"
 		:subname="sidebarSubname"
 		@close="$emit('close')">
-		<slot name="form" />
+		<div class="totem-side">
+			<slot name="form" />
+		</div>
 	</NcAppSidebar>
 </template>
 

@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <template>
-	<div class="totem-detail">
+	<div class="totem-detail totem-side">
 		<table class="totem-detail__table">
 			<caption class="totem-detail__sr">
 				Detalle

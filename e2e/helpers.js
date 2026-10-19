@@ -4,10 +4,10 @@
 // endpoints with the session's request token, and build (and tear down) a small world of one
 // servicio, one box and one pantalla with names that cannot collide with an earlier run.
 
-async function login(page) {
+async function login(page, user = 'admin', password = 'admin') {
 	await page.goto('/login')
-	await page.fill('input[name=user]', 'admin')
-	await page.fill('input[name=password]', 'admin')
+	await page.fill('input[name=user]', user)
+	await page.fill('input[name=password]', password)
 	await page.click('button[type=submit]')
 	await page.waitForURL(/\/apps\//)
 	// A fresh instance shows its admin a modal wizard (`make instance-up` disables it; this covers others).

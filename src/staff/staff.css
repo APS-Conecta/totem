@@ -12,6 +12,7 @@
 	max-width: 1100px;
 	margin-inline: auto;
 	padding: calc(var(--default-grid-baseline) * 6) calc(var(--default-grid-baseline) * 8) calc(var(--default-grid-baseline) * 10);
+	padding-inline-start: calc(var(--default-clickable-area) + var(--default-grid-baseline) * 4);
 	display: flex;
 	flex-direction: column;
 	gap: calc(var(--default-grid-baseline) * 6);
@@ -19,13 +20,24 @@
 	color: var(--color-main-text);
 }
 
-/* Nextcloud floats the navigation toggle over the content below this width: keep clear of it. */
+/* Nextcloud floats its navigation toggle over the top-left corner of the content, at every width: the
+   padding-inline-start above keeps the title clear of it. On a narrow screen the rest tightens. */
 @media (max-width: 1024px) {
 	.totem-pane {
-		padding-inline: calc(var(--default-grid-baseline) * 4);
-		padding-inline-start: calc(var(--default-clickable-area) + var(--default-grid-baseline) * 4);
+		padding-inline-end: calc(var(--default-grid-baseline) * 4);
 		padding-block: calc(var(--default-grid-baseline) * 4) calc(var(--default-grid-baseline) * 8);
 	}
+}
+
+/* While a sidebar is open beside the list, the list gets its width back. */
+.totem-pane--docked {
+	padding-inline-end: calc(var(--default-grid-baseline) * 4);
+}
+
+/* The content of a sidebar, away from its edges. */
+.totem-side {
+	box-sizing: border-box;
+	padding: 0 calc(var(--default-grid-baseline) * 4) calc(var(--default-grid-baseline) * 6);
 }
 
 .totem-pane__head {
@@ -106,7 +118,7 @@
 
 .totem-table th,
 .totem-table td {
-	padding: calc(var(--default-grid-baseline) * 2) calc(var(--default-grid-baseline) * 3);
+	padding: calc(var(--default-grid-baseline) * 2);
 	text-align: start;
 	border-bottom: 1px solid var(--color-border);
 }
@@ -186,9 +198,10 @@
 	border-radius: var(--border-radius-element);
 }
 
-.totem-input--color {
-	width: calc(var(--default-clickable-area) * 1.5);
-	padding: var(--default-grid-baseline);
+/* Nextcloud's own input rules are more specific than a single class: repeat the classes to win. */
+.totem-form input.totem-input.totem-input--color {
+	width: calc(var(--default-clickable-area) * 2);
+	padding: calc(var(--default-grid-baseline) * 0.5);
 }
 
 .totem-input--range {
@@ -273,4 +286,14 @@
 	display: flex;
 	flex-wrap: wrap;
 	gap: calc(var(--default-grid-baseline) * 2);
+}
+
+/*
+ * Nextcloud's standard control is 34px, right for a mouse. A thumb needs more: on a touch screen the whole
+ * staff app (every Nextcloud component reads this variable) switches to the platform's large size, 48px.
+ */
+@media (pointer: coarse) {
+	.totem-staff {
+		--default-clickable-area: var(--clickable-area-large);
+	}
 }

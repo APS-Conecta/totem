@@ -276,6 +276,11 @@ export default {
 	color: var(--color-text-maxcontrast);
 }
 
+.totem-box__meta > :last-child {
+	flex: 1 1 12em;
+	min-width: 0;
+}
+
 .totem-box__why {
 	margin: 0;
 	max-width: 60ch;

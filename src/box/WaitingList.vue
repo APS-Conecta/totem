@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <template>
-	<div class="totem-waiting">
+	<div class="totem-waiting totem-side">
 		<ul v-if="waiting.length" class="totem-waiting__rows">
 			<li v-for="turno in waiting"
 				:key="turno.id"

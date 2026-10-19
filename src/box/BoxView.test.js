@@ -378,6 +378,13 @@ describe('the sidebar', () => {
 		expect(sidebar().findAll('li')).toHaveLength(3)
 	})
 
+	it('pads its content away from the edges of the sidebar', async () => {
+		box.state.mockResolvedValue(state())
+		await choose()
+
+		expect(sidebar().find('.totem-side').exists()).toBe(true)
+	})
+
 	it('is not there before a ventanilla is chosen', async () => {
 		await open()
 

@@ -39,6 +39,19 @@ describe('the styles of the staff pages', () => {
 		expect(offenders).toEqual([])
 	})
 
+	it('give touch screens the large control size, and leave a mouse the platform default', () => {
+		const sheet = STYLES.find((style) => style.file === 'src/staff/staff.css').css
+
+		expect(sheet).toMatch(/@media \(pointer: coarse\)\s*\{\s*\.totem-staff\s*\{\s*--default-clickable-area:\s*var\(--clickable-area-large\);/)
+	})
+
+	it('keep the content clear of the navigation toggle Nextcloud floats over its top-left corner, at every width', () => {
+		const sheet = STYLES.find((style) => style.file === 'src/staff/staff.css').css
+		const pane = sheet.match(/\.totem-pane\s*\{[^}]*\}/)[0]
+
+		expect(pane).toMatch(/padding-inline-start:\s*calc\(var\(--default-clickable-area\)/)
+	})
+
 	it('use no literal colour: only Nextcloud variables', () => {
 		const offenders = STYLES.flatMap(({ file, css }) => [...css.matchAll(/#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/g)].map((m) => `${file}: ${m[0]}`))
 
