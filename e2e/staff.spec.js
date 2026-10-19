@@ -100,6 +100,8 @@ test.describe('configuration in the sidebar', () => {
 	})
 
 	test('is open to a logged-in user who is not an admin', async ({ browser, page }) => {
+		// Creating a user's first session and deleting the user afterwards are both slow in Nextcloud.
+		test.setTimeout(180_000)
 		await login(page)
 		const run = Date.now().toString(36)
 		const user = `staff-${run}`
@@ -121,6 +123,7 @@ test.describe('configuration in the sidebar', () => {
 		} finally {
 			await page.request.delete(`/ocs/v2.php/cloud/users/${user}`, {
 				headers: { 'OCS-APIRequest': 'true', Authorization: 'Basic ' + Buffer.from('admin:admin').toString('base64') },
+				timeout: 120_000,
 			})
 		}
 	})
