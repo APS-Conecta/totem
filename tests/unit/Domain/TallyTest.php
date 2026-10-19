@@ -110,6 +110,16 @@ class TallyTest extends TestCase {
 		$this->assertSame(['Farmacia', 'Vacunatorio'], array_column($with['servicios']['rows'], 'name'));
 	}
 
+	public function testARowSaysWhetherItsServicioIsStillActive(): void {
+		$board = Tally::fold(
+			[$this->row('2026-10-20', 2, false, 'completed', 1)],
+			[$this->servicio(1, 'Farmacia'), $this->servicio(2, 'Vacunatorio', false, false)],
+			self::DAYS,
+		);
+
+		$this->assertSame([true, false], array_column($board['servicios']['rows'], 'active'));
+	}
+
 	public function testRowsKeepTheOrderTheServiciosWereGivenIn(): void {
 		$board = Tally::fold([], [$this->servicio(2, 'Vacunatorio'), $this->servicio(1, 'Farmacia')], self::DAYS);
 

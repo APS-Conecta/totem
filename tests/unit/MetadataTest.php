@@ -64,7 +64,7 @@ class MetadataTest extends TestCase {
 	}
 
 	public function testEveryPageHasItsTemplateAndItsBundleEntry(): void {
-		foreach (['totem', 'display', 'box', 'admin'] as $page) {
+		foreach (['totem', 'display', 'box', 'admin', 'stats'] as $page) {
 			$this->assertFileExists(self::APP_DIR . "/templates/$page.php");
 			$this->assertFileExists(self::APP_DIR . "/src/$page/main.js", "webpack.config.js builds src/$page/main.js");
 		}

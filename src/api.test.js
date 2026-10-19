@@ -1,6 +1,6 @@
 import axios from '@nextcloud/axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { admin, issueTurno, publicServicios, readFeed, box } from './api.js'
+import { admin, issueTurno, publicServicios, readFeed, box, stats } from './api.js'
 
 vi.mock('@nextcloud/axios', () => ({ default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() } }))
 vi.mock('@nextcloud/router', () => ({ generateUrl: (path) => '/index.php' + path }))
@@ -39,6 +39,15 @@ describe('the client for the server', () => {
 
 	it('refuses an action the console does not have', () => {
 		expect(() => box.act(4, 'delete')).toThrow('Acción desconocida')
+	})
+
+	it('reads the statistics board for a kind of period and a day', async () => {
+		await stats.board('week', '2026-10-21')
+		expect(axios.get).toHaveBeenCalledWith('/index.php/apps/totem/stats', { params: { kind: 'week', date: '2026-10-21' } })
+	})
+
+	it('links the CSV download of the same period, as a plain URL', () => {
+		expect(stats.csvUrl('month', '2026-10-01')).toBe('/index.php/apps/totem/stats/csv?kind=month&date=2026-10-01')
 	})
 
 	it('saves servicios, boxes and pantallas through one shape', async () => {

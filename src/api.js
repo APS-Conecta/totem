@@ -30,6 +30,12 @@ export const box = {
 	},
 }
 
+/** The statistics board: any logged-in user. The CSV is a plain link, so the browser downloads it. */
+export const stats = {
+	board: (kind, date) => axios.get(url('/stats'), { params: { kind, date } }).then(data),
+	csvUrl: (kind, date) => url('/stats/csv') + '?' + new URLSearchParams({ kind, date }),
+}
+
 /** One shape for the three admin lists: save(null, body) creates, save(id, body) updates. */
 function resource(name, { deletable }) {
 	return {

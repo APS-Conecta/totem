@@ -52,6 +52,7 @@ final class Tally {
 				'name' => $servicio['name'],
 				'prefix' => $servicio['prefix'],
 				'color' => $servicio['color'],
+				'active' => $servicio['active'],
 			] + ($figure ?? self::emptyFigure());
 		}
 

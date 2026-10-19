@@ -62,7 +62,7 @@ class StatsService {
 		$servicios = $this->known();
 
 		return [
-			'filename' => sprintf('turnos-%s-%s.csv', self::FILE_KIND[$period->kind()], $period->from()),
+			'filename' => sprintf('tickets-%s-%s.csv', self::FILE_KIND[$period->kind()], $period->from()),
 			'content' => $this->csv->render(Tally::cells($this->turnos->countsBetween($period->from(), $period->to()), $servicios), $servicios),
 		];
 	}

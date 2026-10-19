@@ -121,7 +121,7 @@ class StatsServiceTest extends TestCase {
 
 		$csv = $this->service->csv('week', '2026-10-21');
 
-		$this->assertSame('turnos-semana-2026-10-19.csv', $csv['filename']);
+		$this->assertSame('tickets-semana-2026-10-19.csv', $csv['filename']);
 		$this->assertStringContainsString("\n2026-10-20;Sector;Sector Azul;Preferente;4;4;0;0\n", $csv['content']);
 	}
 
@@ -133,7 +133,7 @@ class StatsServiceTest extends TestCase {
 	public function testTheCsvFilenameSaysDayOrMonthInSpanish(): void {
 		$this->turnos->method('countsBetween')->willReturn([]);
 
-		$this->assertSame('turnos-dia-2026-10-21.csv', $this->service->csv('day', '2026-10-21')['filename']);
-		$this->assertSame('turnos-mes-2026-10-01.csv', $this->service->csv('month', '2026-10-21')['filename']);
+		$this->assertSame('tickets-dia-2026-10-21.csv', $this->service->csv('day', '2026-10-21')['filename']);
+		$this->assertSame('tickets-mes-2026-10-01.csv', $this->service->csv('month', '2026-10-21')['filename']);
 	}
 }
