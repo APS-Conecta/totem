@@ -43,6 +43,16 @@ class PageController extends Controller {
 		return $this->page('totem', TemplateResponse::RENDER_AS_BASE);
 	}
 
+	/** A totem with its own address: its unidades and its printer. `/totem` stays the default kiosk. */
+	#[PublicPage]
+	#[NoCSRFRequired]
+	#[AnonRateLimit(limit: 60, period: 60)]
+	public function kiosk(string $slug): TemplateResponse {
+		$this->initialState->provideInitialState('slug', $slug);
+
+		return $this->totem();
+	}
+
 	#[PublicPage]
 	#[NoCSRFRequired]
 	#[AnonRateLimit(limit: 60, period: 60)]

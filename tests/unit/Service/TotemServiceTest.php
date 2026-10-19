@@ -177,4 +177,17 @@ class TotemServiceTest extends TestCase {
 		$this->expectException(DoesNotExistException::class);
 		$this->service->testPrint(99);
 	}
+
+	public function testItSaysWhichUnidadesATotemOffersByItsAddress(): void {
+		$totems = $this->createMock(TotemMapper::class);
+		$totems->method('findBySlug')->with('sala')->willReturn($this->stored());
+		$this->links->method('ids')->with(ServicioLinks::TOTEM, 4)->willReturn([3, 5]);
+
+		$this->assertSame([3, 5], (new TotemService($totems, $this->links, $this->servicios, $this->printing))->offeredBy('sala'));
+	}
+
+	public function testAnUnknownTotemAddressIsNotFound(): void {
+		$this->expectException(DoesNotExistException::class);
+		$this->service->offeredBy('nadie');
+	}
 }

@@ -159,4 +159,25 @@ class ServicioServiceTest extends TestCase {
 			(new ServicioService($mapper))->forTotem(),
 		);
 	}
+
+	public function testATotemThatListsUnidadesIsOfferedOnlyThose(): void {
+		$farmacia = $this->existing(1, 'Farmacia', 'FAR');
+		$muestras = $this->existing(2, 'Toma de Muestras', 'MUE');
+		$vacunas = $this->existing(3, 'Vacunatorio', 'VAC');
+		$mapper = $this->createMock(ServicioMapper::class);
+		$mapper->method('findAll')->willReturn([$farmacia, $muestras, $vacunas]);
+
+		$offered = (new ServicioService($mapper))->forTotem([1, 3]);
+
+		$this->assertSame(['Farmacia', 'Vacunatorio'], array_column($offered, 'name'));
+	}
+
+	public function testAListedUnidadThatIsSwitchedOffIsStillNotOffered(): void {
+		$farmacia = $this->existing(1, 'Farmacia', 'FAR');
+		$farmacia->setActive(false);
+		$mapper = $this->createMock(ServicioMapper::class);
+		$mapper->method('findAll')->willReturn([$farmacia]);
+
+		$this->assertSame([], (new ServicioService($mapper))->forTotem([1]));
+	}
 }

@@ -23,14 +23,16 @@ class ServicioService {
 	}
 
 	/**
-	 * What the totem may offer a patient: the active servicios, and only what a button needs.
+	 * What the totem may offer a patient: the active servicios, and only what a button needs. A totem that
+	 * lists unidades offers just those (`$onlyIds`); none listed means all.
 	 *
+	 * @param list<int> $onlyIds
 	 * @return list<array{id: int, name: string, prefix: string, color: string}>
 	 */
-	public function forTotem(): array {
+	public function forTotem(array $onlyIds = []): array {
 		$offered = [];
 		foreach ($this->servicios->findAll() as $s) {
-			if ($s->getActive()) {
+			if ($s->getActive() && ($onlyIds === [] || in_array((int)$s->getId(), $onlyIds, true))) {
 				$offered[] = ['id' => (int)$s->getId(), 'name' => $s->getName(), 'prefix' => $s->getPrefix(), 'color' => $s->getColor()];
 			}
 		}

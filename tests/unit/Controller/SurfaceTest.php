@@ -21,7 +21,7 @@ use PHPUnit\Framework\TestCase;
  */
 class SurfaceTest extends TestCase {
 	/** The only endpoints an anonymous person may reach: the kiosk and the waiting-room display. */
-	private const PUBLIC = ['page#totem', 'page#display', 'turno#create', 'turno#servicios', 'display#feed'];
+	private const PUBLIC = ['page#totem', 'page#kiosk', 'page#display', 'turno#create', 'turno#servicios', 'display#feed'];
 
 	/**
 	 * Logged-in staff, not admins: the box console, the statistics board and the configuration.
@@ -33,6 +33,7 @@ class SurfaceTest extends TestCase {
 		'page#admin', 'servicio#index', 'servicio#create', 'servicio#update',
 		'box#index', 'box#create', 'box#update', 'box#destroy',
 		'pantalla#index', 'pantalla#create', 'pantalla#update', 'pantalla#destroy',
+		'totem#index', 'totem#create', 'totem#update', 'totem#destroy', 'totem#test_print',
 	];
 
 	/** @return list<array{name: string, url: string, verb: string}> */
@@ -105,7 +106,7 @@ class SurfaceTest extends TestCase {
 	public function testOnlyThePagesSkipTheCsrfToken(): void {
 		// A top-level navigation carries no request token, nor does the CSV download link. The anonymous kiosk POST has none either:
 		// it only issues a number, and the threat model says why that is acceptable.
-		$allowed = ['page#totem', 'page#display', 'page#box', 'page#admin', 'page#stats', 'turno#create', 'turno#servicios', 'display#feed', 'stats#csv'];
+		$allowed = ['page#totem', 'page#kiosk', 'page#display', 'page#box', 'page#admin', 'page#stats', 'turno#create', 'turno#servicios', 'display#feed', 'stats#csv'];
 		foreach (self::routes() as $route) {
 			$this->assertSame(
 				in_array($route['name'], $allowed, true),

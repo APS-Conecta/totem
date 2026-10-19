@@ -80,6 +80,16 @@ class TotemService {
 	}
 
 	/**
+	 * The unidades the totem at this address offers; none listed means all.
+	 *
+	 * @return list<int>
+	 * @throws DoesNotExistException
+	 */
+	public function offeredBy(string $slug): array {
+		return $this->links->ids(ServicioLinks::TOTEM, (int)$this->totems->findBySlug($slug)->getId());
+	}
+
+	/**
 	 * Print a sample ticket at the totem's printer, so the admin sees it works.
 	 *
 	 * @return array{printed: bool, totem: array<string, mixed>}
