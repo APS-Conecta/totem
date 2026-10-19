@@ -176,6 +176,45 @@ final class TurnoMapperTest extends IntegrationTestCase {
 		$this->assertSame([$l2->getId()], array_map(static fn (Llamado $l) => $l->getId(), $onlyMuestras));
 	}
 
+	public function testCountsBetweenGroupsTheTurnosOfThePeriodByDayServicioPreferenteAndEstado(): void {
+		$far = $this->servicio('Farmacia', 'FAR');
+		$mue = $this->servicio('Toma de Muestras', 'MUE');
+		$this->turno($far, false, 1, 1000, '2026-10-19');
+		$this->turno($far, false, 2, 1001, '2026-10-19');
+		$this->turnoEnded($far, true, 1, Estado::Completed, '2026-10-19');
+		$this->turnoEnded($mue, false, 1, Estado::NoShow, '2026-10-20');
+		$this->turno($far, false, 3, 1002, '2026-10-18'); // the day before: outside
+		$this->turno($far, false, 4, 1003, '2026-10-27'); // the day after: outside
+
+		$counts = $this->turnos->countsBetween('2026-10-19', '2026-10-26');
+
+		$this->assertSame([
+			['day' => '2026-10-19', 'servicio_id' => $far->getId(), 'preferente' => false, 'estado' => 'waiting', 'n' => 2],
+			['day' => '2026-10-19', 'servicio_id' => $far->getId(), 'preferente' => true, 'estado' => 'completed', 'n' => 1],
+			['day' => '2026-10-20', 'servicio_id' => $mue->getId(), 'preferente' => false, 'estado' => 'no_show', 'n' => 1],
+		], $counts);
+	}
+
+	public function testCountsBetweenIsEmptyWhenNothingWasIssued(): void {
+		$this->assertSame([], $this->turnos->countsBetween('2026-10-19', '2026-10-26'));
+	}
+
+	public function testAServicioKeepsItsSectorFlagThroughTheDatabase(): void {
+		$azul = $this->servicio('Sector Azul', 'AZU');
+		$azul->setIsSector(true);
+		$this->servicios->update($azul);
+
+		$this->assertTrue($this->servicios->find($azul->getId())->getIsSector());
+		$this->assertFalse($this->servicios->find($this->servicio('Farmacia', 'FAR')->getId())->getIsSector());
+	}
+
+	private function turnoEnded(Servicio $s, bool $preferente, int $seq, Estado $estado, string $day): Turno {
+		$t = $this->turno($s, $preferente, $seq, 1000, $day);
+		$t->setEstado($estado->value);
+
+		return $this->turnos->update($t);
+	}
+
 	private function llamado(Turno $t, int $boxId, int $at): Llamado {
 		$l = new Llamado();
 		$l->setTurnoId($t->getId());

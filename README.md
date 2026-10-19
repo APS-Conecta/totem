@@ -5,7 +5,8 @@ Turnos de atención para CESFAM, CECOSF y SAPU. A native Nextcloud app (NC 34, P
 - **Totem** (`/apps/totem/totem`, anonymous, touch): two taps, servicio and preferente, and the ticket prints.
 - **Pantalla de sala** (`/apps/totem/display/<pantalla>`, anonymous): the call, the recent calls, chimes and a Spanish voice (a bundled open-source model, offline).
 - **Box** (`/apps/totem/box`, logged in): one state-driven button — Llamar siguiente, Iniciar atención, Finalizar atención.
-- **Administración** (`/apps/totem/admin`, Nextcloud admin): servicios, boxes, pantallas.
+- **Estadísticas** (`/apps/totem/estadisticas`, logged in): absolute counts of tickets per day, week or month, by sector, servicio and preferente, with a CSV download.
+- **Administración** (`/apps/totem/admin`, Nextcloud admin): servicios (and which ones are sectors), boxes, pantallas.
 
 No RUN and no personal data is asked for or stored. See `docs/threat-model.md`, `docs/adr/`, `CONTEXT.md`.
 The approved mockups are in `docs/mockups/`.

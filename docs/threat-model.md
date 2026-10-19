@@ -9,15 +9,17 @@ Nothing about a patient: a turno is a servicio, a preferente flag, a sequence an
 | Totem page and `POST /turnos` | anyone on the clinic network (the kiosk) | opening hours, daily quota, generous `#[AnonRateLimit]` |
 | Display page and `GET /display/feed` | anyone (the room's screen) | read-only, no personal data; `#[AnonRateLimit]` |
 | Box page and call/transition endpoints | logged-in Nextcloud users | session, CSRF token, `UserRateLimit` |
+| Estadísticas page, `GET /stats` and `GET /stats/csv` | logged-in Nextcloud users | session, `UserRateLimit`; read-only (the CSV link carries no CSRF token and changes nothing) |
 | Admin page and config endpoints | Nextcloud admins | Nextcloud's admin guard |
 
 ## The real risk: abuse of anonymous issuing
 Without an identity there is no duplicate-turno check. Someone can tap repeatedly and fill the queue with turnos nobody holds, delaying real patients. Bounds, in order: the servicio's opening hours; its daily quota; a per-IP rate limit. All kiosks share one IP, so the limit must be generous; it stops a script, not a determined person at the kiosk. Staff clear ghost turnos with "No se presentó". If this is not enough in practice, add a per-kiosk cooldown (an option, not built).
 
 ## Preferente is self-declared
-It is never verified and no reason is stored, by design (Ley 20.584 / 21.168 intent; verification at a self-service totem would defeat it). Abuse shows up in analytics (slice 2), not in code.
+It is never verified and no reason is stored, by design (Ley 20.584 / 21.168 intent; verification at a self-service totem would defeat it). Abuse shows up in the Estadísticas counts (a high preferente share), not in code.
 
 ## Other
 - The display feed carries labels, servicio names, box names and colors only.
+- The statistics answer carries servicio names, colors and whole-number counts only (ADR-0007); a CSV cell that could run as a spreadsheet formula is defused.
 - The bundled voice model runs in the browser; no text leaves the machine.
 - `totem_llamado` is append-only: the display feed and the audit trail.

@@ -12,6 +12,7 @@ return [
 		['name' => 'page#display', 'url' => '/display/{slug}', 'verb' => 'GET'],
 		['name' => 'page#box', 'url' => '/box', 'verb' => 'GET'],
 		['name' => 'page#admin', 'url' => '/admin', 'verb' => 'GET'],
+		['name' => 'page#stats', 'url' => '/estadisticas', 'verb' => 'GET'],
 
 		// The kiosk (public).
 		['name' => 'turno#servicios', 'url' => '/public/servicios', 'verb' => 'GET'],
@@ -28,6 +29,10 @@ return [
 		['name' => 'call#start', 'url' => '/console/{boxId}/start', 'verb' => 'POST', 'requirements' => ['boxId' => '\d+']],
 		['name' => 'call#finish', 'url' => '/console/{boxId}/finish', 'verb' => 'POST', 'requirements' => ['boxId' => '\d+']],
 		['name' => 'call#absent', 'url' => '/console/{boxId}/absent', 'verb' => 'POST', 'requirements' => ['boxId' => '\d+']],
+
+		// The statistics board (logged-in users). `kind` and `date` travel as query parameters.
+		['name' => 'stats#board', 'url' => '/stats', 'verb' => 'GET'],
+		['name' => 'stats#csv', 'url' => '/stats/csv', 'verb' => 'GET'],
 
 		// Configuration (Nextcloud admins).
 		['name' => 'servicio#index', 'url' => '/servicios', 'verb' => 'GET'],

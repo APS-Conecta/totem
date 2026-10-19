@@ -11,6 +11,7 @@
 						<th>Horario</th>
 						<th>Cupo</th>
 						<th>Estado</th>
+						<th>Tipo</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -29,6 +30,7 @@
 						<td>{{ servicio.opens }}–{{ servicio.closes }}</td>
 						<td>{{ servicio.dailyQuota ?? 'Sin límite' }}</td>
 						<td>{{ servicio.active ? 'Activo' : 'Inactivo' }}</td>
+						<td>{{ servicio.isSector ? 'Sector' : 'Servicio' }}</td>
 					</tr>
 				</tbody>
 			</table>
@@ -70,6 +72,9 @@
 			<NcCheckboxRadioSwitch v-model="form.active" type="switch">
 				Activo
 			</NcCheckboxRadioSwitch>
+			<NcCheckboxRadioSwitch v-model="form.isSector">
+				Es un sector
+			</NcCheckboxRadioSwitch>
 			<FormOutcome :error="error" :notice="notice" />
 			<NcButton type="submit" variant="primary">
 				Guardar servicio
@@ -89,7 +94,7 @@ import FormOutcome from './FormOutcome.vue'
 import ListNotice from './ListNotice.vue'
 import { isGone, reasonFor } from './reason.js'
 
-const blankForm = () => ({ id: null, name: '', prefix: '', dailyQuota: '', opens: '08:00', closes: '17:00', color: '#0b6e4f', active: true })
+const blankForm = () => ({ id: null, name: '', prefix: '', dailyQuota: '', opens: '08:00', closes: '17:00', color: '#0b6e4f', active: true, isSector: false })
 
 export default {
 	name: 'ServiciosTab',

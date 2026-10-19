@@ -6,7 +6,7 @@ The domain's words, fixed so the code says what the team says. The terms are Spa
 
 **Servicio**: a queue a patient joins (Farmacia, Toma de Muestras, Vacunatorio, a sector…). Configured per instance, never seeded (`gestion#ADR-0013`); it has a name, a three-or-four-letter prefix, a color, opening hours and an optional daily quota. _Avoid_: cola, fila, módulo.
 
-**Turno**: one place in a servicio's queue for one day, written `FAR-P-014`: prefix, `P` or `G`, a sequence. It carries no patient identity. _Avoid_: ticket (that is the paper), número, atención.
+**Turno**: one place in a servicio's queue for one day, written `FAR-P-014`: prefix, `P` or `G`, a sequence. It carries no patient identity. _Avoid_: ticket (that is the paper), número, atención. One exception, the owner's wording: the statistics board and its CSV say "ticket" ("Tickets emitidos"); code, routes and every other screen keep Turno.
 
 **Preferente**: the attention a patient asks for by answering SÍ to a single self-declared question (60 or more years old, a disability, or caring for a person with one; Ley 20.584 and Ley 21.168). It is never verified and no reason is stored. The other answer is **general**. _Avoid_: prioritario, urgente.
 
@@ -21,5 +21,9 @@ The domain's words, fixed so the code says what the team says. The terms are Spa
 **No se presentó**: the called patient did not come. There is no editing of a turno: a wrong servicio or preferente means a new turno.
 
 **Día**: every turno, quota and sequence is scoped to a calendar day in the instance's time zone; nothing special happens at the end of the day.
+
+**Sector**: a servicio the admin flags "Es un sector" (a clinic's division, such as Sector Azul). The patient is never asked for one; the statistics board counts sectors in a block apart from the other servicios. _Avoid_: zona, equipo.
+
+**Estadísticas**: the staff page of absolute counts of turnos for a day, a week (Monday to Sunday) or a month, by sector or servicio and by preferente or general, with how each ended (atendidos, no se presentó, sin atender). It counts turnos, never people (`docs/adr/0007`). _Avoid_: analítica, reporte.
 
 **Aviso**: how a llamado is announced: two ding-dong chimes, then the voice twice, plus a gold frame on the display.

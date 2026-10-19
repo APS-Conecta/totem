@@ -12,8 +12,9 @@ import { admin } from '../api.js'
 import ServiciosTab from './ServiciosTab.vue'
 import { field } from './test-helpers.js'
 
-const FARMACIA = { id: 1, name: 'Farmacia', prefix: 'FAR', color: '#0b6e4f', opens: '07:30', closes: '16:30', dailyQuota: null, active: true }
-const MUESTRAS = { id: 2, name: 'Toma de Muestras', prefix: 'MUE', color: '#7a3e9d', opens: '07:30', closes: '10:30', dailyQuota: 80, active: false }
+const FARMACIA = { id: 1, name: 'Farmacia', prefix: 'FAR', color: '#0b6e4f', opens: '07:30', closes: '16:30', dailyQuota: null, active: true, isSector: false }
+const MUESTRAS = { id: 2, name: 'Toma de Muestras', prefix: 'MUE', color: '#7a3e9d', opens: '07:30', closes: '10:30', dailyQuota: 80, active: false, isSector: false }
+const AZUL = { id: 4, name: 'Sector Azul', prefix: 'AZU', color: '#1d5a8a', opens: '08:00', closes: '17:00', dailyQuota: null, active: true, isSector: true }
 
 async function mountTab() {
 	const wrapper = mount(ServiciosTab, { attachTo: document.body })
@@ -33,9 +34,17 @@ describe('ServiciosTab list', () => {
 
 		const rows = wrapper.findAll('tbody tr')
 		expect(rows.map((row) => row.findAll('td').map((cell) => cell.text()))).toEqual([
-			['Farmacia', 'FAR', '07:30–16:30', 'Sin límite', 'Activo'],
-			['Toma de Muestras', 'MUE', '07:30–10:30', '80', 'Inactivo'],
+			['Farmacia', 'FAR', '07:30–16:30', 'Sin límite', 'Activo', 'Servicio'],
+			['Toma de Muestras', 'MUE', '07:30–10:30', '80', 'Inactivo', 'Servicio'],
 		])
+	})
+
+	it('says which servicios are sectors', async () => {
+		admin.servicios.list.mockResolvedValue([FARMACIA, AZUL])
+
+		const wrapper = await mountTab()
+
+		expect(wrapper.findAll('tbody tr').map((row) => row.findAll('td').at(-1).text())).toEqual(['Servicio', 'Sector'])
 	})
 })
 
@@ -69,6 +78,12 @@ describe('ServiciosTab form', () => {
 		expect(field(wrapper, 'Cierra').type).toBe('time')
 		expect(field(wrapper, 'Color').type).toBe('color')
 		expect(wrapper.find('button[type="submit"]').text()).toBe('Guardar servicio')
+	})
+
+	it('offers "Es un sector", off for a new servicio', async () => {
+		const wrapper = await mountTab()
+
+		expect(field(wrapper, 'Es un sector').checked).toBe(false)
 	})
 })
 
@@ -113,6 +128,18 @@ describe('ServiciosTab picking', () => {
 		expect(field(wrapper, 'Cierra').value).toBe('10:30')
 		expect(field(wrapper, 'Color').value).toBe('#7a3e9d')
 		expect(field(wrapper, 'Activo').checked).toBe(false)
+		expect(field(wrapper, 'Es un sector').checked).toBe(false)
+	})
+
+	it('loads a sector with "Es un sector" on, and "Nuevo servicio" turns it off again', async () => {
+		admin.servicios.list.mockResolvedValue([FARMACIA, AZUL])
+		const wrapper = await mountTab()
+
+		await pick(wrapper, 'Sector Azul')
+		expect(field(wrapper, 'Es un sector').checked).toBe(true)
+
+		await wrapper.findAll('button').find((button) => button.text() === 'Nuevo servicio').trigger('click')
+		expect(field(wrapper, 'Es un sector').checked).toBe(false)
 	})
 
 	it('"Nuevo servicio" clears the form back to a new one, active by default', async () => {
@@ -145,10 +172,22 @@ describe('ServiciosTab saving', () => {
 		await submit(wrapper)
 
 		expect(admin.servicios.save).toHaveBeenCalledWith(null, {
-			name: 'Vacunatorio', prefix: 'vac', dailyQuota: null, opens: '08:00', closes: '17:00', color: '#1d5a8a', active: true,
+			name: 'Vacunatorio', prefix: 'vac', dailyQuota: null, opens: '08:00', closes: '17:00', color: '#1d5a8a', active: true, isSector: false,
 		})
 		expect(admin.servicios.list).toHaveBeenCalledTimes(1)
 		expect(wrapper.text()).toContain('Guardado.')
+	})
+
+	it('saves a servicio marked as a sector as one', async () => {
+		admin.servicios.save.mockResolvedValue(AZUL)
+		const wrapper = await mountTab()
+		await wrapper.find('input[maxlength="28"]').setValue('Sector Azul')
+		await wrapper.find('input[maxlength="4"]').setValue('azu')
+		await field(wrapper, 'Es un sector').click()
+
+		await submit(wrapper)
+
+		expect(admin.servicios.save).toHaveBeenCalledWith(null, expect.objectContaining({ name: 'Sector Azul', isSector: true }))
 	})
 
 	it('updates a picked servicio under its id, sending the quota as a number', async () => {

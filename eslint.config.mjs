@@ -43,6 +43,7 @@ export default [
 				self: 'readonly',
 				__webpack_public_path__: 'writable',
 				fetch: 'readonly',
+				URLSearchParams: 'readonly',
 			},
 		},
 		rules: {
