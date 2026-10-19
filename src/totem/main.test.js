@@ -12,15 +12,16 @@ vi.mock('../api.js', async (importOriginal) => ({
 
 describe('the totem entry', () => {
 	beforeEach(() => {
-		document.body.innerHTML = '<div id="totem-totem">Si este mensaje no desaparece, la aplicación no pudo cargar: avise al administrador.</div>'
+		document.body.innerHTML = '<div id="totem-totem"></div>'
 	})
 
-	it('replaces the fallback line of the page with the totem', async () => {
+	it('mounts the totem into the empty mount point of the page', async () => {
+		const mount = document.getElementById('totem-totem')
+		expect(mount.textContent).toBe('')
+
 		await import('./main.js')
 		await flushPromises()
 
-		const mount = document.getElementById('totem-totem')
-		expect(mount.textContent).not.toContain('la aplicación no pudo cargar')
 		expect(mount.textContent).toContain('¿A qué unidad viene?')
 		expect(mount.textContent).toContain('Farmacia')
 	})

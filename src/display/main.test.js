@@ -5,11 +5,12 @@ import { expect, it, vi } from 'vitest'
 vi.mock('../api.js', () => ({ readFeed: vi.fn().mockResolvedValue({ pantalla: { name: 'Sala', volume: 0, voice: 'off' }, llamados: [], cursor: 0 }), warnError: vi.fn(), messageFrom: vi.fn() }))
 vi.mock('../lib/public-path.js', () => ({}))
 
-it('replaces the fallback line in #totem-display with the screen', async () => {
-	document.body.innerHTML = '<div id="totem-display">Si este mensaje no desaparece</div>'
-	await import('./main.js')
+it('mounts the screen into the empty #totem-display', async () => {
+	document.body.innerHTML = '<div id="totem-display"></div>'
 	const mount = document.getElementById('totem-display')
+	expect(mount.textContent).toBe('')
 
-	expect(mount.textContent).not.toContain('Si este mensaje no desaparece')
+	await import('./main.js')
+
 	expect(mount.textContent).toContain('Últimos llamados')
 })

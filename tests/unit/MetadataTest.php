@@ -63,6 +63,14 @@ class MetadataTest extends TestCase {
 		}
 	}
 
+	public function testNoPageShowsAMessageWhileItsAppLoads(): void {
+		foreach (['totem', 'display', 'staff'] as $page) {
+			$markup = trim((string)preg_replace('/<\?php.*?\?>/s', '', (string)file_get_contents(self::APP_DIR . "/templates/$page.php")));
+
+			$this->assertSame(sprintf('<div id="totem-%s"></div>', $page), $markup, "$page must ship an empty mount point, nothing a patient could read");
+		}
+	}
+
 	public function testEveryPageHasItsTemplateAndItsBundleEntry(): void {
 		foreach (['totem', 'display', 'staff'] as $page) {
 			$this->assertFileExists(self::APP_DIR . "/templates/$page.php");

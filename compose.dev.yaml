@@ -55,6 +55,22 @@ services:
       retries: 30
       start_period: 60s
 
+  # A stand-in network ticket printer for the end-to-end tests (e2e/fake-printer.cjs): the Nextcloud container
+  # reaches it at the host name `printer`, port 9100; a test reads what it received on 127.0.0.1:9191.
+  printer:
+    image: node:22-alpine
+    restart: "no"
+    ports:
+      - "127.0.0.1:9191:9101"
+    volumes:
+      - ./e2e/fake-printer.cjs:/app/fake-printer.cjs:ro
+    command: ["node", "/app/fake-printer.cjs"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9101/ >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   dev_postgres:
   dev_nextcloud:

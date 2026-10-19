@@ -24,7 +24,12 @@ async function call(page, method, url, body) {
 			body: b === undefined ? undefined : JSON.stringify(b),
 		})
 		const text = await res.text()
-		if (!res.ok) throw new Error(`${m} ${u} answered ${res.status}: ${text}`)
+		if (!res.ok) {
+			// The app answers a refusal as { message: <a Spanish sentence> }: show the sentence, not escaped JSON.
+			let detail = text
+			try { detail = JSON.parse(text).message ?? text } catch { /* not JSON */ }
+			throw new Error(`${m} ${u} answered ${res.status}: ${detail}`)
+		}
 		return text ? JSON.parse(text) : null
 	}, [method, url, body])
 }

@@ -1,5 +1,5 @@
 <?php
 declare(strict_types=1);
-/** Mount point for the totem page. The fallback line is replaced by the app on a clean boot and left standing when the bundle cannot load. */
+/** Mount point for the totem page: empty, so nothing shows before the app does. */
 ?>
-<div id="totem-totem">Si este mensaje no desaparece, la aplicación no pudo cargar: avise al administrador.</div>
+<div id="totem-totem"></div>
