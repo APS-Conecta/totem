@@ -23,8 +23,17 @@ class SurfaceTest extends TestCase {
 	/** The only endpoints an anonymous person may reach: the kiosk and the waiting-room display. */
 	private const PUBLIC = ['page#totem', 'page#display', 'turno#create', 'turno#servicios', 'display#feed'];
 
-	/** Logged-in staff, not admins: the box console and the statistics board. */
-	private const STAFF = ['page#box', 'call#boxes', 'call#state', 'call#call', 'call#recall', 'call#start', 'call#finish', 'call#absent', 'page#stats', 'stats#board', 'stats#csv'];
+	/**
+	 * Logged-in staff, not admins: the box console, the statistics board and the configuration.
+	 * Configuration is open to every logged-in user by the owner's decision (docs/adr/0008).
+	 */
+	private const STAFF = [
+		'page#box', 'call#boxes', 'call#state', 'call#call', 'call#recall', 'call#start', 'call#finish', 'call#absent',
+		'page#stats', 'stats#board', 'stats#csv',
+		'page#admin', 'servicio#index', 'servicio#create', 'servicio#update',
+		'box#index', 'box#create', 'box#update', 'box#destroy',
+		'pantalla#index', 'pantalla#create', 'pantalla#update', 'pantalla#destroy',
+	];
 
 	/** @return list<array{name: string, url: string, verb: string}> */
 	private static function routes(): array {
@@ -72,7 +81,7 @@ class SurfaceTest extends TestCase {
 		}
 	}
 
-	public function testTheBoxConsoleIsForAnyLoggedInUserAndIsRateLimited(): void {
+	public function testStaffEndpointsAreForAnyLoggedInUserAndAreRateLimited(): void {
 		foreach (self::STAFF as $name) {
 			$m = self::method($name);
 			$this->assertTrue(self::has($m, NoAdminRequired::class), "$name should not need an admin");
@@ -83,12 +92,13 @@ class SurfaceTest extends TestCase {
 		}
 	}
 
-	public function testEverythingElseNeedsANextcloudAdmin(): void {
+	public function testNoRouteNeedsANextcloudAdmin(): void {
 		foreach (self::routes() as $route) {
-			if (in_array($route['name'], [...self::PUBLIC, ...self::STAFF], true)) {
+			if (in_array($route['name'], self::PUBLIC, true)) {
 				continue;
 			}
-			$this->assertFalse(self::has(self::method($route['name']), NoAdminRequired::class), $route['name'] . ' is admin-only');
+			$this->assertContains($route['name'], self::STAFF, $route['name'] . ' is neither public nor on the staff allow-list');
+			$this->assertTrue(self::has(self::method($route['name']), NoAdminRequired::class), $route['name'] . ' should be open to any logged-in user');
 		}
 	}
 

@@ -23,9 +23,5 @@ No pide ni guarda el RUN ni ningún dato del paciente: un turno es un número, u
             <name>Totem</name>
             <route>totem.page.box</route>
         </navigation>
-        <navigation>
-            <name>Estadísticas</name>
-            <route>totem.page.stats</route>
-        </navigation>
     </navigations>
 </info>

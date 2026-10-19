@@ -12,7 +12,7 @@ vi.mock('../api.js', async (importActual) => ({
 }))
 
 import { admin } from '../api.js'
-import BoxesTab from './BoxesTab.vue'
+import BoxesView from './BoxesView.vue'
 import { field } from './test-helpers.js'
 
 const FARMACIA = { id: 1, name: 'Farmacia', prefix: 'FAR', color: '#0b6e4f', opens: '07:30', closes: '16:30', dailyQuota: null, active: true }
@@ -20,8 +20,8 @@ const MUESTRAS = { id: 2, name: 'Toma de Muestras', prefix: 'MUE', color: '#7a3e
 const BOX2 = { id: 20, name: 'Box 2', servicioIds: [1] }
 const BOX3 = { id: 30, name: 'Box 3', servicioIds: [1, 2] }
 
-async function mountTab() {
-	const wrapper = mount(BoxesTab, { attachTo: document.body })
+async function mountView() {
+	const wrapper = mount(BoxesView, { attachTo: document.body })
 	await flushPromises()
 	return wrapper
 }
@@ -33,9 +33,9 @@ beforeEach(() => {
 	admin.boxes.list.mockResolvedValue([BOX2, BOX3])
 })
 
-describe('BoxesTab list', () => {
+describe('BoxesView list', () => {
 	it('lists each box with the servicios it serves', async () => {
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 
 		expect(wrapper.findAll('tbody tr').map((row) => row.findAll('td').map((cell) => cell.text()))).toEqual([
 			['Box 2', 'Farmacia'],
@@ -44,12 +44,12 @@ describe('BoxesTab list', () => {
 	})
 })
 
-describe('BoxesTab loading', () => {
+describe('BoxesView loading', () => {
 	it('tells the admin when the list could not be loaded', async () => {
 		vi.spyOn(console, 'warn').mockImplementation(() => {})
 		admin.boxes.list.mockRejectedValue(new Error('Network Error'))
 
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 
 		expect(wrapper.find('[role="alert"]').text()).toBe('No se pudo cargar la lista de boxes.')
 	})
@@ -57,15 +57,15 @@ describe('BoxesTab loading', () => {
 	it('invites the admin to create the first box when there are none', async () => {
 		admin.boxes.list.mockResolvedValue([])
 
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 
 		expect(wrapper.text()).toContain('Todavía no hay boxes. Complete el formulario para crear el primero.')
 	})
 })
 
-describe('BoxesTab form', () => {
+describe('BoxesView form', () => {
 	it('offers a name capped at 14 and a checkbox for every servicio, inactive ones included', async () => {
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 
 		expect(field(wrapper, 'Nombre').maxLength).toBe(14)
 		expect(wrapper.find('fieldset legend').text()).toBe('Atiende')
@@ -81,9 +81,9 @@ async function pick(wrapper, name) {
 	await wrapper.findAll('tbody button').find((button) => button.text() === name).trigger('click')
 }
 
-describe('BoxesTab picking', () => {
+describe('BoxesView picking', () => {
 	it('loads a picked box into the form, with the servicios it serves checked', async () => {
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 
 		await pick(wrapper, 'Box 3')
 
@@ -93,7 +93,7 @@ describe('BoxesTab picking', () => {
 	})
 
 	it('"Nuevo box" clears the form', async () => {
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 		await pick(wrapper, 'Box 3')
 
 		await wrapper.findAll('button').find((button) => button.text() === 'Nuevo box').trigger('click')
@@ -103,7 +103,7 @@ describe('BoxesTab picking', () => {
 	})
 })
 
-describe('BoxesTab saving', () => {
+describe('BoxesView saving', () => {
 	async function submit(wrapper) {
 		await wrapper.find('form').trigger('submit')
 		await flushPromises()
@@ -111,7 +111,7 @@ describe('BoxesTab saving', () => {
 
 	it('creates a box with the checked servicios, refreshes the list and says "Guardado."', async () => {
 		admin.boxes.save.mockResolvedValue({ id: 40, name: 'Box 4', servicioIds: [2] })
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 		await wrapper.find('input[maxlength="14"]').setValue('Box 4')
 		await field(wrapper, 'Toma de Muestras').click()
 		admin.boxes.list.mockClear()
@@ -125,7 +125,7 @@ describe('BoxesTab saving', () => {
 
 	it('shows the server sentence when it refuses a box that serves no servicio', async () => {
 		admin.boxes.save.mockRejectedValue({ response: { status: 422, data: { message: 'Un box debe atender al menos un servicio.' } } })
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 		await wrapper.find('input[maxlength="14"]').setValue('Box 4')
 
 		await submit(wrapper)
@@ -136,7 +136,7 @@ describe('BoxesTab saving', () => {
 
 	it('updates a picked box under its id', async () => {
 		admin.boxes.save.mockResolvedValue(BOX3)
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 		await pick(wrapper, 'Box 3')
 		await field(wrapper, 'Toma de Muestras').click()
 
@@ -147,7 +147,7 @@ describe('BoxesTab saving', () => {
 
 	it('says the box no longer exists on a 404, and refreshes the list', async () => {
 		admin.boxes.save.mockRejectedValue({ response: { status: 404 } })
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 		await pick(wrapper, 'Box 3')
 		admin.boxes.list.mockClear()
 
@@ -159,7 +159,7 @@ describe('BoxesTab saving', () => {
 
 	it('saves again under the new id after creating', async () => {
 		admin.boxes.save.mockResolvedValue({ id: 40, name: 'Box 4', servicioIds: [1] })
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 		await wrapper.find('input[maxlength="14"]').setValue('Box 4')
 		await submit(wrapper)
 
@@ -169,11 +169,11 @@ describe('BoxesTab saving', () => {
 	})
 })
 
-describe('BoxesTab deleting', () => {
+describe('BoxesView deleting', () => {
 	const button = (wrapper, text) => wrapper.findAll('button').find((candidate) => candidate.text() === text)
 
 	it('offers "Eliminar box" only for a box that already exists', async () => {
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 		expect(button(wrapper, 'Eliminar box')).toBeUndefined()
 
 		await pick(wrapper, 'Box 3')
@@ -183,7 +183,7 @@ describe('BoxesTab deleting', () => {
 
 	it('asks inline first, with a question, "Sí, eliminar" and "Cancelar", and deletes nothing yet', async () => {
 		const confirm = vi.spyOn(window, 'confirm')
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 		await pick(wrapper, 'Box 3')
 
 		await button(wrapper, 'Eliminar box').trigger('click')
@@ -196,7 +196,7 @@ describe('BoxesTab deleting', () => {
 	})
 
 	it('goes back to "Eliminar box" on "Cancelar", deleting nothing', async () => {
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 		await pick(wrapper, 'Box 3')
 		await button(wrapper, 'Eliminar box').trigger('click')
 
@@ -208,7 +208,7 @@ describe('BoxesTab deleting', () => {
 	})
 
 	it('names the saved box in the question, not what is half-typed in the name field', async () => {
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 		await pick(wrapper, 'Box 3')
 		await wrapper.find('input[maxlength="14"]').setValue('Otro nombre')
 
@@ -218,7 +218,7 @@ describe('BoxesTab deleting', () => {
 	})
 
 	it('moves focus to "Cancelar" when it asks, so a stray Enter does not delete', async () => {
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 		await pick(wrapper, 'Box 3')
 
 		await button(wrapper, 'Eliminar box').trigger('click')
@@ -236,7 +236,7 @@ describe('BoxesTab deleting', () => {
 
 	it('deletes on "Sí, eliminar", refreshes the list, clears the form and says so', async () => {
 		admin.boxes.remove.mockResolvedValue({})
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 		admin.boxes.list.mockResolvedValue([BOX2])
 
 		await confirmDeletion(wrapper)
@@ -250,7 +250,7 @@ describe('BoxesTab deleting', () => {
 
 	it('shows the sentence when the server refuses the delete (a box in use)', async () => {
 		admin.boxes.remove.mockRejectedValue({ response: { status: 422, data: { message: 'El Box 3 tiene turnos en atención.' } } })
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 
 		await confirmDeletion(wrapper)
 
@@ -260,7 +260,7 @@ describe('BoxesTab deleting', () => {
 
 	it('says the box no longer exists on a 404, and refreshes the list', async () => {
 		admin.boxes.remove.mockRejectedValue({ response: { status: 404 } })
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 		admin.boxes.list.mockClear()
 
 		await confirmDeletion(wrapper)

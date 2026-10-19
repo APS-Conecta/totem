@@ -58,7 +58,7 @@ import withServicios from './withServicios.js'
 const blankForm = () => ({ id: null, name: '', servicioIds: [] })
 
 export default {
-	name: 'BoxesTab',
+	name: 'BoxesView',
 	mixins: [withServicios],
 	components: { ConfirmDelete, NcButton, FormOutcome, ListNotice, NcTextField, ServicioChecks },
 	data() {

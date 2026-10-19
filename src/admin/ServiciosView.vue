@@ -97,7 +97,7 @@ import { isGone, reasonFor } from './reason.js'
 const blankForm = () => ({ id: null, name: '', prefix: '', dailyQuota: '', opens: '08:00', closes: '17:00', color: '#0b6e4f', active: true, isSector: false })
 
 export default {
-	name: 'ServiciosTab',
+	name: 'ServiciosView',
 	components: { NcButton, FormOutcome, ListNotice, NcCheckboxRadioSwitch, NcTextField },
 	data() {
 		return { servicios: [], form: blankForm(), error: '', notice: '', loaded: false, loadFailed: false }

@@ -104,7 +104,7 @@ const blankForm = () => ({ id: null, slug: '', name: '', servicioIds: [], volume
 const VOICE_SUMMARY = { mujer: 'voz de mujer', hombre: 'voz de hombre', off: 'sin voz' }
 
 export default {
-	name: 'PantallasTab',
+	name: 'PantallasView',
 	mixins: [withServicios],
 	components: { ConfirmDelete, FormOutcome, ListNotice, NcButton, NcTextField, ServicioChecks },
 	data() {
