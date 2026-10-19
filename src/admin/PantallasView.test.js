@@ -34,6 +34,7 @@ async function pick(wrapper, name) {
 }
 
 const button = (wrapper, text) => wrapper.findAll('button').find((candidate) => candidate.text() === text)
+const openNew = (wrapper) => button(wrapper, 'Nueva pantalla').trigger('click')
 
 beforeEach(() => {
 	vi.clearAllMocks()
@@ -46,17 +47,81 @@ describe('PantallasView list', () => {
 	it('lists each pantalla with the servicios it shows and its aviso settings', async () => {
 		const wrapper = await mountView()
 
-		expect(wrapper.findAll('tbody tr').map((row) => row.findAll('td').map((cell) => cell.text()))).toEqual([
-			['Sala Farmacia', 'Farmacia', 'Volumen 60 %, voz de hombre'],
-			['Central', 'Todas las unidades', 'Volumen 100 %, voz de mujer'],
-			['Silenciosa', 'Farmacia, Toma de Muestras', 'Volumen 40 %, sin voz'],
+		expect(wrapper.findAll('tbody tr').map((row) => row.findAll('th, td').map((cell) => cell.text()))).toEqual([
+			['Sala Farmacia', 'Farmacia', 'Volumen 60 %, voz de hombre', 'Abrir pantalla'],
+			['Central', 'Todas las unidades', 'Volumen 100 %, voz de mujer', 'Abrir pantalla'],
+			['Silenciosa', 'Farmacia, Toma de Muestras', 'Volumen 40 %, sin voz', 'Abrir pantalla'],
 		])
+	})
+})
+
+describe('PantallasView section', () => {
+	it('titles the page Pantallas and keeps the form closed until one is picked or a new one is asked for', async () => {
+		const wrapper = await mountView()
+
+		expect(wrapper.find('h2').text()).toBe('Pantallas')
+		expect(wrapper.find('aside').exists()).toBe(false)
+	})
+
+	it('opens an empty form in the sidebar for "Nueva pantalla"', async () => {
+		const wrapper = await mountView()
+
+		await openNew(wrapper)
+
+		expect(wrapper.find('aside h2').text()).toBe('Nueva pantalla')
+		expect(field(wrapper, 'Nombre').value).toBe('')
+	})
+
+	it('opens the picked pantalla in the sidebar, named for it', async () => {
+		const wrapper = await mountView()
+
+		await pick(wrapper, 'Sala Farmacia')
+
+		expect(wrapper.find('aside h2').text()).toBe('Sala Farmacia')
+		expect(wrapper.find('aside').text()).toContain('Editar pantalla')
+	})
+
+	it('closes the sidebar with its own close button', async () => {
+		const wrapper = await mountView()
+		await openNew(wrapper)
+
+		await wrapper.find('aside button[aria-label]').trigger('click')
+
+		expect(wrapper.find('aside').exists()).toBe(false)
+	})
+})
+
+describe('PantallasView opening a pantalla', () => {
+	const links = (wrapper, scope) => wrapper.findAll(`${scope} a`).filter((a) => a.text() === 'Abrir pantalla')
+
+	it('offers "Abrir pantalla" on every row of the list, in a new tab, so nobody has to guess the address', async () => {
+		const wrapper = await mountView()
+
+		const rows = links(wrapper, 'tbody')
+		expect(rows.map((a) => a.attributes('href').split('/').pop())).toEqual(['sala-farmacia', 'central', 'silenciosa'])
+		for (const a of rows) {
+			expect(a.attributes('target')).toBe('_blank')
+			expect(a.attributes('rel')).toContain('noopener')
+		}
+	})
+
+	it('offers it in the sidebar of a saved pantalla, next to its address, and not for a new one', async () => {
+		const wrapper = await mountView()
+		await openNew(wrapper)
+		expect(links(wrapper, 'aside')).toHaveLength(0)
+
+		await pick(wrapper, 'Sala Farmacia')
+
+		const [open] = links(wrapper, 'aside')
+		expect(open.attributes('href')).toContain('/apps/totem/display/sala-farmacia')
+		expect(open.attributes('target')).toBe('_blank')
 	})
 })
 
 describe('PantallasView form', () => {
 	it('offers the fields of a new pantalla, none of them the slug', async () => {
 		const wrapper = await mountView()
+		await openNew(wrapper)
 
 		expect(field(wrapper, 'Nombre').maxLength).toBe(32)
 		expect(wrapper.find('fieldset legend').text()).toBe('Unidades que muestra (ninguna marcada = todas)')
@@ -78,6 +143,7 @@ describe('PantallasView form', () => {
 
 	it('shows the volume readout live as the range moves', async () => {
 		const wrapper = await mountView()
+		await openNew(wrapper)
 
 		await wrapper.find('input[type="range"]').setValue('35')
 
@@ -120,6 +186,7 @@ describe('PantallasView saving', () => {
 	it('creates a pantalla from the form, without any slug, refreshes the list and says "Guardado."', async () => {
 		admin.pantallas.save.mockResolvedValue({ id: 8, slug: 'sala-azul', name: 'Sala Azul', volume: 35, voice: 'hombre', servicioIds: [2] })
 		const wrapper = await mountView()
+		await openNew(wrapper)
 		await wrapper.find('input[maxlength="32"]').setValue('Sala Azul')
 		await field(wrapper, 'Toma de Muestras').click()
 		await wrapper.find('input[type="range"]').setValue('35')
@@ -146,6 +213,7 @@ describe('PantallasView saving', () => {
 	it('shows the sentence of a refusal next to the form and does not claim it saved', async () => {
 		admin.pantallas.save.mockRejectedValue({ response: { status: 422, data: { message: 'Ya existe una pantalla con ese nombre.' } } })
 		const wrapper = await mountView()
+		await openNew(wrapper)
 
 		await submit(wrapper)
 
@@ -168,6 +236,7 @@ describe('PantallasView saving', () => {
 	it('keeps editing the pantalla it just created, so saving again updates', async () => {
 		admin.pantallas.save.mockResolvedValue({ id: 8, slug: 'sala-azul', name: 'Sala Azul', volume: 100, voice: 'mujer', servicioIds: [] })
 		const wrapper = await mountView()
+		await openNew(wrapper)
 		await submit(wrapper)
 
 		await submit(wrapper)
@@ -183,6 +252,7 @@ describe('PantallasView display address', () => {
 
 	it('shows no address for a pantalla that is not saved yet', async () => {
 		const wrapper = await mountView()
+		await openNew(wrapper)
 
 		expect(wrapper.text()).not.toContain('/apps/totem/display/')
 		expect(button(wrapper, 'Copiar dirección')).toBeUndefined()
@@ -241,6 +311,7 @@ describe('PantallasView "Probar aviso"', () => {
 		vi.spyOn(console, 'warn').mockImplementation(() => {})
 		testAnnouncement.mockRejectedValue(new Error('no audio'))
 		const wrapper = await mountView()
+		await openNew(wrapper)
 
 		await button(wrapper, 'Probar aviso').trigger('click')
 		await flushPromises()
@@ -294,6 +365,7 @@ describe('PantallasView deleting', () => {
 	it('deletes on "Sí, eliminar", refreshes the list, clears the form and says so', async () => {
 		admin.pantallas.remove.mockResolvedValue({})
 		const wrapper = await mountView()
+		await openNew(wrapper)
 		admin.pantallas.list.mockResolvedValue([CENTRAL, SILENCIOSA])
 
 		await confirmDeletion(wrapper)
@@ -308,6 +380,7 @@ describe('PantallasView deleting', () => {
 	it('shows the sentence when the server refuses the delete', async () => {
 		admin.pantallas.remove.mockRejectedValue({ response: { status: 422, data: { message: 'No se puede eliminar la última pantalla.' } } })
 		const wrapper = await mountView()
+		await openNew(wrapper)
 
 		await confirmDeletion(wrapper)
 
@@ -318,6 +391,7 @@ describe('PantallasView deleting', () => {
 	it('says the pantalla no longer exists on a 404, and refreshes the list', async () => {
 		admin.pantallas.remove.mockRejectedValue({ response: { status: 404 } })
 		const wrapper = await mountView()
+		await openNew(wrapper)
 		admin.pantallas.list.mockClear()
 
 		await confirmDeletion(wrapper)

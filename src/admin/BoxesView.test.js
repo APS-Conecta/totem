@@ -26,6 +26,8 @@ async function mountView() {
 	return wrapper
 }
 
+const openNew = (wrapper) => wrapper.findAll('button').find((button) => button.text() === 'Nueva ventanilla').trigger('click')
+
 beforeEach(() => {
 	vi.clearAllMocks()
 	document.body.innerHTML = ''
@@ -37,7 +39,7 @@ describe('BoxesView list', () => {
 	it('lists each box with the servicios it serves', async () => {
 		const wrapper = await mountView()
 
-		expect(wrapper.findAll('tbody tr').map((row) => row.findAll('td').map((cell) => cell.text()))).toEqual([
+		expect(wrapper.findAll('tbody tr').map((row) => row.findAll('th, td').map((cell) => cell.text()))).toEqual([
 			['Box 2', 'Farmacia'],
 			['Box 3', 'Farmacia, Toma de Muestras'],
 		])
@@ -63,9 +65,46 @@ describe('BoxesView loading', () => {
 	})
 })
 
+describe('BoxesView section', () => {
+	it('titles the page Ventanillas and keeps the form closed until one is picked or a new one is asked for', async () => {
+		const wrapper = await mountView()
+
+		expect(wrapper.find('h2').text()).toBe('Ventanillas')
+		expect(wrapper.find('aside').exists()).toBe(false)
+	})
+
+	it('opens an empty form in the sidebar for "Nueva ventanilla"', async () => {
+		const wrapper = await mountView()
+
+		await openNew(wrapper)
+
+		expect(wrapper.find('aside h2').text()).toBe('Nueva ventanilla')
+		expect(field(wrapper, 'Nombre').value).toBe('')
+	})
+
+	it('opens the picked ventanilla in the sidebar, named for it', async () => {
+		const wrapper = await mountView()
+
+		await wrapper.findAll('tbody button').find((button) => button.text() === 'Box 3').trigger('click')
+
+		expect(wrapper.find('aside h2').text()).toBe('Box 3')
+		expect(wrapper.find('aside').text()).toContain('Editar ventanilla')
+	})
+
+	it('closes the sidebar with its own close button', async () => {
+		const wrapper = await mountView()
+		await openNew(wrapper)
+
+		await wrapper.find('aside button[aria-label]').trigger('click')
+
+		expect(wrapper.find('aside').exists()).toBe(false)
+	})
+})
+
 describe('BoxesView form', () => {
 	it('offers a name capped at 14 and a checkbox for every servicio, inactive ones included', async () => {
 		const wrapper = await mountView()
+		await openNew(wrapper)
 
 		expect(field(wrapper, 'Nombre').maxLength).toBe(14)
 		expect(wrapper.find('fieldset legend').text()).toBe('Atiende')
@@ -112,6 +151,7 @@ describe('BoxesView saving', () => {
 	it('creates a box with the checked servicios, refreshes the list and says "Guardado."', async () => {
 		admin.boxes.save.mockResolvedValue({ id: 40, name: 'Box 4', servicioIds: [2] })
 		const wrapper = await mountView()
+		await openNew(wrapper)
 		await wrapper.find('input[maxlength="14"]').setValue('Box 4')
 		await field(wrapper, 'Toma de Muestras').click()
 		admin.boxes.list.mockClear()
@@ -126,6 +166,7 @@ describe('BoxesView saving', () => {
 	it('shows the server sentence when it refuses a box that serves no servicio', async () => {
 		admin.boxes.save.mockRejectedValue({ response: { status: 422, data: { message: 'Un box debe atender al menos un servicio.' } } })
 		const wrapper = await mountView()
+		await openNew(wrapper)
 		await wrapper.find('input[maxlength="14"]').setValue('Box 4')
 
 		await submit(wrapper)
@@ -160,6 +201,7 @@ describe('BoxesView saving', () => {
 	it('saves again under the new id after creating', async () => {
 		admin.boxes.save.mockResolvedValue({ id: 40, name: 'Box 4', servicioIds: [1] })
 		const wrapper = await mountView()
+		await openNew(wrapper)
 		await wrapper.find('input[maxlength="14"]').setValue('Box 4')
 		await submit(wrapper)
 
@@ -174,6 +216,7 @@ describe('BoxesView deleting', () => {
 
 	it('offers "Eliminar ventanilla" only for a box that already exists', async () => {
 		const wrapper = await mountView()
+		await openNew(wrapper)
 		expect(button(wrapper, 'Eliminar ventanilla')).toBeUndefined()
 
 		await pick(wrapper, 'Box 3')

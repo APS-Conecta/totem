@@ -22,6 +22,8 @@ async function mountView() {
 	return wrapper
 }
 
+const openNew = (wrapper) => wrapper.findAll('button').find((button) => button.text() === 'Nueva unidad').trigger('click')
+
 beforeEach(() => {
 	vi.clearAllMocks()
 	document.body.innerHTML = ''
@@ -33,7 +35,7 @@ describe('ServiciosView list', () => {
 		const wrapper = await mountView()
 
 		const rows = wrapper.findAll('tbody tr')
-		expect(rows.map((row) => row.findAll('td').map((cell) => cell.text()))).toEqual([
+		expect(rows.map((row) => row.findAll('th, td').map((cell) => cell.text()))).toEqual([
 			['Farmacia', 'FAR', '07:30–16:30', 'Sin límite', 'Activa', 'Unidad'],
 			['Toma de Muestras', 'MUE', '07:30–10:30', '80', 'Inactiva', 'Unidad'],
 		])
@@ -67,9 +69,47 @@ describe('ServiciosView loading', () => {
 	})
 })
 
+describe('ServiciosView section', () => {
+	it('titles the page Unidades and keeps the form closed until one is picked or a new one is asked for', async () => {
+		const wrapper = await mountView()
+
+		expect(wrapper.find('h2').text()).toBe('Unidades')
+		expect(wrapper.find('aside').exists()).toBe(false)
+	})
+
+	it('opens an empty form in the sidebar for "Nueva unidad"', async () => {
+		const wrapper = await mountView()
+
+		await openNew(wrapper)
+
+		expect(wrapper.find('aside h2').text()).toBe('Nueva unidad')
+		expect(wrapper.find('aside').text()).toContain('Complete el formulario')
+		expect(field(wrapper, 'Nombre').value).toBe('')
+	})
+
+	it('opens the picked unidad in the sidebar, named for it', async () => {
+		const wrapper = await mountView()
+
+		await wrapper.findAll('tbody button').find((button) => button.text() === 'Farmacia').trigger('click')
+
+		expect(wrapper.find('aside h2').text()).toBe('Farmacia')
+		expect(wrapper.find('aside').text()).toContain('Editar unidad')
+	})
+
+	it('closes the sidebar with its own close button', async () => {
+		const wrapper = await mountView()
+		await openNew(wrapper)
+
+		await wrapper.find('aside button[aria-label]').trigger('click')
+
+		expect(wrapper.find('aside').exists()).toBe(false)
+	})
+})
+
 describe('ServiciosView form', () => {
 	it('offers the fields of a new servicio, each with a visible label and the capped lengths', async () => {
 		const wrapper = await mountView()
+		await openNew(wrapper)
 
 		expect(field(wrapper, 'Nombre').maxLength).toBe(28)
 		expect(field(wrapper, 'Prefijo').maxLength).toBe(4)
@@ -82,6 +122,7 @@ describe('ServiciosView form', () => {
 
 	it('offers "Es un sector", off for a new servicio', async () => {
 		const wrapper = await mountView()
+		await openNew(wrapper)
 
 		expect(field(wrapper, 'Es un sector').checked).toBe(false)
 	})
@@ -90,6 +131,7 @@ describe('ServiciosView form', () => {
 describe('ServiciosView live color preview', () => {
 	it('previews the prefix on the chosen color with readable text and reports a legible contrast', async () => {
 		const wrapper = await mountView()
+		await openNew(wrapper)
 
 		await wrapper.find('input[type="color"]').setValue('#1d5a8a')
 		await wrapper.find('input[maxlength="4"]').setValue('far')
@@ -104,6 +146,7 @@ describe('ServiciosView live color preview', () => {
 
 	it('says so, and how to fix it, when the best text color is not legible on the chosen color', async () => {
 		const wrapper = await mountView()
+		await openNew(wrapper)
 
 		await wrapper.find('input[type="color"]').setValue('#6f7f8f')
 
@@ -164,6 +207,7 @@ describe('ServiciosView saving', () => {
 	it('creates a servicio with an empty quota sent as null, refreshes the list and says "Guardado."', async () => {
 		admin.servicios.save.mockResolvedValue({ ...FARMACIA, id: 3 })
 		const wrapper = await mountView()
+		await openNew(wrapper)
 		await wrapper.find('input[maxlength="28"]').setValue('Vacunatorio')
 		await wrapper.find('input[maxlength="4"]').setValue('vac')
 		await wrapper.find('input[type="color"]').setValue('#1d5a8a')
@@ -181,6 +225,7 @@ describe('ServiciosView saving', () => {
 	it('saves a servicio marked as a sector as one', async () => {
 		admin.servicios.save.mockResolvedValue(AZUL)
 		const wrapper = await mountView()
+		await openNew(wrapper)
 		await wrapper.find('input[maxlength="28"]').setValue('Sector Azul')
 		await wrapper.find('input[maxlength="4"]').setValue('azu')
 		await field(wrapper, 'Es un sector').click()
@@ -204,6 +249,7 @@ describe('ServiciosView saving', () => {
 	it('keeps editing the servicio it just created, so saving again updates instead of duplicating', async () => {
 		admin.servicios.save.mockResolvedValue({ ...FARMACIA, id: 3 })
 		const wrapper = await mountView()
+		await openNew(wrapper)
 		await submit(wrapper)
 
 		await submit(wrapper)
@@ -215,6 +261,7 @@ describe('ServiciosView saving', () => {
 	it('shows the sentence of a refusal next to the form and does not claim it saved', async () => {
 		admin.servicios.save.mockRejectedValue({ response: { status: 422, data: { message: 'Ya existe una unidad con el prefijo FAR.' } } })
 		const wrapper = await mountView()
+		await openNew(wrapper)
 
 		await submit(wrapper)
 
@@ -237,6 +284,7 @@ describe('ServiciosView saving', () => {
 	it('drops the previous outcome when another servicio is picked or a new one is started', async () => {
 		admin.servicios.save.mockResolvedValue(FARMACIA)
 		const wrapper = await mountView()
+		await openNew(wrapper)
 		await submit(wrapper)
 		expect(wrapper.text()).toContain('Guardado.')
 

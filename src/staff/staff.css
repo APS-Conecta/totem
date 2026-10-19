@@ -80,3 +80,197 @@
 	background: var(--color-background-hover);
 	color: var(--color-text-maxcontrast);
 }
+
+/* ===== Lists and forms of the configuration sections (Unidades, Ventanillas, Pantallas) ===== */
+
+.totem-sr {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+
+.totem-scroll {
+	position: relative;
+	overflow-x: auto;
+	min-width: 0;
+}
+
+.totem-table {
+	width: 100%;
+	min-width: 32em;
+	border-collapse: collapse;
+}
+
+.totem-table th,
+.totem-table td {
+	padding: calc(var(--default-grid-baseline) * 2) calc(var(--default-grid-baseline) * 3);
+	text-align: start;
+	border-bottom: 1px solid var(--color-border);
+}
+
+.totem-table thead th {
+	font-size: var(--font-size-small);
+	font-weight: normal;
+	color: var(--color-text-maxcontrast);
+}
+
+.totem-table tbody th {
+	font-weight: 600;
+}
+
+.totem-table tr.totem-selected th,
+.totem-table tr.totem-selected td {
+	background: var(--color-primary-element-light);
+}
+
+.totem-empty {
+	margin: 0 0 calc(var(--default-grid-baseline) * 3);
+	color: var(--color-text-maxcontrast);
+}
+
+.totem-link {
+	display: inline-flex;
+	align-items: center;
+	min-height: var(--default-clickable-area);
+	font-weight: 600;
+	color: var(--color-primary-element-text, var(--color-primary-element));
+}
+
+.totem-dot {
+	display: inline-block;
+	flex: none;
+	width: 0.75em;
+	height: 0.75em;
+	border-radius: 50%;
+	border: 1px solid var(--color-border-maxcontrast);
+}
+
+/* The form in the sidebar. */
+.totem-form {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--default-grid-baseline) * 4);
+	min-width: 0;
+}
+
+.totem-row {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: calc(var(--default-grid-baseline) * 3);
+}
+
+.totem-row > * {
+	min-width: 0;
+}
+
+.totem-label {
+	display: flex;
+	flex-direction: column;
+	gap: var(--default-grid-baseline);
+	font-size: var(--font-size-small);
+	color: var(--color-text-maxcontrast);
+}
+
+.totem-input {
+	box-sizing: border-box;
+	min-width: 0;
+	min-height: var(--default-clickable-area);
+	padding-inline: calc(var(--default-grid-baseline) * 3);
+	font: inherit;
+	color: var(--color-main-text);
+	background: var(--color-main-background);
+	border: 2px solid var(--color-border-maxcontrast);
+	border-radius: var(--border-radius-element);
+}
+
+.totem-input--color {
+	width: calc(var(--default-clickable-area) * 1.5);
+	padding: var(--default-grid-baseline);
+}
+
+.totem-input--range {
+	width: 100%;
+	padding: 0;
+	accent-color: var(--color-primary-element);
+}
+
+.totem-color {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: calc(var(--default-grid-baseline) * 3);
+}
+
+.totem-chip {
+	padding: var(--default-grid-baseline) calc(var(--default-grid-baseline) * 3);
+	border: 1px solid var(--color-border-maxcontrast);
+	border-radius: var(--border-radius-element);
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	font-variant-numeric: tabular-nums;
+}
+
+.totem-ratio {
+	font-size: var(--font-size-small);
+}
+
+.totem-ratio--good {
+	color: var(--color-success-text);
+}
+
+.totem-ratio--bad {
+	font-weight: 700;
+	color: var(--color-error-text);
+}
+
+.totem-upper input {
+	text-transform: uppercase;
+}
+
+.totem-fieldset {
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+	padding: var(--default-grid-baseline) calc(var(--default-grid-baseline) * 3);
+	border: 1px solid var(--color-border-dark);
+	border-radius: var(--border-radius-element);
+}
+
+.totem-fieldset legend {
+	padding-inline: var(--default-grid-baseline);
+	font-size: var(--font-size-small);
+	color: var(--color-text-maxcontrast);
+}
+
+.totem-address-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: calc(var(--default-grid-baseline) * 2);
+}
+
+.totem-address {
+	flex: 1 1 12em;
+	min-width: 0;
+	padding: calc(var(--default-grid-baseline) * 2) calc(var(--default-grid-baseline) * 3);
+	font-size: var(--font-size-small);
+	color: var(--color-main-text);
+	background: var(--color-background-dark);
+	border-radius: var(--border-radius-element);
+	overflow-wrap: anywhere;
+	user-select: all;
+}
+
+.totem-confirm__question {
+	margin: 0 0 calc(var(--default-grid-baseline) * 2);
+	font-weight: 700;
+}
+
+.totem-confirm__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--default-grid-baseline) * 2);
+}
