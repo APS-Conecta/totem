@@ -26,6 +26,13 @@ class TodayTest extends TestCase {
 		$this->assertSame(1_792_290_600, $this->today(1_792_290_600, 'UTC')->now());
 	}
 
+	public function testTheStampIsTheMomentTheWayTheClinicReadsItOnATicket(): void {
+		$ts = (new \DateTimeImmutable('2026-10-18 02:30:00', new DateTimeZone('UTC')))->getTimestamp();
+
+		$this->assertSame('17-10-2026 23:30', $this->today($ts, 'America/Santiago')->stamp());
+		$this->assertSame('18-10-2026 02:30', $this->today($ts, 'UTC')->stamp());
+	}
+
 	public function testTheDayAndTimeAreThoseOfTheInstanceZoneNotUtc(): void {
 		// 2026-10-18 02:30 UTC is still the 17th, 23:30, in Chile's summer time (UTC-3).
 		$ts = (new \DateTimeImmutable('2026-10-18 02:30:00', new DateTimeZone('UTC')))->getTimestamp();

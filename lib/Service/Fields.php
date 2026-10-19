@@ -6,6 +6,7 @@ declare(strict_types=1);
 
 namespace OCA\Totem\Service;
 
+use OCA\Totem\Domain\PrinterAddress;
 use OCA\Totem\Exception\Refused;
 
 /**
@@ -84,6 +85,28 @@ final class Fields {
 		}
 
 		return $value;
+	}
+
+	/**
+	 * A totem's network printer: a blank host means none (the kiosk's browser prints); otherwise the host and
+	 * the port must be where a clinic's ticket printer can be (Domain\PrinterAddress).
+	 *
+	 * @param ?callable(string): (list<string>|false) $resolve host name to IPv4 addresses; the system resolver by default
+	 * @return array{0: ?string, 1: int} host (null = no printer) and port
+	 */
+	public static function printer(mixed $host, mixed $port, ?callable $resolve = null): array {
+		$host = trim((string)$host);
+		if ($host === '') {
+			return [null, 9100];
+		}
+		$raw = trim((string)$port);
+		$number = $raw === '' ? 9100 : ((string)(int)$raw === $raw ? (int)$raw : 0);
+		$problem = PrinterAddress::problem($host, $number, $resolve);
+		if ($problem !== null) {
+			throw new Refused($problem);
+		}
+
+		return [$host, $number];
 	}
 
 	/** @return list<int> distinct, in the order given */

@@ -32,6 +32,11 @@ class Today {
 		return $this->local()->format('Y-m-d');
 	}
 
+	/** The moment as the clinic writes it on a ticket, DD-MM-YYYY HH:MM, in the instance's time zone. */
+	public function stamp(): string {
+		return $this->local()->format('d-m-Y H:i');
+	}
+
 	/** HH:MM in the instance's time zone. */
 	public function time(): string {
 		return $this->local()->format('H:i');
