@@ -1,0 +1,454 @@
+<meta charset="utf-8">
+<title>Maqueta Totem staff</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Review shell (themed) around ONE Nextcloud-style app: navigation on the left, a section in the middle, the
+   sidebar on the right. The product uses Nextcloud's own components and variables (NcAppNavigation, NcAppContent,
+   NcAppSidebar; theming and dark mode come free); the mockup fakes those variables under --nc-*.
+   Design rules shown here and kept in the product: no pixel font sizes (em/rem and tokens), spacing in multiples
+   of the 4px grid baseline, controls at least 44px high, content at most 1100px wide, the left inset below 1024px
+   clears the floating navigation toggle. The layout reads the width of the chosen frame (container query);
+   the product reads the real viewport. */
+:root {
+  --bg: #f4f5f7; --fg: #13202b; --muted: #55606b; --line: #d5d9de; --panel: #ffffff; --accent: #6a12e0;
+  --nc-bg: #ffffff; --nc-fg: #222222; --nc-muted: #6b6b6b; --nc-border: #dddddd; --nc-soft: #f4f4f4;
+  --nc-primary: #6a12e0; --nc-primary-fg: #ffffff; --nc-primary-soft: #f1ebff; --nc-hover: #f1f1f1;
+  --nc-err: #b3261e; --nc-err-soft: #fdecea; --nc-ok: #2e7d4f; --gold: #f2b134;
+  --gb: 4px; --clickable: 44px; --small: 0.867em; --r-el: 8px; --r-box: 16px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e151c; --fg: #e8edf1; --muted: #9aa7b3; --line: #2a3744; --panel: #16212b; --accent: #a97bff;
+    --nc-bg: #171717; --nc-fg: #ebebeb; --nc-muted: #a6a6a6; --nc-border: #3a3a3a; --nc-soft: #202020;
+    --nc-primary: #a97bff; --nc-primary-fg: #13202b; --nc-primary-soft: #2b2142; --nc-hover: #262626;
+    --nc-err: #ff8a80; --nc-err-soft: #3b1f1d; --nc-ok: #6fcf97; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e151c; --fg: #e8edf1; --muted: #9aa7b3; --line: #2a3744; --panel: #16212b; --accent: #a97bff;
+  --nc-bg: #171717; --nc-fg: #ebebeb; --nc-muted: #a6a6a6; --nc-border: #3a3a3a; --nc-soft: #202020;
+  --nc-primary: #a97bff; --nc-primary-fg: #13202b; --nc-primary-soft: #2b2142; --nc-hover: #262626;
+  --nc-err: #ff8a80; --nc-err-soft: #3b1f1d; --nc-ok: #6fcf97; color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 16px; line-height: 1.45;
+  padding-block: 24px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1440px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+h1 { font-size: 1.5rem; line-height: 1.15; margin: 0; text-wrap: balance; }
+.lede { margin: 0; color: var(--muted); max-width: 72ch; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 0.875rem; color: var(--muted); }
+.bar select { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.frame-outer { overflow-x: auto; }
+.frame { margin: 0 auto; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; container: nc / inline-size; width: var(--w, 100%); max-width: 100%; height: 780px; position: relative; }
+
+/* ===== the Nextcloud-style app ===== */
+.nc { height: 100%; display: flex; flex-direction: column; background: var(--nc-bg); color: var(--nc-fg); font-size: 15px; line-height: 1.4; position: relative; }
+.nc button, .nc a { font: inherit; color: inherit; }
+.nc-top { height: 50px; flex: none; background: #6a12e0; color: #fff; display: flex; align-items: center; padding: 0 calc(var(--gb) * 5); font-weight: 700; }
+.shell { flex: 1; min-height: 0; display: grid; grid-template-columns: 300px minmax(0, 1fr) auto; position: relative; }
+
+/* navigation */
+.nav { background: var(--nc-soft); border-inline-end: 1px solid var(--nc-border); padding: calc(var(--gb) * 2); display: flex; flex-direction: column; gap: calc(var(--gb) * 2); overflow: auto; }
+.nav h3 { margin: calc(var(--gb) * 2) calc(var(--gb) * 3) 0; font-size: var(--small); font-weight: 600; color: var(--nc-muted); letter-spacing: .02em; }
+.nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--gb); }
+.nav-item { width: 100%; min-height: var(--clickable); display: flex; align-items: center; gap: calc(var(--gb) * 3); padding: 0 calc(var(--gb) * 3); border: 0; border-radius: var(--r-el); background: transparent; cursor: pointer; text-align: start; text-decoration: none; font-size: 1em; }
+.nav-item:hover { background: var(--nc-hover); }
+.nav-item[aria-current="page"] { background: var(--nc-primary-soft); font-weight: 600; }
+.nav-item svg { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.nav-foot { margin-top: auto; border-top: 1px solid var(--nc-border); padding-top: calc(var(--gb) * 2); }
+.nav-item .ext { margin-inline-start: auto; color: var(--nc-muted); }
+.nc :focus-visible { outline: 2px solid var(--nc-fg); outline-offset: 2px; }
+
+/* content */
+.content { min-width: 0; overflow: auto; padding: calc(var(--gb) * 6) calc(var(--gb) * 8) calc(var(--gb) * 10); }
+.content > .inner { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: calc(var(--gb) * 6); min-width: 0; }
+.head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: calc(var(--gb) * 2) calc(var(--gb) * 4); }
+.head h2 { margin: 0; font-size: 1.5em; line-height: 1.3; font-weight: 700; text-wrap: balance; }
+.head .sub { margin: 0; font-size: 1em; color: var(--nc-muted); }
+.head .titles { min-width: 0; display: flex; flex-direction: column; gap: var(--gb); }
+.acts { display: inline-flex; flex-wrap: wrap; gap: calc(var(--gb) * 2); align-items: center; }
+.btn { min-height: var(--clickable); padding: 0 calc(var(--gb) * 4); border: 1px solid var(--nc-border); border-radius: var(--r-el); background: var(--nc-bg); cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: calc(var(--gb) * 2); text-decoration: none; }
+.btn:hover { background: var(--nc-hover); }
+.btn.primary { background: var(--nc-primary); border-color: var(--nc-primary); color: var(--nc-primary-fg); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn.tertiary { border-color: transparent; background: transparent; }
+.note { margin: 0; color: var(--nc-muted); font-size: var(--small); max-width: 80ch; }
+.state { margin: 0; padding: calc(var(--gb) * 4) calc(var(--gb) * 5); border: 1px dashed var(--nc-border); border-radius: var(--r-el); background: var(--nc-soft); color: var(--nc-muted); }
+
+/* box */
+.now { display: flex; flex-direction: column; gap: calc(var(--gb) * 2); padding: calc(var(--gb) * 2) 0; }
+.now .num { font-size: clamp(3em, 11cqw, 7.5em); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.now .none { font-size: 2em; color: var(--nc-muted); }
+.now .meta { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--gb) * 1) calc(var(--gb) * 3); font-size: 1.25em; color: var(--nc-muted); }
+.dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.nc .primary-big { width: 100%; min-height: calc(var(--clickable) * 2); border: 0; border-radius: var(--r-box); background: var(--nc-primary); color: var(--nc-primary-fg); font-size: clamp(1.25em, 3cqw, 2em); font-weight: 700; cursor: pointer; }
+.nc .primary-big.ok { background: var(--nc-ok); color: #fff; }
+.nc .primary-big:disabled { opacity: .4; cursor: not-allowed; }
+.seconds { display: flex; flex-wrap: wrap; gap: calc(var(--gb) * 3); }
+.seconds .btn { flex: 1 1 12em; min-height: calc(var(--clickable) * 1.5); font-size: 1.125em; }
+.picker { display: flex; flex-direction: column; gap: calc(var(--gb) * 2); max-width: 60ch; }
+.picker select, .field input[type=text], .field input[type=time], .field input[type=number], .field select { min-height: var(--clickable); font: inherit; color: var(--nc-fg); background: var(--nc-bg); border: 2px solid var(--nc-border); border-radius: var(--r-el); padding: 0 calc(var(--gb) * 3); width: 100%; }
+.q-btn { margin-inline-start: auto; }
+
+/* sidebar */
+.side { display: none; width: 400px; background: var(--nc-bg); border-inline-start: 1px solid var(--nc-border); flex-direction: column; min-height: 0; }
+.shell.side-open .side { display: flex; }
+.side header { display: flex; align-items: flex-start; justify-content: space-between; gap: calc(var(--gb) * 2); padding: calc(var(--gb) * 4) calc(var(--gb) * 4) calc(var(--gb) * 2); }
+.side header h3 { margin: 0; font-size: 1.25em; line-height: 1.3; text-wrap: balance; overflow-wrap: anywhere; }
+.side header p { margin: 0; color: var(--nc-muted); font-size: var(--small); }
+.side .x { width: var(--clickable); height: var(--clickable); border: 0; background: transparent; border-radius: var(--r-el); cursor: pointer; font-size: 1.5em; line-height: 1; flex: none; }
+.side .x:hover { background: var(--nc-hover); }
+.side .body { padding: calc(var(--gb) * 2) calc(var(--gb) * 4) calc(var(--gb) * 6); overflow: auto; display: flex; flex-direction: column; gap: calc(var(--gb) * 4); }
+.q-row { display: flex; align-items: center; gap: calc(var(--gb) * 3); min-height: var(--clickable); padding: 0 calc(var(--gb) * 2); border-top: 1px solid var(--nc-border); font-variant-numeric: tabular-nums; font-weight: 600; }
+.q-row.next { background: var(--nc-primary-soft); border-radius: var(--r-el); }
+.q-row .w { margin-inline-start: auto; font-weight: 400; color: var(--nc-muted); }
+.q-row .tag { font-size: var(--small); color: var(--nc-primary); }
+.kind { width: 1.75em; height: 1.75em; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-size: var(--small); font-weight: 700; flex: none; }
+.kind.p { background: var(--gold); color: #13202b; } .kind.g { background: var(--nc-hover); color: var(--nc-fg); border: 1px solid var(--nc-border); }
+
+/* forms in the sidebar */
+.field { display: flex; flex-direction: column; gap: var(--gb); min-width: 0; }
+.field > label, .field > .lbl { font-size: var(--small); color: var(--nc-muted); }
+.row2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(var(--gb) * 3); }
+.switch { display: flex; align-items: center; gap: calc(var(--gb) * 3); min-height: var(--clickable); }
+.switch input { width: 22px; height: 22px; accent-color: var(--nc-primary); }
+.chip { display: inline-flex; align-items: center; justify-content: center; min-width: 5em; padding: calc(var(--gb) * 1) calc(var(--gb) * 3); border-radius: var(--r-el); font-weight: 700; letter-spacing: .06em; }
+.ratio { font-size: var(--small); color: var(--nc-ok); }
+.checks { display: flex; flex-direction: column; border: 1px solid var(--nc-border); border-radius: var(--r-el); padding: var(--gb) calc(var(--gb) * 3); }
+.checks .switch { min-height: var(--clickable); }
+
+/* tables */
+.scroll { overflow-x: auto; min-width: 0; position: relative; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 40em; }
+caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+th, td { padding: calc(var(--gb) * 2) calc(var(--gb) * 3); text-align: end; border-bottom: 1px solid var(--nc-border); white-space: nowrap; }
+thead th { font-weight: 400; font-size: var(--small); color: var(--nc-muted); vertical-align: bottom; }
+th:first-child, td:first-child { text-align: start; position: sticky; inset-inline-start: 0; background: var(--nc-bg); }
+thead tr.grp th { text-align: center; border-bottom: 0; padding-bottom: 0; }
+thead tr.grp th.span { border-bottom: 1px solid var(--nc-border); }
+tbody th { font-weight: 600; white-space: normal; }
+.pick { min-height: var(--clickable); width: 100%; display: flex; align-items: center; gap: calc(var(--gb) * 2); border: 0; background: transparent; cursor: pointer; text-align: start; font-weight: 600; border-radius: var(--r-el); padding: 0 calc(var(--gb) * 1); }
+.pick:hover { background: var(--nc-hover); }
+tr.sel td, tr.sel th { background: var(--nc-primary-soft); }
+tfoot th, tfoot td { font-weight: 700; border-top: 2px solid var(--nc-fg); border-bottom: 0; }
+td.t { font-weight: 700; } td.z { color: var(--nc-muted); } tr.future td, tr.future th { color: var(--nc-muted); }
+.off { font-weight: 400; color: var(--nc-muted); font-size: var(--small); margin-inline-start: calc(var(--gb) * 2); }
+.link { color: var(--nc-primary); text-decoration: underline; font-weight: 600; min-height: var(--clickable); display: inline-flex; align-items: center; }
+
+/* statistics */
+.seg { display: inline-flex; border: 1px solid var(--nc-border); border-radius: var(--r-el); overflow: hidden; }
+.seg button { min-height: var(--clickable); padding: 0 calc(var(--gb) * 4); border: 0; background: var(--nc-bg); cursor: pointer; font-weight: 600; }
+.seg button + button { border-inline-start: 1px solid var(--nc-border); }
+.seg button[aria-pressed="true"] { background: var(--nc-primary); color: var(--nc-primary-fg); }
+.when { display: inline-flex; align-items: center; gap: calc(var(--gb) * 2); min-width: 0; }
+.when .label { font-size: 1.125em; font-weight: 700; padding: 0 calc(var(--gb) * 2); text-wrap: balance; }
+.when .arrow { width: var(--clickable); height: var(--clickable); border: 1px solid var(--nc-border); border-radius: var(--r-el); background: var(--nc-bg); cursor: pointer; font-size: 1.5em; line-height: 1; }
+.when .arrow:disabled { opacity: .35; cursor: not-allowed; }
+.figures { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-top: 3px solid var(--nc-fg); }
+.figure { padding: calc(var(--gb) * 3) calc(var(--gb) * 3) calc(var(--gb) * 1); min-width: 0; border-inline-start: 1px solid var(--nc-border); }
+.figure:first-child { padding-inline-start: 0; border-inline-start: 0; }
+.figure .n { font-size: 2.5em; font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.figure.main .n { font-size: 3.5em; }
+.figure .t { font-size: var(--small); color: var(--nc-muted); }
+section h3.sec { margin: 0 0 calc(var(--gb) * 2); font-size: 1.125em; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--gb) calc(var(--gb) * 3); }
+section h3.sec small { font-weight: 400; font-size: var(--small); color: var(--nc-muted); }
+.split th, .split td { padding: calc(var(--gb) * 2) calc(var(--gb) * 2); }
+.split { min-width: 0; }
+
+/* the docked sidebar takes 400px: give the list its width back */
+@container nc (min-width: 1024px) { .shell.side-open .content { padding-inline: calc(var(--gb) * 4); } }
+
+/* toggle (phones and tablets) */
+.toggle { display: none; position: absolute; z-index: 5; top: calc(50px + var(--gb) * 2); inset-inline-start: calc(var(--gb) * 2); width: var(--clickable); height: var(--clickable); border: 1px solid var(--nc-border); border-radius: var(--r-el); background: var(--nc-bg); cursor: pointer; align-items: center; justify-content: center; }
+.toggle svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.scrim { display: none; }
+
+@container nc (max-width: 1023px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .toggle { display: inline-flex; }
+  .nav { position: absolute; z-index: 20; inset-block: 0; inset-inline-start: 0; width: min(300px, 86%); transform: translateX(-102%); transition: transform .2s; box-shadow: 0 0 0 100vmax transparent; }
+  .shell.nav-open .nav { transform: none; }
+  .shell.nav-open .scrim { display: block; position: absolute; inset: 0; z-index: 10; background: rgba(0, 0, 0, .35); }
+  .content { padding: calc(var(--gb) * 4) calc(var(--gb) * 5) calc(var(--gb) * 8) calc(var(--clickable) + var(--gb) * 4); }
+  .side { position: absolute; z-index: 15; inset-block: 0; inset-inline-end: 0; width: min(400px, 100%); box-shadow: -8px 0 24px rgba(0, 0, 0, .18); }
+  .figures { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .figure:nth-child(4) { padding-inline-start: 0; border-inline-start: 0; }
+  .figure:nth-child(n + 4) { border-top: 1px solid var(--nc-border); margin-top: calc(var(--gb) * 2); padding-top: calc(var(--gb) * 3); }
+}
+@container nc (max-width: 560px) {
+  .content { padding: calc(var(--gb) * 3) calc(var(--gb) * 4) calc(var(--gb) * 8) calc(var(--clickable) + var(--gb) * 4); }
+  .figures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .figure:nth-child(n) { padding-inline-start: calc(var(--gb) * 3); border-inline-start: 1px solid var(--nc-border); }
+  .figure:nth-child(odd) { padding-inline-start: 0; border-inline-start: 0; }
+  .figure:nth-child(n + 3) { border-top: 1px solid var(--nc-border); margin-top: calc(var(--gb) * 2); padding-top: calc(var(--gb) * 3); }
+  .seg, .when, .acts { width: 100%; } .seg button, .acts .btn { flex: 1; }
+  .when { justify-content: space-between; } .when .label { flex: 1; text-align: center; font-size: 1em; }
+  .row2 { grid-template-columns: minmax(0, 1fr); }
+  th, td { padding: calc(var(--gb) * 2) calc(var(--gb) * 2); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <h1>Maqueta: menú y barra lateral del staff</h1>
+  <p class="lede">Una sola aplicación de Nextcloud para Box, Estadísticas y Configuración: menú a la izquierda, la sección en el centro y la barra lateral a la derecha con el detalle de lo seleccionado. Todo es interactivo: elija una opción del menú, toque una fila o el turno en espera, y cambie el ancho o el tema para revisar teléfono, tableta y portátil. La configuración queda abierta a cualquier usuario con sesión.</p>
+  <div class="bar" role="group" aria-label="Revisión">
+    <label>Ancho
+      <select id="width">
+        <option value="">Todo el ancho</option>
+        <option value="1366px" selected>Portátil 1366</option>
+        <option value="820px">Tableta 820</option>
+        <option value="390px">Teléfono 390</option>
+        <option value="340px">Teléfono pequeño 340</option>
+      </select>
+    </label>
+    <label>Tema
+      <select id="theme"><option value="">Del sistema</option><option value="light">Claro</option><option value="dark">Oscuro</option></select>
+    </label>
+  </div>
+  <div class="frame-outer"><div class="frame" id="frame"><div class="nc" id="app"></div></div></div>
+</div>
+
+<script>
+const ICONS = {
+  box: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="9" width="18" height="9" rx="2"/><path d="M7 9V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3M8 21h8"/></svg>',
+  stats: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V11M12 20V4M19 20v-6"/></svg>',
+  servicios: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>',
+  boxes: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
+  pantallas: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M9 20h6M12 16v4"/></svg>',
+  totem: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M10 18h4"/></svg>',
+  menu: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+};
+const SECTIONS = [
+  { id: 'box', group: 'Operación', name: 'Box' },
+  { id: 'estadisticas', group: 'Operación', name: 'Estadísticas', icon: 'stats' },
+  { id: 'servicios', group: 'Configuración', name: 'Servicios' },
+  { id: 'boxes', group: 'Configuración', name: 'Boxes' },
+  { id: 'pantallas', group: 'Configuración', name: 'Pantallas' },
+];
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const num = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+/* ---------- state ---------- */
+const S = { section: 'box', navOpen: false, side: null,                  // side: { type, ... } | null
+  box: { chosen: true, estado: 'none' },                                    // none | called | in_service
+  kind: 'week', offset: 0 };
+
+/* ---------- box ---------- */
+const WAITING = [
+  { l: 'FAR-P-015', k: 'p', w: '12:40', c: '#0b6e69' }, { l: 'MUE-P-008', k: 'p', w: '09:02', c: '#b7791f' },
+  { l: 'FAR-G-032', k: 'g', w: '21:15', c: '#0b6e69' }, { l: 'FAR-G-033', k: 'g', w: '18:30', c: '#0b6e69' },
+  { l: 'MUE-G-021', k: 'g', w: '11:48', c: '#b7791f' }, { l: 'FAR-G-034', k: 'g', w: '04:12', c: '#0b6e69' },
+];
+function boxHtml() {
+  const e = S.box.estado;
+  const cur = e === 'none' ? null : { l: 'FAR-P-014', pref: true, servicio: 'Farmacia', c: '#0b6e69' };
+  const primary = { none: ['Llamar siguiente', ''], called: ['Iniciar atención', ''], in_service: ['Finalizar atención', 'ok'] }[e];
+  return `<div class="inner">
+    <div class="head"><div class="titles"><h2>Box 3</h2><p class="sub">Farmacia, Toma de Muestras</p></div>
+      <div class="acts"><button class="btn" data-act="waiting">En espera (${WAITING.length})</button><button class="btn tertiary" type="button">Cambiar box</button></div></div>
+    <div class="now" aria-live="polite">${cur
+      ? `<div class="num">${cur.l}</div><div class="meta"><span class="dot" style="background:${cur.c}"></span><span>${cur.servicio} · Atención preferente · ${e === 'called' ? 'Llamado' : 'En atención'} 00:42</span></div>`
+      : `<div class="none">Sin turno en atención.</div><div class="meta">El siguiente en la fila es FAR-P-015, de Farmacia.</div>`}</div>
+    <button class="primary-big ${primary[1]}" type="button" data-act="primary">${primary[0]}</button>
+    <div class="seconds"><button class="btn" type="button" ${e === 'called' ? '' : 'disabled'}>Llamar de nuevo</button><button class="btn" type="button" ${e === 'called' ? '' : 'disabled'}>No se presentó</button></div>
+  </div>`;
+}
+function waitingSide() {
+  return { title: 'En espera', sub: `${WAITING.length} turnos · Box 3`, body: `<div role="list">${WAITING.map((r, i) =>
+    `<div class="q-row ${i === 0 ? 'next' : ''}" role="listitem"><span class="kind ${r.k}">${r.k.toUpperCase()}</span><span>${r.l}</span>${i === 0 ? '<span class="tag">SIGUIENTE</span>' : ''}<span class="w">${r.w}</span></div>`).join('')}</div>
+    <p class="note">P = atención preferente, G = atención general. Se llama primero a quien lleva más tiempo, con dos preferentes por cada general.</p>` };
+}
+
+/* ---------- statistics (sample data, always adds up) ---------- */
+const TODAY = '2026-10-21';
+const SERVICIOS = [
+  { id: 1, name: 'Sector Azul', color: '#2b6cb0', sector: true }, { id: 2, name: 'Sector Verde', color: '#2f855a', sector: true },
+  { id: 3, name: 'Sector Rojo', color: '#c53030', sector: true }, { id: 4, name: 'Farmacia', color: '#0b6e69' },
+  { id: 5, name: 'Toma de Muestras', color: '#b7791f' }, { id: 6, name: 'Vacunatorio', color: '#6b46c1' },
+];
+const zero = () => ({ emitidos: 0, atendidos: 0, noShow: 0, sinAtender: 0 });
+const plus = (a, b) => { for (const k in a) a[k] += b[k]; return a; };
+const parse = (s) => new Date(s + 'T00:00:00Z');
+const iso = (d) => d.toISOString().slice(0, 10);
+const add = (s, n) => { const d = parse(s); d.setUTCDate(d.getUTCDate() + n); return iso(d); };
+function cell(day, s) {
+  const d = parse(day), wd = d.getUTCDay(), gen = { p: zero(), g: zero() };
+  if (wd === 0 || wd === 6 || day > TODAY) return gen;
+  const n = d.getUTCDate(), p = 5 + ((n * 5 + s.id * 3) % 9), g = 18 + ((n * 7 + s.id * 13) % 25), live = day === TODAY;
+  const noShow = live ? 1 : (n + s.id) % 4, open = live ? Math.round((p + g) * 0.35) : ((n + s.id) % 3 === 0 ? 1 : 0);
+  const pp = live ? Math.round(p * 0.6) : p, gg = live ? Math.round(g * 0.6) : g, po = live ? Math.min(open, pp) : 0;
+  gen.p = { emitidos: pp, atendidos: pp - po, noShow: 0, sinAtender: po };
+  gen.g = { emitidos: gg, atendidos: gg - noShow - (open - po), noShow, sinAtender: open - po };
+  return gen;
+}
+function period() {
+  if (S.kind === 'day') { const f = add(TODAY, S.offset); return { from: f, to: f }; }
+  if (S.kind === 'week') { const wd = (parse(TODAY).getUTCDay() + 6) % 7, f = add(TODAY, -wd + 7 * S.offset); return { from: f, to: add(f, 6) }; }
+  const t = parse(TODAY), first = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + S.offset, 1));
+  return { from: iso(first), to: iso(new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0))) };
+}
+const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const WD = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+function label(p) {
+  const a = parse(p.from), b = parse(p.to);
+  if (S.kind === 'day') return `${WD[a.getUTCDay()]} ${a.getUTCDate()} de ${MONTHS[a.getUTCMonth()]} de ${a.getUTCFullYear()}`;
+  if (S.kind === 'month') return `${MONTHS[a.getUTCMonth()]} de ${a.getUTCFullYear()}`;
+  return a.getUTCMonth() === b.getUTCMonth() ? `Semana del ${a.getUTCDate()} al ${b.getUTCDate()} de ${MONTHS[b.getUTCMonth()]} de ${b.getUTCFullYear()}` : `Semana del ${a.getUTCDate()} de ${MONTHS[a.getUTCMonth()]} al ${b.getUTCDate()} de ${MONTHS[b.getUTCMonth()]} de ${b.getUTCFullYear()}`;
+}
+const dayLabel = (d) => `${WD[parse(d).getUTCDay()].slice(0, 3)}, ${parse(d).getUTCDate()} ${MONTHS[parse(d).getUTCMonth()].slice(0, 3)}`;
+function board() {
+  const p = period(), days = []; for (let d = p.from; d <= p.to; d = add(d, 1)) days.push(d);
+  const rows = SERVICIOS.map((s) => { const r = { key: 's' + s.id, name: s.name, color: s.color, sector: s.sector, p: zero(), g: zero() }; days.forEach((d) => { const c = cell(d, s); plus(r.p, c.p); plus(r.g, c.g); }); return r; });
+  const perDay = days.map((d) => { const r = { key: 'd' + d, name: dayLabel(d), future: d > TODAY, day: d, p: zero(), g: zero() }; SERVICIOS.forEach((s) => { const c = cell(d, s); plus(r.p, c.p); plus(r.g, c.g); }); return r; });
+  return { p, rows, perDay };
+}
+const tot = (r) => plus(plus(zero(), r.p), r.g);
+const sum = (l) => l.reduce((a, r) => { plus(a.p, r.p); plus(a.g, r.g); return a; }, { p: zero(), g: zero() });
+function statsTable(caption, first, rows, foot, selectable) {
+  const body = rows.map((r) => { const t = tot(r), f = r.future, z = (n) => (n === 0 && !f ? ' class="z"' : '');
+    const head = selectable ? `<button class="pick" type="button" data-stat="${r.key}">${r.color ? `<span class="dot" style="background:${r.color}"></span>` : ''}${esc(r.name)}</button>` : esc(r.name);
+    return `<tr class="${f ? 'future' : ''} ${S.side && S.side.key === r.key ? 'sel' : ''}"><th scope="row">${head}</th><td${z(r.p.emitidos)}>${f ? '–' : num(r.p.emitidos)}</td><td${z(r.g.emitidos)}>${f ? '–' : num(r.g.emitidos)}</td><td class="t">${f ? '–' : num(t.emitidos)}</td><td${z(t.atendidos)}>${f ? '–' : num(t.atendidos)}</td><td${z(t.noShow)}>${f ? '–' : num(t.noShow)}</td><td${z(t.sinAtender)}>${f ? '–' : num(t.sinAtender)}</td></tr>`; }).join('');
+  const ft = tot(foot);
+  return `<div class="scroll"><table><caption>${caption}</caption><thead><tr class="grp"><th></th><th class="span" colspan="3" scope="colgroup">Tickets emitidos</th><th colspan="3"></th></tr><tr><th scope="col">${first}</th><th scope="col">Preferente</th><th scope="col">General</th><th scope="col">Total</th><th scope="col">Atendidos</th><th scope="col">No se presentó</th><th scope="col">Sin atender</th></tr></thead><tbody>${body}</tbody><tfoot><tr><th scope="row">${foot.label}</th><td>${num(foot.p.emitidos)}</td><td>${num(foot.g.emitidos)}</td><td>${num(ft.emitidos)}</td><td>${num(ft.atendidos)}</td><td>${num(ft.noShow)}</td><td>${num(ft.sinAtender)}</td></tr></tfoot></table></div>`;
+}
+function statsHtml() {
+  const b = board(), p = b.p, current = p.to >= TODAY && p.from <= TODAY;
+  const sec = b.rows.filter((r) => r.sector), oth = b.rows.filter((r) => !r.sector), all = sum(b.rows), T = tot(all);
+  const figs = [['Tickets emitidos', T.emitidos], ['Preferentes', all.p.emitidos], ['Generales', all.g.emitidos], ['Atendidos', T.atendidos], ['No se presentó', T.noShow], ['Sin atender', T.sinAtender]]
+    .map(([t, n], i) => `<div class="figure ${i === 0 ? 'main' : ''}"><div class="n">${num(n)}</div><div class="t">${t}</div></div>`).join('');
+  return `<div class="inner">
+    <div class="head"><div class="titles"><h2>Estadísticas</h2></div>
+      <div class="acts"><button class="btn" type="button">Actualizar</button><a class="btn primary" href="#csv">Descargar CSV</a></div></div>
+    <div class="head"><div class="seg" role="group" aria-label="Período">${['day', 'week', 'month'].map((k) => `<button type="button" data-kind="${k}" aria-pressed="${S.kind === k}">${{ day: 'Día', week: 'Semana', month: 'Mes' }[k]}</button>`).join('')}</div>
+      <div class="when"><button class="arrow" type="button" data-step="-1" aria-label="Período anterior">‹</button><span class="label" aria-live="polite">${label(p)}</span><button class="arrow" type="button" data-step="1" aria-label="Período siguiente" ${current ? 'disabled' : ''}>›</button></div></div>
+    <div class="figures" role="group" aria-label="Totales del período">${figs}</div>
+    <section><h3 class="sec">Sectores <small>Servicios marcados como sector</small></h3>${statsTable('Tickets por sector', 'Sector', sec, { ...sum(sec), label: 'Total sectores' }, true)}</section>
+    <section><h3 class="sec">Otros servicios</h3>${statsTable('Tickets por servicio', 'Servicio', oth, { ...sum(oth), label: 'Total otros servicios' }, true)}</section>
+    ${S.kind === 'day' ? '' : `<section><h3 class="sec">Por día</h3>${statsTable('Tickets por día', 'Día', b.perDay, { ...sum(b.rows), label: 'Total del período' }, true)}</section>`}
+    <p class="note">Se cuentan tickets, no personas: quien saca dos tickets cuenta dos veces. No se guarda ningún dato personal. “Sin atender” son los tickets que quedaron esperando, llamados o en atención al terminar el día.</p>
+  </div>`;
+}
+function statSide(key) {
+  const b = board(), r = [...b.rows, ...b.perDay].find((x) => x.key === key); if (!r) return null;
+  const t = tot(r), line = (name, field) => `<tr><th scope="row">${name}</th><td>${num(r.p[field])}</td><td>${num(r.g[field])}</td><td class="t">${num(t[field])}</td></tr>`;
+  return { key, title: r.name, sub: label(b.p), body: `<div class="scroll"><table class="split"><caption>Detalle de ${esc(r.name)}</caption><thead><tr><th></th><th scope="col">Preferente</th><th scope="col">General</th><th scope="col">Total</th></tr></thead>
+    <tbody>${line('Emitidos', 'emitidos')}${line('Atendidos', 'atendidos')}${line('No se presentó', 'noShow')}${line('Sin atender', 'sinAtender')}</tbody></table></div>
+    <p class="note">Cada ticket termina en una sola fila: emitidos = atendidos + no se presentó + sin atender.</p>` };
+}
+
+/* ---------- configuration ---------- */
+const SRV = [
+  { id: 1, name: 'Sector Azul', prefix: 'AZU', color: '#2b6cb0', opens: '07:30', closes: '16:30', quota: '', active: true, sector: true },
+  { id: 2, name: 'Sector Verde', prefix: 'VER', color: '#2f855a', opens: '07:30', closes: '16:30', quota: '', active: true, sector: true },
+  { id: 4, name: 'Farmacia', prefix: 'FAR', color: '#0b6e69', opens: '07:30', closes: '16:30', quota: '', active: true, sector: false },
+  { id: 5, name: 'Toma de Muestras', prefix: 'MUE', color: '#b7791f', opens: '07:30', closes: '10:30', quota: '80', active: true, sector: false },
+  { id: 6, name: 'Vacunatorio', prefix: 'VAC', color: '#6b46c1', opens: '08:00', closes: '15:00', quota: '', active: false, sector: false },
+];
+const BOX = [{ id: 3, name: 'Box 3', servicios: [4, 5] }, { id: 4, name: 'Box 4', servicios: [6] }, { id: 5, name: 'Box 5', servicios: [1, 2] }];
+const PAN = [{ id: 1, slug: 'atencion', name: 'Atención', servicios: [], volume: 100, voice: 'mujer' }, { id: 2, slug: 'sala_farmacia', name: 'Sala Farmacia', servicios: [4], volume: 60, voice: 'hombre' }];
+const names = (ids) => ids.length ? ids.map((i) => SRV.find((s) => s.id === i).name).join(', ') : 'Todos los servicios';
+function ratio(hex) { const l = (h) => { const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((v) => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; }; const a = l(hex); return Math.max((1.05) / (a + 0.05), (a + 0.05) / 0.05); }
+function listHead(title, sub, newLabel) {
+  return `<div class="head"><div class="titles"><h2>${title}</h2><p class="sub">${sub}</p></div><div class="acts"><button class="btn primary" type="button" data-new="${S.section}">${newLabel}</button></div></div>`;
+}
+function serviciosHtml() {
+  return `<div class="inner">${listHead('Servicios', 'Las colas que un paciente puede tomar en el tótem. Un servicio marcado como sector se cuenta aparte en Estadísticas.', 'Nuevo servicio')}
+    <div class="scroll"><table><caption>Servicios</caption><thead><tr><th scope="col">Servicio</th><th scope="col">Prefijo</th><th scope="col">Horario</th><th scope="col">Cupo</th><th scope="col">Estado</th><th scope="col">Tipo</th></tr></thead><tbody>
+    ${SRV.map((s) => `<tr class="${S.side && S.side.key === 's' + s.id ? 'sel' : ''}"><th scope="row"><button class="pick" type="button" data-edit="s${s.id}"><span class="dot" style="background:${s.color}"></span>${esc(s.name)}</button></th><td>${s.prefix}</td><td>${s.opens}–${s.closes}</td><td>${s.quota || 'Sin límite'}</td><td>${s.active ? 'Activo' : 'Inactivo'}</td><td>${s.sector ? 'Sector' : 'Servicio'}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+function servicioSide(id) {
+  const s = id === 'new' ? { name: '', prefix: '', color: '#0b6e4f', opens: '08:00', closes: '17:00', quota: '', active: true, sector: false } : SRV.find((x) => 's' + x.id === id);
+  const r = ratio(s.color);
+  return { key: id === 'new' ? 'new' : id, title: id === 'new' ? 'Nuevo servicio' : s.name, sub: id === 'new' ? 'Complete el formulario' : 'Editar servicio', body: `<form class="body" style="padding:0" onsubmit="return false">
+    <div class="field"><label for="f-name">Nombre</label><input id="f-name" type="text" maxlength="28" value="${esc(s.name)}"></div>
+    <div class="row2"><div class="field"><label for="f-prefix">Prefijo</label><input id="f-prefix" type="text" maxlength="4" value="${s.prefix}"></div><div class="field"><label for="f-quota">Cupo diario</label><input id="f-quota" type="number" placeholder="Sin límite" value="${s.quota}"></div></div>
+    <div class="row2"><div class="field"><label for="f-opens">Abre</label><input id="f-opens" type="time" value="${s.opens}"></div><div class="field"><label for="f-closes">Cierra</label><input id="f-closes" type="time" value="${s.closes}"></div></div>
+    <div class="field"><span class="lbl">Color</span><div class="acts"><span class="chip" style="background:${s.color};color:${r >= 4.5 ? '#fff' : '#13202b'}">${s.prefix || '—'}</span><span class="ratio">Contraste ${r.toFixed(1).replace('.', ',')}:1</span></div></div>
+    <label class="switch"><input type="checkbox" ${s.active ? 'checked' : ''}> Activo</label>
+    <label class="switch"><input type="checkbox" ${s.sector ? 'checked' : ''}> Es un sector</label>
+    <button class="btn primary" type="submit">Guardar servicio</button></form>` };
+}
+function boxesHtml() {
+  return `<div class="inner">${listHead('Boxes', 'Cada box atiende uno o más servicios y llama al ticket que lleva más tiempo esperando.', 'Nuevo box')}
+    <div class="scroll"><table><caption>Boxes</caption><thead><tr><th scope="col">Box</th><th scope="col">Atiende</th></tr></thead><tbody>
+    ${BOX.map((b) => `<tr class="${S.side && S.side.key === 'b' + b.id ? 'sel' : ''}"><th scope="row"><button class="pick" type="button" data-edit="b${b.id}">${esc(b.name)}</button></th><td style="text-align:start;white-space:normal">${names(b.servicios)}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+function boxSide(id) {
+  const b = id === 'new' ? { name: '', servicios: [] } : BOX.find((x) => 'b' + x.id === id);
+  return { key: id === 'new' ? 'new' : id, title: id === 'new' ? 'Nuevo box' : b.name, sub: id === 'new' ? 'Complete el formulario' : 'Editar box', body: `<form class="body" style="padding:0" onsubmit="return false">
+    <div class="field"><label for="f-bname">Nombre</label><input id="f-bname" type="text" maxlength="14" value="${esc(b.name)}"></div>
+    <div class="field"><span class="lbl">Servicios que atiende</span><div class="checks">${SRV.filter((s) => s.active).map((s) => `<label class="switch"><input type="checkbox" ${b.servicios.includes(s.id) ? 'checked' : ''}> ${esc(s.name)}</label>`).join('')}</div></div>
+    <button class="btn primary" type="submit">Guardar box</button>
+    ${id === 'new' ? '' : '<button class="btn" type="button">Eliminar box</button>'}</form>` };
+}
+function pantallasHtml() {
+  return `<div class="inner">${listHead('Pantallas', 'Las pantallas de la sala de espera: muestran las llamadas y las anuncian con sonido y voz.', 'Nueva pantalla')}
+    <div class="scroll"><table><caption>Pantallas</caption><thead><tr><th scope="col">Pantalla</th><th scope="col">Muestra</th><th scope="col">Volumen</th><th scope="col">Voz</th><th scope="col"><span style="position:absolute;width:1px;height:1px;overflow:hidden">Abrir</span></th></tr></thead><tbody>
+    ${PAN.map((p) => `<tr class="${S.side && S.side.key === 'p' + p.id ? 'sel' : ''}"><th scope="row"><button class="pick" type="button" data-edit="p${p.id}">${esc(p.name)}</button></th><td style="text-align:start;white-space:normal">${names(p.servicios)}</td><td>${p.volume}</td><td>${{ mujer: 'Mujer', hombre: 'Hombre', off: 'Sin voz' }[p.voice]}</td><td><a class="link" href="#display-${p.slug}" target="_blank" rel="noopener">Abrir pantalla</a></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+function pantallaSide(id) {
+  const p = id === 'new' ? { name: '', slug: '', servicios: [], volume: 100, voice: 'mujer' } : PAN.find((x) => 'p' + x.id === id);
+  return { key: id === 'new' ? 'new' : id, title: id === 'new' ? 'Nueva pantalla' : p.name, sub: id === 'new' ? 'Complete el formulario' : 'Editar pantalla', body: `<form class="body" style="padding:0" onsubmit="return false">
+    <div class="field"><label for="f-pname">Nombre</label><input id="f-pname" type="text" maxlength="28" value="${esc(p.name)}"></div>
+    <div class="field"><span class="lbl">Servicios que muestra</span><div class="checks">${SRV.filter((s) => s.active).map((s) => `<label class="switch"><input type="checkbox" ${p.servicios.includes(s.id) ? 'checked' : ''}> ${esc(s.name)}</label>`).join('')}</div><p class="note">Sin ninguno marcado, muestra todos los servicios.</p></div>
+    <div class="field"><label for="f-vol">Volumen del aviso: ${p.volume}</label><input id="f-vol" type="range" min="0" max="100" value="${p.volume}" style="min-height:var(--clickable);accent-color:var(--nc-primary)"></div>
+    <div class="field"><label for="f-voice">Voz del aviso</label><select id="f-voice"><option ${p.voice === 'mujer' ? 'selected' : ''}>Mujer (Claude, México)</option><option ${p.voice === 'hombre' ? 'selected' : ''}>Hombre (Davefx, España)</option><option ${p.voice === 'off' ? 'selected' : ''}>Sin voz</option></select></div>
+    <button class="btn" type="button">Probar aviso</button>
+    ${id === 'new' ? '' : `<div class="field"><span class="lbl">Dirección de la pantalla</span><code style="overflow-wrap:anywhere;font-size:var(--small)">http://localhost:8094/apps/totem/display/${p.slug}</code><div class="acts"><a class="btn" href="#display-${p.slug}" target="_blank" rel="noopener">Abrir pantalla</a><button class="btn tertiary" type="button">Copiar dirección</button></div></div>`}
+    <button class="btn primary" type="submit">Guardar pantalla</button>
+    ${id === 'new' ? '' : '<button class="btn" type="button">Eliminar pantalla</button>'}</form>` };
+}
+
+/* ---------- shell ---------- */
+function navHtml() {
+  const groups = [...new Set(SECTIONS.map((s) => s.group))];
+  return `<nav class="nav" aria-label="Totem">${groups.map((g, gi) => `<div><h3 id="g${gi}">${g}</h3><ul aria-labelledby="g${gi}">${SECTIONS.filter((s) => s.group === g).map((s) =>
+    `<li><button class="nav-item" type="button" data-section="${s.id}" ${S.section === s.id ? 'aria-current="page"' : ''}>${ICONS[s.icon || s.id]}<span>${s.name}</span></button></li>`).join('')}</ul></div>`).join('')}
+    <div class="nav-foot"><a class="nav-item" href="#totem" target="_blank" rel="noopener">${ICONS.totem}<span>Abrir tótem</span><span class="ext" aria-hidden="true">↗</span></a></div></nav>`;
+}
+function sideData() {
+  const t = S.side && S.side.type; if (!t) return null;
+  if (t === 'waiting') return waitingSide();
+  if (t === 'stat') return statSide(S.side.key);
+  if (t === 'servicio') return servicioSide(S.side.key);
+  if (t === 'box') return boxSide(S.side.key);
+  if (t === 'pantalla') return pantallaSide(S.side.key);
+}
+function render() {
+  const main = { box: boxHtml, estadisticas: statsHtml, servicios: serviciosHtml, boxes: boxesHtml, pantallas: pantallasHtml }[S.section]();
+  const sd = sideData();
+  document.getElementById('app').innerHTML = `<div class="nc-top">Totem</div>
+    <div class="shell ${S.navOpen ? 'nav-open' : ''} ${sd ? 'side-open' : ''}">
+      <button class="toggle" type="button" data-toggle aria-label="Abrir el menú" aria-expanded="${S.navOpen}">${ICONS.menu}</button>
+      <div class="scrim" data-toggle></div>
+      ${navHtml()}
+      <main class="content" id="content">${main}</main>
+      ${sd ? `<aside class="side" aria-label="${esc(sd.title)}"><header><div><h3>${esc(sd.title)}</h3><p>${esc(sd.sub)}</p></div><button class="x" type="button" data-close aria-label="Cerrar">×</button></header><div class="body">${sd.body}</div></aside>` : '<aside class="side"></aside>'}
+    </div>`;
+}
+function open(type, key) { S.side = { type, key }; }
+const wide = () => document.getElementById('frame').clientWidth >= 1024;
+document.getElementById('app').addEventListener('click', (e) => {
+  const t = e.target.closest('[data-section],[data-toggle],[data-close],[data-act],[data-kind],[data-step],[data-stat],[data-edit],[data-new]'); if (!t) return;
+  const d = t.dataset;
+  if (d.section) { S.section = d.section; S.side = d.section === 'box' && wide() ? { type: 'waiting' } : null; S.navOpen = false; }
+  else if ('toggle' in d) S.navOpen = !S.navOpen;
+  else if ('close' in d) S.side = null;
+  else if (d.act === 'waiting') open('waiting');
+  else if (d.act === 'primary') S.box.estado = { none: 'called', called: 'in_service', in_service: 'none' }[S.box.estado];
+  else if (d.kind) { S.kind = d.kind; S.offset = 0; S.side = null; }
+  else if (d.step) { S.offset = Math.min(0, Math.max(-60, S.offset + Number(d.step))); S.side = null; }
+  else if (d.stat) open('stat', d.stat);
+  else if (d.edit) open({ s: 'servicio', b: 'box', p: 'pantalla' }[d.edit[0]], d.edit);
+  else if (d.new) open({ servicios: 'servicio', boxes: 'box', pantallas: 'pantalla' }[d.new], 'new');
+  render();
+});
+document.getElementById('width').addEventListener('change', (e) => { document.getElementById('frame').style.setProperty('--w', e.target.value || '100%'); S.side = S.section === 'box' && wide() ? { type: 'waiting' } : null; render(); });
+document.getElementById('theme').addEventListener('change', (e) => { const v = e.target.value; if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme; });
+document.getElementById('frame').style.setProperty('--w', '1366px');
+if (wide()) S.side = { type: 'waiting' };
+render();
+</script>
