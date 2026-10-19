@@ -7,7 +7,7 @@ import { generateUrl } from '@nextcloud/router'
 // and tell themselves apart by the # that follows. There is no router: switching sections is a state change,
 // and this file keeps the address and the back button in step with it.
 
-const CONFIGURATION = ['servicios', 'boxes', 'pantallas']
+const CONFIGURATION = ['servicios', 'boxes', 'pantallas', 'totems']
 
 /** The address of a section. */
 export function urlFor(section) {

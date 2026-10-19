@@ -12,6 +12,7 @@ describe('the address of a section', () => {
 		expect(urlFor('servicios')).toBe('/index.php/apps/totem/admin#servicios')
 		expect(urlFor('boxes')).toBe('/index.php/apps/totem/admin#boxes')
 		expect(urlFor('pantallas')).toBe('/index.php/apps/totem/admin#pantallas')
+		expect(urlFor('totems')).toBe('/index.php/apps/totem/admin#totems')
 	})
 })
 
@@ -24,6 +25,7 @@ describe('the section an address opens', () => {
 		['/apps/totem/admin', '#servicios', 'servicios'],
 		['/apps/totem/admin', '#boxes', 'boxes'],
 		['/apps/totem/admin', '#pantallas', 'pantallas'],
+		['/apps/totem/admin', '#totems', 'totems'],
 		['/nextcloud/index.php/apps/totem/estadisticas', '', 'estadisticas'],
 	])('%s%s opens %s', (pathname, hash, expected) => {
 		expect(sectionFrom({ pathname, hash })).toBe(expected)

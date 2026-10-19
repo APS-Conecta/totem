@@ -4,7 +4,7 @@
 		No se pudo cargar la lista de {{ plural }}.
 	</NcNoteCard>
 	<p v-else-if="empty" class="totem-empty">
-		Todavía no hay {{ plural }}. Complete el formulario para crear la primera.
+		Todavía no hay {{ plural }}. Complete el formulario para crear {{ first }}.
 	</p>
 </template>
 
@@ -16,8 +16,10 @@ export default {
 	name: 'ListNotice',
 	components: { NcNoteCard },
 	props: {
-		/** The plural noun the sentences use ("unidades", "ventanillas", "pantallas"), all feminine. */
+		/** The plural noun the sentences use ("unidades", "ventanillas", "pantallas", "tótems"). */
 		plural: { type: String, required: true },
+		/** "the first one", agreeing with the noun: feminine unless it says otherwise ("el primero" for tótems). */
+		first: { type: String, default: 'la primera' },
 		failed: { type: Boolean, default: false },
 		empty: { type: Boolean, default: false },
 	},

@@ -12,6 +12,7 @@ const SECTIONS = [
 	{ link: 'Unidades', path: '/apps/totem/admin#servicios', title: 'Unidades' },
 	{ link: 'Ventanillas', path: '/apps/totem/admin#boxes', title: 'Ventanillas' },
 	{ link: 'Pantallas', path: '/apps/totem/admin#pantallas', title: 'Pantallas' },
+	{ link: 'Tótems', path: '/apps/totem/admin#totems', title: 'Tótems' },
 ]
 const here = (page) => new URL(page.url()).pathname + new URL(page.url()).hash
 const menu = (page) => page.getByRole('navigation', { name: 'Totem' })

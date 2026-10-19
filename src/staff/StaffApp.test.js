@@ -10,7 +10,7 @@ vi.mock('@nextcloud/router', () => ({ generateUrl: (path) => '/index.php' + path
 
 // The sections have their own tests; here they only say which one is showing.
 const stub = (id) => ({ template: `<div data-section="${id}" />` })
-const STUBS = { BoxView: stub('box'), StatsView: stub('estadisticas'), ServiciosView: stub('servicios'), BoxesView: stub('boxes'), PantallasView: stub('pantallas') }
+const STUBS = { BoxView: stub('box'), StatsView: stub('estadisticas'), ServiciosView: stub('servicios'), BoxesView: stub('boxes'), PantallasView: stub('pantallas'), TotemsView: stub('totems') }
 
 let wrapper
 
@@ -42,7 +42,7 @@ describe('the menu', () => {
 		expect(groups.map((g) => document.getElementById(g.attributes('aria-labelledby')).textContent.trim())).toEqual(['Operación', 'Configuración'])
 		expect(groups.map((g) => g.findAll('.app-navigation-entry').map((e) => e.text()))).toEqual([
 			['Ventanilla', 'Estadísticas'],
-			['Unidades', 'Ventanillas', 'Pantallas'],
+			['Unidades', 'Ventanillas', 'Pantallas', 'Tótems'],
 		])
 	})
 
@@ -66,12 +66,13 @@ describe('the menu entries', () => {
 	it('are real links to the address of their section, so they can be opened in a new tab', () => {
 		open()
 
-		expect(['Ventanilla', 'Estadísticas', 'Unidades', 'Ventanillas', 'Pantallas'].map((name) => link(name).attributes('href'))).toEqual([
+		expect(['Ventanilla', 'Estadísticas', 'Unidades', 'Ventanillas', 'Pantallas', 'Tótems'].map((name) => link(name).attributes('href'))).toEqual([
 			'/index.php/apps/totem/box',
 			'/index.php/apps/totem/estadisticas',
 			'/index.php/apps/totem/admin#servicios',
 			'/index.php/apps/totem/admin#boxes',
 			'/index.php/apps/totem/admin#pantallas',
+			'/index.php/apps/totem/admin#totems',
 		])
 	})
 
@@ -95,7 +96,7 @@ describe('the menu entries', () => {
 })
 
 describe('the section showing', () => {
-	it.each(['box', 'estadisticas', 'servicios', 'boxes', 'pantallas'])('opens %s when the server says so', (section) => {
+	it.each(['box', 'estadisticas', 'servicios', 'boxes', 'pantallas', 'totems'])('opens %s when the server says so', (section) => {
 		open(section)
 		expect(showing()).toBe(section)
 		expect(wrapper.findAll('[data-section]')).toHaveLength(1)

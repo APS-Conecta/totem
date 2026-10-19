@@ -175,3 +175,125 @@ test('a kiosk lists only the unidades its totem offers, and the default one list
 		await patient.close()
 	}
 })
+
+/** A patient at a kiosk page, with the browser's print counted instead of opening a dialog. */
+async function kiosk(browser, path) {
+	const patient = await browser.newContext({ locale: 'es-CL', viewport: { width: 1080, height: 1920 } })
+	await patient.addInitScript(() => {
+		window.__prints = 0
+		window.print = () => { window.__prints += 1 }
+	})
+	const screen = await patient.newPage()
+	await screen.goto(path)
+	return { patient, screen }
+}
+
+async function takeTicketOnScreen(screen, unidad, answer) {
+	await screen.getByRole('button', { name: new RegExp(unidad) }).click()
+	await screen.getByRole('button', { name: answer, exact: true }).click()
+}
+
+test.describe('on the totem screen', () => {
+	test('a patient at a totem with a printer takes the ticket, it prints there, and the browser stays out of it', async ({ page, browser }) => {
+		const slugged = await totem(page)
+		const { patient, screen } = await kiosk(browser, `/apps/totem/totem/${slugged.slug}`)
+		try {
+			await expect(screen.getByRole('heading', { name: 'Seleccione la unidad a la que acude.' })).toBeVisible()
+
+			await takeTicketOnScreen(screen, w.servicio.name, 'Sí')
+
+			await expect(screen.locator('.t-ticket')).toContainText(`${w.prefix}-P-001`)
+			await expect(screen.locator('.t-ticket')).toContainText('Retire su ticket impreso')
+			await expect.poll(async () => (await printerReceived()).count).toBe(1)
+			expect((await printerReceived()).text).toContain(`${w.prefix}-P-001`)
+			expect(await screen.evaluate(() => window.__prints)).toBe(0)
+		} finally {
+			await patient.close()
+		}
+	})
+
+	test('when the printer is down the patient still sees the number and is sent to SOME', async ({ page, browser }) => {
+		const broken = await totem(page, { printerPort: 9109 })
+		const { patient, screen } = await kiosk(browser, `/apps/totem/totem/${broken.slug}`)
+		try {
+			await takeTicketOnScreen(screen, w.servicio.name, 'No')
+
+			const ticket = screen.locator('.t-ticket')
+			await expect(ticket).toContainText(`${w.prefix}-G-001`)
+			await expect(ticket).toContainText('No se pudo imprimir')
+			await expect(ticket).toContainText('Acérquese a SOME.')
+			await expect(ticket).not.toContainText('Su turno')
+			expect(await screen.evaluate(() => window.__prints)).toBe(0)
+		} finally {
+			await patient.close()
+		}
+	})
+
+	test('a totem without a printer, and the default kiosk, print through the browser as always', async ({ page, browser }) => {
+		const plain = await totem(page, { printerHost: '' })
+		for (const path of [`/apps/totem/totem/${plain.slug}`, '/apps/totem/totem']) {
+			const { patient, screen } = await kiosk(browser, path)
+			try {
+				await takeTicketOnScreen(screen, w.servicio.name, 'No')
+
+				await expect(screen.locator('.t-ticket')).toContainText('Retire su ticket impreso')
+				await expect.poll(() => screen.evaluate(() => window.__prints)).toBe(1)
+				expect((await printerReceived()).count).toBe(0)
+			} finally {
+				await patient.close()
+			}
+		}
+	})
+
+	test('a totem only shows the unidades it offers', async ({ page, browser }) => {
+		const other = await call(page, 'POST', '/apps/totem/servicios', {
+			name: `Otra ${w.prefix}`, prefix: w.prefix.startsWith('Z') ? 'Y' + w.prefix.slice(1) : 'Z' + w.prefix.slice(1), color: '#6b46c1', opens: '00:00', closes: '23:59', dailyQuota: null,
+		})
+		try {
+			const own = await totem(page)
+			const { patient, screen } = await kiosk(browser, `/apps/totem/totem/${own.slug}`)
+			try {
+				await expect(screen.getByRole('button', { name: new RegExp(w.servicio.name) })).toBeVisible()
+				await expect(screen.getByRole('button', { name: new RegExp(`Otra ${w.prefix}`) })).toHaveCount(0)
+			} finally {
+				await patient.close()
+			}
+		} finally {
+			await call(page, 'PUT', `/apps/totem/servicios/${other.id}`, { ...other, active: false }).catch(() => {})
+		}
+	})
+})
+
+test('an admin configures a totem with its printer in the sidebar and prints a test ticket', async ({ page }) => {
+	await page.goto('/apps/totem/admin#totems')
+	await expect(page.getByRole('heading', { level: 2, name: 'Tótems', exact: true }).first()).toBeVisible()
+	const name = `Tótem ${w.prefix}`
+
+	await page.getByRole('button', { name: 'Nuevo tótem' }).click()
+	const sidebar = page.getByRole('complementary')
+	await sidebar.getByLabel('Nombre').fill(name)
+	await sidebar.getByLabel('Dirección de la impresora').fill('printer')
+	await sidebar.getByRole('button', { name: 'Guardar tótem' }).click()
+	await expect(sidebar.getByText('Guardado.')).toBeVisible()
+	totems.push((await call(page, 'GET', '/apps/totem/totems')).find((t) => t.name === name))
+	await expect(page.getByRole('row', { name: new RegExp(name) })).toContainText('printer')
+
+	await sidebar.getByRole('button', { name: 'Probar impresión' }).click()
+
+	await expect(sidebar.getByText('Ticket de prueba enviado a printer:9100.')).toBeVisible()
+	await expect.poll(async () => (await printerReceived()).count).toBe(1)
+	expect((await printerReceived()).text).toContain('PRUEBA')
+	await expect(page.getByRole('row', { name: new RegExp(name) })).toContainText('Imprimió a las')
+})
+
+test('a saved address outside the clinic network is refused in the form with its sentence', async ({ page }) => {
+	await page.goto('/apps/totem/admin#totems')
+
+	await page.getByRole('button', { name: 'Nuevo tótem' }).click()
+	const sidebar = page.getByRole('complementary')
+	await sidebar.getByLabel('Nombre').fill(`Tótem ${w.prefix}`)
+	await sidebar.getByLabel('Dirección de la impresora').fill('8.8.8.8')
+	await sidebar.getByRole('button', { name: 'Guardar tótem' }).click()
+
+	await expect(sidebar.getByRole('alert')).toContainText('La impresora debe estar en la red de la clínica')
+})

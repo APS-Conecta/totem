@@ -55,11 +55,13 @@ import Desk from 'vue-material-design-icons/Desk.vue'
 import FormatListBulleted from 'vue-material-design-icons/FormatListBulleted.vue'
 import Monitor from 'vue-material-design-icons/Monitor.vue'
 import TabletCellphone from 'vue-material-design-icons/TabletCellphone.vue'
+import Printer from 'vue-material-design-icons/Printer.vue'
 import ViewGridOutline from 'vue-material-design-icons/ViewGridOutline.vue'
 import { markRaw } from 'vue'
 import BoxesView from '../admin/BoxesView.vue'
 import PantallasView from '../admin/PantallasView.vue'
 import ServiciosView from '../admin/ServiciosView.vue'
+import TotemsView from '../admin/TotemsView.vue'
 import BoxView from '../box/BoxView.vue'
 import StatsView from '../stats/StatsView.vue'
 import { navigate, onBack, sectionFrom, urlFor } from './location.js'
@@ -71,6 +73,7 @@ const ICONS = {
 	servicios: markRaw(FormatListBulleted),
 	boxes: markRaw(ViewGridOutline),
 	pantallas: markRaw(Monitor),
+	totems: markRaw(Printer),
 }
 const VIEWS = {
 	box: markRaw(BoxView),
@@ -78,6 +81,7 @@ const VIEWS = {
 	servicios: markRaw(ServiciosView),
 	boxes: markRaw(BoxesView),
 	pantallas: markRaw(PantallasView),
+	totems: markRaw(TotemsView),
 }
 
 /**
