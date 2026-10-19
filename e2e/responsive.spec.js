@@ -78,10 +78,10 @@ test.describe('screens adapt to any size', () => {
 			expect(await patient.evaluate(audit), 'home').toEqual([])
 
 			await bar.click()
-			await expect(patient.getByRole('button', { name: 'Sí, atención preferente' })).toBeVisible()
+			await expect(patient.getByRole('button', { name: 'Sí', exact: true })).toBeVisible()
 			expect(await patient.evaluate(audit), 'question').toEqual([])
 
-			await patient.getByRole('button', { name: 'Sí, atención preferente' }).click()
+			await patient.getByRole('button', { name: 'Sí', exact: true }).click()
 			await expect(patient.getByText('Su turno')).toBeVisible()
 			expect(await patient.evaluate(audit), 'ticket').toEqual([])
 		})

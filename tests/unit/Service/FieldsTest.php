@@ -118,4 +118,47 @@ class FieldsTest extends TestCase {
 		$this->assertSame([3, 4], Fields::ids([3, '4', 3]));
 		$this->assertSame([], Fields::ids(null));
 	}
+
+	public function testNoPrinterHostMeansNoNetworkPrinter(): void {
+		$this->assertSame([null, 9100], Fields::printer(null, 9105));
+		$this->assertSame([null, 9100], Fields::printer('', ''));
+		$this->assertSame([null, 9100], Fields::printer('   ', 9101));
+	}
+
+	public function testAPrinterOnTheClinicNetworkIsKeptTrimmedWithItsPort(): void {
+		$this->assertSame(['192.168.1.50', 9101], Fields::printer(' 192.168.1.50 ', '9101'));
+		$this->assertSame(['10.0.0.7', 9100], Fields::printer('10.0.0.7', 9100));
+	}
+
+	public function testThePortDefaultsToTheJetDirectPortWhenOnlyTheHostIsGiven(): void {
+		$this->assertSame(['192.168.1.50', 9100], Fields::printer('192.168.1.50', null));
+		$this->assertSame(['192.168.1.50', 9100], Fields::printer('192.168.1.50', ''));
+	}
+
+	public function testAPrinterNameIsResolvedBeforeItIsAccepted(): void {
+		$this->assertSame(['impresora-sala', 9100], Fields::printer('impresora-sala', 9100, static fn (): array => ['192.168.1.20']));
+	}
+
+	public function testAPrinterOutsideTheClinicNetworkRefusesWithTheSentenceTheFormShows(): void {
+		$this->expectException(Refused::class);
+		$this->expectExceptionMessage('La impresora debe estar en la red de la clínica');
+		Fields::printer('8.8.8.8', 9100);
+	}
+
+	/** @return array<string, array{mixed}> */
+	public static function badPorts(): array {
+		return [
+			'text' => ['nueve mil'],
+			'a web port' => [80],
+			'too high' => [9110],
+			'a decimal' => ['9100.5'],
+		];
+	}
+
+	#[DataProvider('badPorts')]
+	public function testABadPrinterPortRefuses(mixed $port): void {
+		$this->expectException(Refused::class);
+		$this->expectExceptionMessage('El puerto de la impresora debe estar entre 9100 y 9109.');
+		Fields::printer('192.168.1.50', $port);
+	}
 }

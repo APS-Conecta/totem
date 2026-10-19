@@ -12,6 +12,7 @@ const SECTIONS = [
 	{ link: 'Unidades', path: '/apps/totem/admin#servicios', title: 'Unidades' },
 	{ link: 'Ventanillas', path: '/apps/totem/admin#boxes', title: 'Ventanillas' },
 	{ link: 'Pantallas', path: '/apps/totem/admin#pantallas', title: 'Pantallas' },
+	{ link: 'Tótems', path: '/apps/totem/admin#totems', title: 'Tótems' },
 ]
 const here = (page) => new URL(page.url()).pathname + new URL(page.url()).hash
 const menu = (page) => page.getByRole('navigation', { name: 'Totem' })
@@ -33,9 +34,11 @@ test.describe('the menu', () => {
 			await expect(menu(page).getByRole('link', { name: section.link, exact: true })).toHaveAttribute('aria-current', 'page')
 		}
 
+		// The back button returns to the section visited just before the last one.
+		const before = SECTIONS.at(-2)
 		await page.goBack()
-		await expect(page.getByRole('heading', { level: 2, name: 'Ventanillas', exact: true }).first()).toBeVisible()
-		expect(here(page)).toBe('/apps/totem/admin#boxes')
+		await expect(page.getByRole('heading', { level: 2, name: before.title, exact: true }).first()).toBeVisible()
+		expect(here(page)).toBe(before.path)
 	})
 
 	test('opens the section its old address names', async ({ page }) => {

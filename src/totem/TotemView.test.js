@@ -18,15 +18,19 @@ const FARMACIA = { id: 1, name: 'Farmacia', prefix: 'FAR', color: '#1b6ec2' }
 const VACUNAS = { id: 2, name: 'Vacunatorio', prefix: 'VAC', color: '#f2b134' }
 
 /** What the Nextcloud server puts in the page for loadState to read. */
-function provideEstablishment(name) {
-	document.body.innerHTML = ''
-	window._nc_initial_state = undefined
-	if (name === undefined) return
+function provideState(key, value) {
 	const input = document.createElement('input')
 	input.type = 'hidden'
-	input.id = 'initial-state-totem-establishment'
-	input.value = window.btoa(JSON.stringify(name))
+	input.id = `initial-state-totem-${key}`
+	input.value = window.btoa(JSON.stringify(value))
 	document.body.append(input)
+}
+
+function provideEstablishment(name, { slug } = {}) {
+	document.body.innerHTML = ''
+	window._nc_initial_state = undefined
+	if (name !== undefined) provideState('establishment', name)
+	if (slug !== undefined) provideState('slug', slug)
 }
 
 async function mountTotem() {
@@ -57,8 +61,9 @@ describe('home screen', () => {
 	it('offers one bar per servicio, with its name and prefix, under the question', async () => {
 		const wrapper = await mountTotem()
 
-		expect(wrapper.text()).toContain('¿A qué unidad viene?')
-		expect(wrapper.text()).toContain('Toque la unidad para sacar su turno.')
+		expect(wrapper.text()).toContain('Seleccione la unidad a la que acude.')
+		expect(wrapper.find('.t-sub').exists()).toBe(false)
+		expect(wrapper.text()).not.toContain('Toque')
 		expect(buttons(wrapper)).toEqual(['FarmaciaFAR', 'VacunatorioVAC'])
 	})
 
@@ -175,8 +180,8 @@ describe('question screen', () => {
 
 		expect(wrapper.text()).toContain('Farmacia')
 		expect(wrapper.text()).toContain('¿Tiene 60 años o más, una discapacidad o cuida a una persona con discapacidad?')
-		expect(buttons(wrapper)).toEqual(['‹ Volver', 'Sí, atención preferente', 'No, atención general'])
-		expect(wrapper.text()).not.toContain('¿A qué unidad viene?')
+		expect(buttons(wrapper)).toEqual(['‹ Volver', 'Sí', 'No'])
+		expect(wrapper.text()).not.toContain('Seleccione la unidad a la que acude.')
 		expect(issueTurno).not.toHaveBeenCalled()
 	})
 
@@ -192,7 +197,7 @@ describe('question screen', () => {
 		const wrapper = await openFarmacia()
 		await button(wrapper, '‹ Volver').trigger('click')
 
-		expect(wrapper.text()).toContain('¿A qué unidad viene?')
+		expect(wrapper.text()).toContain('Seleccione la unidad a la que acude.')
 		expect(issueTurno).not.toHaveBeenCalled()
 	})
 })
@@ -210,11 +215,11 @@ describe('issuing a turno', () => {
 
 	it('issues a preferente turno on "Sí" and shows the ticket screen', async () => {
 		issueTurno.mockResolvedValue(issued('FAR-P-014', true))
-		const wrapper = await answer('Sí, atención preferente')
+		const wrapper = await answer('Sí')
 		const screen = wrapper.find('main')
 
 		expect(issueTurno).toHaveBeenCalledTimes(1)
-		expect(issueTurno).toHaveBeenCalledWith(1, true)
+		expect(issueTurno).toHaveBeenCalledWith(1, true, null)
 		expect(screen.text()).toContain('Su turno')
 		expect(screen.text()).toContain('FAR-P-014')
 		expect(screen.text()).toContain('Farmacia')
@@ -228,7 +233,7 @@ describe('issuing a turno', () => {
 		issueTurno.mockReturnValue(new Promise((resolve) => (arrive = resolve)))
 		const wrapper = await mountTotem()
 		await button(wrapper, 'FarmaciaFAR').trigger('click')
-		await button(wrapper, 'No, atención general').trigger('click')
+		await button(wrapper, 'No').trigger('click')
 		await button(wrapper, '‹ Volver').trigger('click')
 		arrive(issued('FAR-G-007', false))
 		await flushPromises()
@@ -239,17 +244,17 @@ describe('issuing a turno', () => {
 
 	it('issues a general turno on "No", without the preferente chip', async () => {
 		issueTurno.mockResolvedValue(issued('FAR-G-007', false))
-		const wrapper = await answer('No, atención general')
+		const wrapper = await answer('No')
 		const screen = wrapper.find('main')
 
-		expect(issueTurno).toHaveBeenCalledWith(1, false)
+		expect(issueTurno).toHaveBeenCalledWith(1, false, null)
 		expect(screen.text()).toContain('FAR-G-007')
 		expect(screen.text()).not.toContain('Atención preferente')
 	})
 
 	it('colors the ticket screen in the servicio color', async () => {
 		issueTurno.mockResolvedValue(issued('FAR-G-007', false))
-		const wrapper = await answer('No, atención general')
+		const wrapper = await answer('No')
 
 		expect(wrapper.find('main').element.style.backgroundColor).toBe('rgb(27, 110, 194)')
 		expect(wrapper.find('main').element.style.color).toBe('rgb(255, 255, 255)')
@@ -257,7 +262,7 @@ describe('issuing a turno', () => {
 
 	it('counts down from 8 and returns home', async () => {
 		issueTurno.mockResolvedValue(issued('FAR-G-007', false))
-		const wrapper = await answer('No, atención general')
+		const wrapper = await answer('No')
 
 		await vi.advanceTimersByTimeAsync(1000)
 		expect(wrapper.text()).toContain('Volviendo al inicio en 7 s')
@@ -265,7 +270,7 @@ describe('issuing a turno', () => {
 		expect(wrapper.text()).toContain('Volviendo al inicio en 1 s')
 		await vi.advanceTimersByTimeAsync(1000)
 
-		expect(wrapper.text()).toContain('¿A qué unidad viene?')
+		expect(wrapper.text()).toContain('Seleccione la unidad a la que acude.')
 		expect(wrapper.text()).not.toContain('FAR-G-007')
 	})
 
@@ -274,14 +279,35 @@ describe('issuing a turno', () => {
 		issueTurno.mockReturnValue(new Promise((resolve) => (arrive = resolve)))
 		const wrapper = await mountTotem()
 		await button(wrapper, 'FarmaciaFAR').trigger('click')
-		await button(wrapper, 'No, atención general').trigger('click')
-		await button(wrapper, 'No, atención general').trigger('click')
-		await button(wrapper, 'Sí, atención preferente').trigger('click')
+		await button(wrapper, 'No').trigger('click')
+		await button(wrapper, 'No').trigger('click')
+		await button(wrapper, 'Sí').trigger('click')
 		arrive(issued('FAR-G-007', false))
 		await flushPromises()
 
 		expect(issueTurno).toHaveBeenCalledTimes(1)
 		expect(wrapper.find('main').text()).toContain('FAR-G-007')
+	})
+})
+
+describe('a totem with its own address', () => {
+	it('asks for the unidades of its own totem and says which totem the ticket is taken at', async () => {
+		provideEstablishment('CESFAM Ejemplo', { slug: 'sala-sur' })
+		issueTurno.mockResolvedValue({ id: 41, label: 'FAR-G-001', servicio: 'Farmacia', preferente: false, printed: true })
+		const wrapper = await mountTotem()
+
+		expect(publicServicios).toHaveBeenCalledWith('sala-sur')
+		await button(wrapper, 'FarmaciaFAR').trigger('click')
+		await button(wrapper, 'No').trigger('click')
+		await flushPromises()
+
+		expect(issueTurno).toHaveBeenCalledWith(1, false, 'sala-sur')
+	})
+
+	it('is the default kiosk when the page names no totem', async () => {
+		await mountTotem()
+
+		expect(publicServicios).toHaveBeenCalledWith(null)
 	})
 })
 
@@ -298,13 +324,49 @@ describe('printing the ticket', () => {
 	}
 
 	it('asks the browser to print once the turno is issued', async () => {
-		await issue({ id: 41, label: 'FAR-P-014', servicio: 'Farmacia', preferente: true }, 'Sí, atención preferente')
+		await issue({ id: 41, label: 'FAR-P-014', servicio: 'Farmacia', preferente: true }, 'Sí')
 
 		expect(window.print).toHaveBeenCalledTimes(1)
 	})
 
+	it('prints through the browser when the server has no network printer for this totem (printed: null)', async () => {
+		await issue({ id: 41, label: 'FAR-P-014', servicio: 'Farmacia', preferente: true, printed: null }, 'Sí')
+
+		expect(window.print).toHaveBeenCalledTimes(1)
+	})
+
+	it('does not print through the browser when the server printed the ticket, and says to take it', async () => {
+		const wrapper = await issue({ id: 41, label: 'FAR-P-014', servicio: 'Farmacia', preferente: true, printed: true }, 'Sí')
+
+		expect(window.print).not.toHaveBeenCalled()
+		expect(wrapper.find('.paper').exists()).toBe(false)
+		expect(wrapper.find('.t-ticket').text()).toContain('Retire su ticket impreso y espere su llamado en la sala de espera.')
+		expect(wrapper.find('.t-ticket .lbl').text()).toBe('Su turno')
+	})
+
+	it('when the printer did not answer, shows the number and sends the patient to SOME, without printing', async () => {
+		const wrapper = await issue({ id: 41, label: 'FAR-P-014', servicio: 'Farmacia', preferente: true, printed: false }, 'Sí')
+		const screen = wrapper.find('.t-ticket')
+
+		expect(window.print).not.toHaveBeenCalled()
+		expect(wrapper.find('.paper').exists()).toBe(false)
+		expect(screen.find('.num').text()).toBe('FAR-P-014')
+		expect(screen.text()).toContain('No se pudo imprimir')
+		expect(screen.find('.inst').text()).toBe('Acérquese a SOME.')
+		expect(screen.find('.lbl').exists()).toBe(false)
+		expect(screen.text()).not.toContain('Retire su ticket')
+	})
+
+	it('still goes back to the start after the countdown when the printer did not answer', async () => {
+		const wrapper = await issue({ id: 41, label: 'FAR-P-014', servicio: 'Farmacia', preferente: false, printed: false }, 'No')
+
+		await vi.advanceTimersByTimeAsync(8000)
+
+		expect(wrapper.text()).toContain('Seleccione la unidad a la que acude.')
+	})
+
 	it('prepares the paper ticket with the establishment, the label, the servicio, the date and the instruction', async () => {
-		const wrapper = await issue({ id: 41, label: 'FAR-P-014', servicio: 'Farmacia', preferente: true }, 'Sí, atención preferente')
+		const wrapper = await issue({ id: 41, label: 'FAR-P-014', servicio: 'Farmacia', preferente: true }, 'Sí')
 		const paper = wrapper.find('.paper')
 
 		expect(paper.text()).toContain('CESFAM Ejemplo')
@@ -316,7 +378,7 @@ describe('printing the ticket', () => {
 	})
 
 	it('leaves the preferente box off a general ticket', async () => {
-		const wrapper = await issue({ id: 42, label: 'FAR-G-007', servicio: 'Farmacia', preferente: false }, 'No, atención general')
+		const wrapper = await issue({ id: 42, label: 'FAR-G-007', servicio: 'Farmacia', preferente: false }, 'No')
 
 		expect(wrapper.find('.paper').text()).toContain('FAR-G-007')
 		expect(wrapper.find('.paper').text()).not.toContain('ATENCIÓN PREFERENTE')
@@ -330,7 +392,7 @@ describe('when the server refuses the turno', () => {
 		issueTurno.mockRejectedValue(error)
 		const wrapper = await mountTotem()
 		await button(wrapper, 'FarmaciaFAR').trigger('click')
-		await button(wrapper, 'No, atención general').trigger('click')
+		await button(wrapper, 'No').trigger('click')
 		await flushPromises()
 		return wrapper
 	}
@@ -345,7 +407,7 @@ describe('when the server refuses the turno', () => {
 		expect(wrapper.text()).not.toContain('Sin conexión')
 
 		await button(wrapper, 'Volver al inicio').trigger('click')
-		expect(wrapper.text()).toContain('¿A qué unidad viene?')
+		expect(wrapper.text()).toContain('Seleccione la unidad a la que acude.')
 		expect(wrapper.find('[role="alert"]').exists()).toBe(false)
 	})
 
@@ -366,7 +428,7 @@ describe('when the server refuses the turno', () => {
 		issueTurno.mockReturnValue(new Promise((resolve, reject) => (fail = reject)))
 		const wrapper = await mountTotem()
 		await button(wrapper, 'FarmaciaFAR').trigger('click')
-		await button(wrapper, 'No, atención general').trigger('click')
+		await button(wrapper, 'No').trigger('click')
 		await button(wrapper, '‹ Volver').trigger('click')
 		fail(refusal(422, 'Hoy ya no quedan turnos para Farmacia.'))
 		await flushPromises()
@@ -381,7 +443,7 @@ describe('when the server refuses the turno', () => {
 		await button(wrapper, 'FarmaciaFAR').trigger('click')
 
 		expect(wrapper.find('[role="alert"]').exists()).toBe(false)
-		expect(button(wrapper, 'No, atención general').attributes('disabled')).toBeUndefined()
+		expect(button(wrapper, 'No').attributes('disabled')).toBeUndefined()
 	})
 })
 
@@ -394,7 +456,7 @@ describe('when the network is down', () => {
 		const wrapper = await mountTotem()
 
 		expect(overlay(wrapper).text()).toContain('Sin conexión')
-		expect(overlay(wrapper).text()).toContain('Acérquese a SOME para sacar su turno.')
+		expect(overlay(wrapper).text()).toContain('Acérquese a SOME.')
 		expect(overlay(wrapper).text()).toContain('Reintentando…')
 	})
 
@@ -415,7 +477,7 @@ describe('when the network is down', () => {
 		await button(wrapper, 'FarmaciaFAR').trigger('click')
 		issueTurno.mockRejectedValue(noAnswer())
 		publicServicios.mockRejectedValue(noAnswer()) // the server really is unreachable
-		await button(wrapper, 'No, atención general').trigger('click')
+		await button(wrapper, 'No').trigger('click')
 		await flushPromises()
 
 		expect(overlay(wrapper).text()).toContain('Sin conexión')
@@ -427,7 +489,7 @@ describe('when the network is down', () => {
 		const wrapper = await mountTotem()
 		await button(wrapper, 'FarmaciaFAR').trigger('click')
 		issueTurno.mockRejectedValue(noAnswer())
-		await button(wrapper, 'No, atención general').trigger('click')
+		await button(wrapper, 'No').trigger('click')
 		await flushPromises()
 		expect(publicServicios).toHaveBeenCalledTimes(2)
 
@@ -449,7 +511,7 @@ describe('a patient who walks away', () => {
 		expect(wrapper.text()).toContain('¿Tiene 60 años o más')
 		await vi.advanceTimersByTimeAsync(1)
 
-		expect(wrapper.text()).toContain('¿A qué unidad viene?')
+		expect(wrapper.text()).toContain('Seleccione la unidad a la que acude.')
 		expect(issueTurno).not.toHaveBeenCalled()
 	})
 
@@ -462,15 +524,15 @@ describe('a patient who walks away', () => {
 		expect(wrapper.text()).toContain('¿Tiene 60 años o más')
 		await vi.advanceTimersByTimeAsync(10000)
 
-		expect(wrapper.text()).toContain('¿A qué unidad viene?')
+		expect(wrapper.text()).toContain('Seleccione la unidad a la que acude.')
 	})
 
 	it('does not cut the ticket screen short when the answer was slow to arrive', async () => {
 		let arrive
 		issueTurno.mockReturnValue(new Promise((resolve) => (arrive = resolve)))
 		const wrapper = await openFarmacia()
-		await button(wrapper, 'No, atención general').trigger('pointerdown')
-		await button(wrapper, 'No, atención general').trigger('click')
+		await button(wrapper, 'No').trigger('pointerdown')
+		await button(wrapper, 'No').trigger('click')
 		await vi.advanceTimersByTimeAsync(28000)
 		arrive({ id: 43, label: 'FAR-G-008', servicio: 'Farmacia', preferente: false })
 		await flushPromises()

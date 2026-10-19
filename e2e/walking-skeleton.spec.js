@@ -22,7 +22,7 @@ test('a preferente turno taken on the totem is called from the box and shown on 
 		const patient = await (await browser.newContext({ locale: 'es-CL' })).newPage()
 		await patient.goto('/apps/totem/totem')
 		await patient.getByRole('button', { name: new RegExp(w.servicio.name) }).click()
-		await patient.getByRole('button', { name: 'Sí, atención preferente' }).click()
+		await patient.getByRole('button', { name: 'Sí', exact: true }).click()
 		// The label is on the screen ticket and in the (print-only) paper ticket: the first is the visible one.
 		await expect(patient.getByText(`${w.prefix}-P-001`).first()).toBeVisible()
 

@@ -12,6 +12,7 @@ use OCA\Totem\Db\PantallaMapper;
 use OCA\Totem\Db\ServicioLinks;
 use OCA\Totem\Db\ServicioMapper;
 use OCA\Totem\Db\TurnoMapper;
+use OCA\Totem\Domain\SpokenPlace;
 use OCA\Totem\Domain\TurnoLabel;
 use OCP\AppFramework\Db\DoesNotExistException;
 
@@ -46,14 +47,16 @@ class DisplayFeed {
 
 		$out = [];
 		$last = $cursor;
+		$onlyOneVentanilla = null;
 		foreach ($this->llamados->findSince($servicioIds, $this->today->day(), $cursor, self::LIMIT) as $llamado) {
 			$turno = $this->turnos->find($llamado->getTurnoId());
 			$servicio = $this->servicios->find($llamado->getServicioId());
 			$box = $this->boxName($llamado->getBoxId());
+			$onlyOneVentanilla ??= count($this->boxes->findAll()) === 1;
 			$out[] = [
 				'id' => (int)$llamado->getId(),
 				'label' => TurnoLabel::of($servicio->getPrefix(), $turno->getPreferente(), $turno->getSeq()),
-				'spoken' => TurnoLabel::spoken($servicio->getName(), $turno->getPreferente(), $turno->getSeq(), $box),
+				'spoken' => TurnoLabel::spoken($servicio->getName(), $turno->getPreferente(), $turno->getSeq(), SpokenPlace::of($box, $onlyOneVentanilla)),
 				'servicio' => $servicio->getName(),
 				'color' => $servicio->getColor(),
 				'preferente' => $turno->getPreferente(),
@@ -75,7 +78,7 @@ class DisplayFeed {
 		try {
 			return $this->boxes->find($boxId)->getName();
 		} catch (DoesNotExistException) {
-			return 'Box';
+			return 'Ventanilla';
 		}
 	}
 }

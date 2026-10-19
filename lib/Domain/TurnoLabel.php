@@ -20,10 +20,11 @@ final class TurnoLabel {
 	}
 
 	/**
-	 * The announcement. "preferente" and "general" are spoken as words: the
-	 * letters P and G sound alike across a room.
+	 * The announcement: "Farmacia, preferente 12. Diríjase a ventanilla 2." `$place` is already how the place is
+	 * said (SpokenPlace). "preferente" and "general" are spoken as words: the letters P and G sound alike
+	 * across a room.
 	 */
-	public static function spoken(string $servicio, bool $preferente, int $seq, string $box): string {
-		return sprintf('Turno %s, %s %d. Diríjase a %s.', $servicio, $preferente ? 'preferente' : 'general', $seq, $box);
+	public static function spoken(string $servicio, bool $preferente, int $seq, string $place): string {
+		return sprintf('%s, %s %d. Diríjase a %s.', $servicio, $preferente ? 'preferente' : 'general', $seq, $place);
 	}
 }

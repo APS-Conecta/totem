@@ -10,12 +10,13 @@ use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 
 /**
- * The servicios a box covers and a pantalla shows: two join tables with one
+ * The servicios a box covers, a pantalla shows and a totem offers: three join tables with one
  * shape, so one reader and one writer (no foreign keys, by convention).
  */
 class ServicioLinks {
 	public const BOX = ['totem_box_servicio', 'box_id'];
 	public const PANTALLA = ['totem_pantalla_servicio', 'pantalla_id'];
+	public const TOTEM = ['totem_totem_servicio', 'totem_id'];
 
 	public function __construct(private IDBConnection $db) {
 	}

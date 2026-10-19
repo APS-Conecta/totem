@@ -28,6 +28,8 @@ class DisplayFeedTest extends TestCase {
 	private ServicioLinks&MockObject $links;
 	private LlamadoMapper&MockObject $llamados;
 	private DisplayFeed $feed;
+	/** @var list<Box> every ventanilla of the clinic: two by default, so a number is spoken */
+	private array $allBoxes = [];
 
 	protected function setUp(): void {
 		$p = new Pantalla();
@@ -58,6 +60,7 @@ class DisplayFeedTest extends TestCase {
 		$s->setColor('#0b6e69');
 		$servicios->method('find')->willReturn($s);
 		$boxes = $this->createMock(BoxMapper::class);
+		$boxes->method('findAll')->willReturnCallback(fn (): array => $this->allBoxes);
 		$boxes->method('find')->willReturnCallback(static function (int $id): Box {
 			if ($id !== 8) {
 				throw new DoesNotExistException('deleted');
@@ -71,7 +74,16 @@ class DisplayFeedTest extends TestCase {
 		$today = $this->createMock(Today::class);
 		$today->method('day')->willReturn('2026-10-18');
 
+		$this->allBoxes = [$this->boxNamed(8, 'Box 2'), $this->boxNamed(9, 'Box 3')];
 		$this->feed = new DisplayFeed($this->pantallas, $this->links, $this->llamados, $turnos, $servicios, $boxes, $today);
+	}
+
+	private function boxNamed(int $id, string $name): Box {
+		$b = new Box();
+		$b->setId($id);
+		$b->setName($name);
+
+		return $b;
 	}
 
 	private function llamado(int $id, int $boxId = 8): Llamado {
@@ -108,7 +120,7 @@ class DisplayFeedTest extends TestCase {
 		$this->assertSame([[
 			'id' => 21,
 			'label' => 'FAR-P-012',
-			'spoken' => 'Turno Farmacia, preferente 12. Diríjase a Box 2.',
+			'spoken' => 'Farmacia, preferente 12. Diríjase a ventanilla 2.',
 			'servicio' => 'Farmacia',
 			'color' => '#0b6e69',
 			'preferente' => true,
@@ -145,7 +157,28 @@ class DisplayFeedTest extends TestCase {
 		$this->links->method('ids')->willReturn([]);
 		$this->llamados->method('findSince')->willReturn([$this->llamado(21, 99)]);
 
-		$this->assertSame('Box', $this->feed->since('sala', 0)['llamados'][0]['box']);
+		$out = $this->feed->since('sala', 0)['llamados'][0];
+
+		$this->assertSame('Ventanilla', $out['box']);
+		$this->assertSame('Farmacia, preferente 12. Diríjase a Ventanilla.', $out['spoken']);
+	}
+
+	public function testWhenTheClinicHasOneVentanillaTheCallJustSaysVentanilla(): void {
+		$this->allBoxes = [$this->boxNamed(8, 'Box 2')];
+		$this->links->method('ids')->willReturn([]);
+		$this->llamados->method('findSince')->willReturn([$this->llamado(21)]);
+
+		$out = $this->feed->since('sala', 0)['llamados'][0];
+
+		$this->assertSame('Farmacia, preferente 12. Diríjase a ventanilla.', $out['spoken']);
+		$this->assertSame('Box 2', $out['box']);
+	}
+
+	public function testWithSeveralVentanillasTheCallSaysWhichByItsNumber(): void {
+		$this->links->method('ids')->willReturn([]);
+		$this->llamados->method('findSince')->willReturn([$this->llamado(21)]);
+
+		$this->assertStringEndsWith('Diríjase a ventanilla 2.', $this->feed->since('sala', 0)['llamados'][0]['spoken']);
 	}
 
 	public function testAnUnknownPantallaIsNotFound(): void {

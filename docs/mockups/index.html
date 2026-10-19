@@ -224,6 +224,7 @@ h1 { font-size: 1.75rem; line-height: 1.15; margin: 0; text-wrap: balance; }
       <div class="viewport" data-w="1080" data-h="1920"><div class="native"><div class="screen totem" id="totem"></div></div></div>
       <div class="controls">
         <button class="ctl" id="btn-offline" type="button">Simular sin conexión</button>
+        <button class="ctl" id="btn-printfail" type="button">Simular impresora sin respuesta</button>
         <button class="ctl" id="btn-reset" type="button">Volver al inicio</button>
       </div>
     </div>
@@ -253,7 +254,7 @@ h1 { font-size: 1.75rem; line-height: 1.15; margin: 0; text-wrap: balance; }
       <ul>
         <li>El número y el box se leen desde el fondo de la sala. Solo aparecen número y box. En vertical, el llamado va arriba y la lista abajo.</li>
         <li>Los llamados siguen la regla real. En cada servicio, después de dos turnos preferentes toca uno general; si no hay del otro tipo, sigue el que haya. Cada botón dice qué turno llamaría.</li>
-        <li>Aviso para el oído: dos pares de tonos (cuatro toques) y después la voz, dos veces: "Turno Farmacia, preferente 12. Diríjase a Ventanilla 2." En la app la voz la genera un modelo de código abierto incluido en la app, sin internet. Aquí, en los llamados simulados, la voz es la del navegador; la voz real se escucha con "Probar aviso" en Administración > Pantallas.</li>
+        <li>Aviso para el oído: dos pares de tonos (cuatro toques) y después la voz, dos veces: "Farmacia, preferente 12. Diríjase a ventanilla 2." (con una sola ventanilla: "Diríjase a ventanilla.") En la app la voz la genera un modelo de código abierto incluido en la app, sin internet. Aquí, en los llamados simulados, la voz es la del navegador; la voz real se escucha con "Probar aviso" en Administración > Pantallas.</li>
         <li>Aviso para la vista: un marco dorado que respira una vez por segundo durante 6 s. Con "reducir movimiento" queda fijo, sin animación. Lo que se dice aparece escrito abajo.</li>
         <li>El volumen y la voz (Mujer o Hombre) se ajustan por pantalla en Administración > Pantallas. El tope real lo fija el volumen del equipo.</li>
         <li>Un turno que saca en el totem entra a la cola y se llama cuando le toca. Llamar de nuevo (pestaña Box) repite el aviso sin sumar otra fila.</li>
@@ -377,7 +378,7 @@ h1 { font-size: 1.75rem; line-height: 1.15; margin: 0; text-wrap: balance; }
     return out;
   }
   /* what the room hears, and the same words shown as a caption */
-  function phrase(t, b) { return "Turno " + byId(t.s).name + ", " + (t.p ? "preferente" : "general") + " " + t.seq + ". Diríjase a " + BOX[b].name + "."; }
+  function phrase(t, b) { var n = (BOX[b].name.match(/\d+/) || [])[0]; return byId(t.s).name + ", " + (t.p ? "preferente" : "general") + " " + t.seq + ". Diríjase a ventanilla" + (n ? " " + n : "") + "."; }
   function announce(t, b) {
     pulseUntil = Date.now() + 6000; setTimeout(displayRender, 6100);
     if (!document.getElementById("p-display").hidden) playAnnouncement(phrase(t, b));
@@ -502,28 +503,29 @@ h1 { font-size: 1.75rem; line-height: 1.15; margin: 0; text-wrap: balance; }
   });
 
   /* ---------- TOTEM ---------- */
-  var T = { step: "home", srv: null, pref: null, label: "", left: 8, offline: false, timer: null };
+  var T = { step: "home", srv: null, pref: null, label: "", left: 8, offline: false, printFailed: false, timer: null };
   var totemEl = document.getElementById("totem");
 
   function totemRender() {
     var s = T.srv, h = "";
     if (T.step === "home") {
-      h = '<div class="t-head">¿A qué unidad viene?</div><div class="t-sub">Toque la unidad para sacar su turno.</div><div class="t-bars">' +
+      h = '<div class="t-head">Seleccione la unidad a la que acude.</div><div class="t-bars">' +
         SERV.map(function (x) {
           return '<button class="t-bar" data-act="srv" data-id="' + x.id + '" style="background:' + x.color + ";color:" + readableOn(x.color) + '"><span>' + esc(x.name) + '</span><span class="pre">' + x.pre + "</span></button>";
         }).join("") + '</div><div class="t-foot"><span>CESFAM Ejemplo</span><span id="clock"></span></div>';
     } else if (T.step === "pref") {
       h = band(s) + '<div class="t-q">¿Tiene 60 años o más, una discapacidad o cuida a una persona con discapacidad?</div><div class="t-choices">' +
-        '<button class="t-choice yes" data-act="pref" data-v="1">Sí, atención preferente</button>' +
-        '<button class="t-choice" data-act="pref" data-v="0">No, atención general</button></div>';
+        '<button class="t-choice yes" data-act="pref" data-v="1">Sí</button>' +
+        '<button class="t-choice" data-act="pref" data-v="0">No</button></div>';
     } else if (T.step === "ticket") {
       var fg = readableOn(s.color);
-      h = '<div class="t-ticket" style="background:' + s.color + ";color:" + fg + '"><div class="lbl">Su turno</div><div class="num">' + T.label + '</div><div class="srv">' + esc(s.name) + "</div>" +
+      h = '<div class="t-ticket" style="background:' + s.color + ";color:" + fg + '">' + (T.printFailed ? "" : '<div class="lbl">Su turno</div>') + '<div class="num">' + T.label + '</div><div class="srv">' + esc(s.name) + "</div>" +
         (T.pref ? '<div class="t-chip">Atención preferente</div>' : "") +
-        '<div class="inst">Retire su ticket impreso y espere su llamado en la sala de espera.</div><div class="cnt">Volviendo al inicio en <span id="cnt">' + T.left + "</span> s</div></div>";
+        (T.printFailed ? '<div class="t-chip">No se pudo imprimir</div>' : "") +
+        '<div class="inst">' + (T.printFailed ? "Acérquese a SOME." : "Retire su ticket impreso y espere su llamado en la sala de espera.") + '</div><div class="cnt">Volviendo al inicio en <span id="cnt">' + T.left + "</span> s</div></div>";
     }
     if (T.offline) {
-      h += '<div class="t-offline" role="alert"><h3>Sin conexión</h3><p>Acérquese a SOME para sacar su turno.</p><p class="dot">Reintentando…</p></div>';
+      h += '<div class="t-offline" role="alert"><h3>Sin conexión</h3><p>Acérquese a SOME.</p><p class="dot">Reintentando…</p></div>';
     }
     totemEl.innerHTML = h;
     tick();
@@ -547,6 +549,7 @@ h1 { font-size: 1.75rem; line-height: 1.15; margin: 0; text-wrap: balance; }
     else if (a === "back") totemReset();
     totemRender();
   });
+  document.getElementById("btn-printfail").addEventListener("click", function () { T.printFailed = !T.printFailed; this.textContent = T.printFailed ? "Simular impresora que responde" : "Simular impresora sin respuesta"; totemRender(); });
   document.getElementById("btn-offline").addEventListener("click", function () { T.offline = !T.offline; this.textContent = T.offline ? "Restablecer conexión" : "Simular sin conexión"; totemRender(); });
   document.getElementById("btn-reset").addEventListener("click", totemReset);
   setInterval(tick, 20000);

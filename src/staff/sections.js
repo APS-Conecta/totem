@@ -11,4 +11,5 @@ export const SECTIONS = [
 	{ id: 'servicios', group: 'Configuración', name: 'Unidades' },
 	{ id: 'boxes', group: 'Configuración', name: 'Ventanillas' },
 	{ id: 'pantallas', group: 'Configuración', name: 'Pantallas' },
+	{ id: 'totems', group: 'Configuración', name: 'Tótems' },
 ]

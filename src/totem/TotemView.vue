@@ -7,6 +7,8 @@ import { readableOn } from '../lib/color.js'
 import { poll } from '../lib/poll.js'
 
 const establishment = loadState('totem', 'establishment', 'CESFAM')
+// The totem this page is (its own address), or null for the default kiosk: its unidades and its printer.
+const slug = loadState('totem', 'slug', null)
 const servicios = ref([])
 const offline = ref(false)
 const step = ref('home')
@@ -24,7 +26,7 @@ let polling = null
 function startPolling() {
 	polling?.stop()
 	polling = poll({
-		load: publicServicios,
+		load: () => publicServicios(slug),
 		onData: (list) => {
 			servicios.value = list
 			offline.value = false
@@ -63,7 +65,7 @@ async function answer(preferente) {
 	issuing.value = true
 	const chosen = servicio.value // the patient may leave the question before the answer arrives
 	try {
-		ticket.value = await issueTurno(chosen.id, preferente)
+		ticket.value = await issueTurno(chosen.id, preferente, slug)
 	} catch (e) {
 		warnError('no se pudo sacar el turno', e)
 		if (!e.response) {
@@ -86,10 +88,16 @@ async function answer(preferente) {
 		left.value -= 1
 		if (left.value <= 0) goHome()
 	}, 1000)
-	// The paper ticket must be in the page before the browser prints it.
-	await nextTick()
-	window.print()
+	// Printed by the server (true) or not (false): the browser stays out of it. Only a totem without a network
+	// printer prints here, and its paper ticket must be in the page before the browser prints it.
+	if (browserPrints.value) {
+		await nextTick()
+		window.print()
+	}
 }
+
+/** True when this ticket is for the browser to print: the totem has no network printer (`printed` is null). */
+const browserPrints = computed(() => ticket.value !== null && (ticket.value.printed ?? null) === null)
 
 const PAGE_SIZE = 7
 const page = ref(0)
@@ -123,11 +131,8 @@ onBeforeUnmount(() => {
 			<div class="screen totem">
 				<template v-if="step === 'home'">
 					<h1 class="t-head">
-						¿A qué unidad viene?
+						Seleccione la unidad a la que acude.
 					</h1>
-					<div class="t-sub">
-						Toque la unidad para sacar su turno.
-					</div>
 					<div class="t-bars">
 						<button
 							v-for="s in shown"
@@ -169,15 +174,15 @@ onBeforeUnmount(() => {
 					</div>
 					<div v-if="!problem" class="t-choices">
 						<button type="button" class="t-choice yes" :disabled="issuing" @click="answer(true)">
-							Sí, atención preferente
+							Sí
 						</button>
 						<button type="button" class="t-choice" :disabled="issuing" @click="answer(false)">
-							No, atención general
+							No
 						</button>
 					</div>
 				</template>
 				<main v-else-if="step === 'ticket'" class="t-ticket" :style="{ background: servicio.color, color: readableOn(servicio.color) }">
-					<div class="lbl">
+					<div v-if="ticket.printed !== false" class="lbl">
 						Su turno
 					</div>
 					<div class="num">
@@ -189,8 +194,11 @@ onBeforeUnmount(() => {
 					<div v-if="ticket.preferente" class="t-chip">
 						Atención preferente
 					</div>
+					<div v-if="ticket.printed === false" class="t-chip">
+						No se pudo imprimir
+					</div>
 					<div class="inst">
-						Retire su ticket impreso y espere su llamado en la sala de espera.
+						{{ ticket.printed === false ? 'Acérquese a SOME.' : 'Retire su ticket impreso y espere su llamado en la sala de espera.' }}
 					</div>
 					<div class="cnt">
 						Volviendo al inicio en {{ left }} s
@@ -198,14 +206,14 @@ onBeforeUnmount(() => {
 				</main>
 				<div v-if="offline" class="t-offline" role="alert">
 					<h3>Sin conexión</h3>
-					<p>Acérquese a SOME para sacar su turno.</p>
+					<p>Acérquese a SOME.</p>
 					<p class="dot">
 						Reintentando…
 					</p>
 				</div>
 			</div>
 		</div>
-		<div v-if="ticket" class="paper">
+		<div v-if="ticket && browserPrints" class="paper">
 			<div class="est">
 				{{ establishment }}
 			</div>
@@ -249,7 +257,6 @@ html, body { margin: 0; }
 .t-page .totem button:focus-visible { outline: calc(10 * var(--k)) solid var(--ink); outline-offset: calc(-10 * var(--k)); box-shadow: inset 0 0 0 calc(20 * var(--k)) #fff; }
 .t-page .totem button:disabled { opacity: .35; cursor: not-allowed; }
 .t-page .t-head { margin: 0; padding: calc(64 * var(--k)) calc(72 * var(--k)) calc(36 * var(--k)); font-size: calc(72 * var(--k)); font-weight: 700; line-height: 1.1; }
-.t-page .t-sub { padding: 0 calc(72 * var(--k)) calc(28 * var(--k)); font-size: calc(40 * var(--k)); color: #46525e; }
 .t-page .t-bars { flex: 1; display: flex; flex-direction: column; gap: calc(14 * var(--k)); padding: 0 calc(40 * var(--k)); min-height: 0; }
 .t-page .t-bar { flex: 1; min-height: 0; line-height: 1.05; text-wrap: balance; border: 0; display: flex; align-items: center; justify-content: space-between; gap: calc(24 * var(--k)); padding: 0 calc(56 * var(--k)); font: inherit; font-size: calc(72 * var(--k)); font-weight: 700; cursor: pointer; text-align: left; }
 .t-page .t-bar .pre { font-size: calc(52 * var(--k)); font-weight: 400; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
@@ -282,7 +289,6 @@ html, body { margin: 0; }
 @container scr (aspect-ratio > 1) {
 	.t-page .totem { --k: min(100cqw / 1920, 100cqh / 1080); }
 	.t-page .t-head { padding: calc(32 * var(--k)) calc(64 * var(--k)) calc(8 * var(--k)); font-size: calc(60 * var(--k)); }
-	.t-page .t-sub { padding: 0 calc(64 * var(--k)) calc(16 * var(--k)); font-size: calc(32 * var(--k)); }
 	.t-page .t-bars { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: calc(16 * var(--k)); padding: 0 calc(40 * var(--k)); }
 	.t-page .t-bar { font-size: calc(54 * var(--k)); padding: 0 calc(40 * var(--k)); }
 	.t-page .t-bar:last-child:nth-child(odd) { grid-column: 1 / -1; }

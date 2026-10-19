@@ -26,15 +26,15 @@ class TurnoLabelTest extends TestCase {
 	public function testThePreferenteCallIsSpokenWithWordsNotLetters(): void {
 		// "P" and "G" sound alike over a speaker; the words do not.
 		$this->assertSame(
-			'Turno Farmacia, preferente 12. Diríjase a Box 2.',
-			TurnoLabel::spoken('Farmacia', true, 12, 'Box 2'),
+			'Farmacia, preferente 12. Diríjase a ventanilla 2.',
+			TurnoLabel::spoken('Farmacia', true, 12, 'ventanilla 2'),
 		);
 	}
 
 	public function testTheGeneralCallIsSpokenWithTheWordGeneral(): void {
 		$this->assertSame(
-			'Turno Toma de Muestras, general 7. Diríjase a Box 5.',
-			TurnoLabel::spoken('Toma de Muestras', false, 7, 'Box 5'),
+			'Toma de Muestras, general 7. Diríjase a ventanilla 5.',
+			TurnoLabel::spoken('Toma de Muestras', false, 7, 'ventanilla 5'),
 		);
 	}
 }

@@ -9,6 +9,7 @@ return [
 	'routes' => [
 		// Pages.
 		['name' => 'page#totem', 'url' => '/totem', 'verb' => 'GET'],
+		['name' => 'page#kiosk', 'url' => '/totem/{slug}', 'verb' => 'GET', 'requirements' => ['slug' => '[a-z0-9_-]+']],
 		['name' => 'page#display', 'url' => '/display/{slug}', 'verb' => 'GET'],
 		['name' => 'page#box', 'url' => '/box', 'verb' => 'GET'],
 		['name' => 'page#admin', 'url' => '/admin', 'verb' => 'GET'],
@@ -46,5 +47,10 @@ return [
 		['name' => 'pantalla#create', 'url' => '/pantallas', 'verb' => 'POST'],
 		['name' => 'pantalla#update', 'url' => '/pantallas/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],
 		['name' => 'pantalla#destroy', 'url' => '/pantallas/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\d+']],
+		['name' => 'totem#index', 'url' => '/totems', 'verb' => 'GET'],
+		['name' => 'totem#create', 'url' => '/totems', 'verb' => 'POST'],
+		['name' => 'totem#update', 'url' => '/totems/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],
+		['name' => 'totem#destroy', 'url' => '/totems/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\d+']],
+		['name' => 'totem#test_print', 'url' => '/totems/{id}/test-print', 'verb' => 'POST', 'requirements' => ['id' => '\d+']],
 	],
 ];

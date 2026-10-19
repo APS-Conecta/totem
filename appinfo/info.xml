@@ -6,7 +6,7 @@
     <description><![CDATA[Turnos de atención para la sala de espera: el paciente saca su turno en un totem táctil con dos toques (servicio y atención preferente), el funcionario lo llama desde su box y la pantalla de sala lo muestra y lo anuncia con tonos y voz.
 
 No pide ni guarda el RUN ni ningún dato del paciente: un turno es un número, un servicio y una hora.]]></description>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
     <licence>AGPL-3.0-or-later</licence>
     <author>Daniel Espinoza</author>
     <namespace>Totem</namespace>

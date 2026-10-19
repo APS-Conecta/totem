@@ -12,8 +12,8 @@ const url = (path) => generateUrl('/apps/totem' + path)
 const data = (response) => response.data
 
 /** The totem's calls: anonymous. */
-export const publicServicios = () => axios.get(url('/public/servicios')).then(data)
-export const issueTurno = (servicioId, preferente) => axios.post(url('/turnos'), { servicioId, preferente }).then(data)
+export const publicServicios = (totem) => axios.get(url('/public/servicios'), { params: { totem } }).then(data)
+export const issueTurno = (servicioId, preferente, totem) => axios.post(url('/turnos'), { servicioId, preferente, totem }).then(data)
 
 /** The display's poll: the llamados after `since`. */
 export const readFeed = (slug, since) => axios.get(url(`/display/${slug}/feed`), { params: { since } }).then(data)
@@ -50,4 +50,9 @@ export const admin = {
 	servicios: resource('servicios', { deletable: false }),
 	boxes: resource('boxes', { deletable: true }),
 	pantallas: resource('pantallas', { deletable: true }),
+	totems: {
+		...resource('totems', { deletable: true }),
+		/** Print a sample ticket at the totem's network printer. */
+		testPrint: (id) => axios.post(url(`/totems/${id}/test-print`)).then(data),
+	},
 }
