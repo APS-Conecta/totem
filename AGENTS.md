@@ -15,3 +15,19 @@ Turnos de atención para CESFAM, CECOSF y SAPU, a Nextcloud app: the patient tak
 - **Screens adapt:** the totem and the display size everything from one fitted unit and switch layout by aspect ratio; never write a fixed-pixel layout for them. The approved mockups are `docs/mockups/index.html` (totem, display, box, admin) and `docs/mockups/estadisticas.html` (the statistics page, an ordinary Nextcloud page).
 - **Voice assets:** `js/tts/` is committed (about 160 MB: the runtime and the two Piper models), so a release tarball is self-contained (`docs/adr/0005`). Only `make tts-assets` (needs `npm ci`) changes it, and it verifies pinned sha256 values; never edit it by hand. `docs/mockups/voz/*.wav` are the two recordings the mockup plays.
 - **One concern per PR**, with every change its description claims.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `APS-Conecta/totem`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Canonical vocabulary, unmodified: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`,
+`wontfix`. All five exist on the repo. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: [`CONTEXT.md`](CONTEXT.md) for the vocabulary, [`docs/adr/`](docs/adr/) for the
+decisions. See `docs/agents/domain.md`.
