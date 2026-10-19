@@ -34,9 +34,11 @@ test.describe('the menu', () => {
 			await expect(menu(page).getByRole('link', { name: section.link, exact: true })).toHaveAttribute('aria-current', 'page')
 		}
 
+		// The back button returns to the section visited just before the last one.
+		const before = SECTIONS.at(-2)
 		await page.goBack()
-		await expect(page.getByRole('heading', { level: 2, name: 'Ventanillas', exact: true }).first()).toBeVisible()
-		expect(here(page)).toBe('/apps/totem/admin#boxes')
+		await expect(page.getByRole('heading', { level: 2, name: before.title, exact: true }).first()).toBeVisible()
+		expect(here(page)).toBe(before.path)
 	})
 
 	test('opens the section its old address names', async ({ page }) => {
