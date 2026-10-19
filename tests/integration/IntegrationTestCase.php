@@ -21,7 +21,7 @@ use PHPUnit\Framework\TestCase;
  * tracking what it created.
  */
 abstract class IntegrationTestCase extends TestCase {
-	private const TABLES = ['totem_llamado', 'totem_turno', 'totem_box_servicio', 'totem_box', 'totem_pantalla_servicio', 'totem_pantalla', 'totem_servicio'];
+	private const TABLES = ['totem_llamado', 'totem_turno', 'totem_box_servicio', 'totem_box', 'totem_pantalla_servicio', 'totem_pantalla', 'totem_totem_servicio', 'totem_totem', 'totem_servicio'];
 
 	protected function setUp(): void {
 		$this->emptyTables();
