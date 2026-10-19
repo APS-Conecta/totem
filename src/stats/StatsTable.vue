@@ -38,10 +38,24 @@
 				</tr>
 			</thead>
 			<tbody>
-				<tr v-for="row in rows" :key="row.key" :class="{ 'totem-stats__future': row.future }">
+				<tr v-for="row in rows"
+					:key="row.key"
+					:class="{ 'totem-stats__future': row.future, 'totem-stats__selected': row.key === selectedKey }">
 					<th scope="row">
-						<span v-if="row.color" class="totem-stats__dot" :style="{ background: row.color }" aria-hidden="true" />{{ row.label }}
-						<span v-if="row.off" class="totem-stats__off">desactivado</span>
+						<template v-if="row.future">
+							{{ row.label }}
+						</template>
+						<NcButton v-else
+							variant="tertiary"
+							alignment="start"
+							:aria-pressed="String(row.key === selectedKey)"
+							@click="$emit('select', row.key)">
+							<template v-if="row.color" #icon>
+								<span class="totem-stats__dot" :style="{ background: row.color }" aria-hidden="true" />
+							</template>
+							{{ row.label }}
+							<span v-if="row.off" class="totem-stats__off">desactivado</span>
+						</NcButton>
 					</th>
 					<td v-for="cell in cellsOf(row)" :key="cell.name" :class="cell.classes">
 						{{ cell.text }}
@@ -63,11 +77,14 @@
 </template>
 
 <script>
+import NcButton from '@nextcloud/vue/components/NcButton'
 import { count } from './format.js'
 
 /** One row of the board: its figure as the six numbers a person reads, in column order. */
 export default {
 	name: 'StatsTable',
+	components: { NcButton },
+	emits: ['select'],
 	props: {
 		caption: { type: String, required: true },
 		firstHeading: { type: String, required: true },
@@ -75,6 +92,8 @@ export default {
 		rows: { type: Array, required: true },
 		/** @type {{ label: string, figure: object }} */
 		foot: { type: Object, required: true },
+		/** The key of the row whose detail is open, if any. */
+		selectedKey: { type: String, default: null },
 	},
 	methods: {
 		cellsOf({ figure, future }) {
@@ -106,14 +125,14 @@ export default {
 
 .totem-stats__table {
 	width: 100%;
-	min-width: 640px;
+	min-width: 40em;
 	border-collapse: collapse;
 	font-variant-numeric: tabular-nums;
 }
 
 .totem-stats__table th,
 .totem-stats__table td {
-	padding: 10px;
+	padding: calc(var(--default-grid-baseline) * 2) calc(var(--default-grid-baseline) * 3);
 	text-align: end;
 	white-space: nowrap;
 	border-bottom: 1px solid var(--color-border);
@@ -121,7 +140,7 @@ export default {
 
 .totem-stats__table thead th {
 	font-weight: normal;
-	font-size: 14px;
+	font-size: var(--font-size-small);
 	vertical-align: bottom;
 	color: var(--color-text-maxcontrast);
 }
@@ -142,11 +161,10 @@ export default {
 
 .totem-stats__group .totem-stats__span {
 	border-bottom: 1px solid var(--color-border);
-	padding-bottom: 4px;
+	padding-bottom: var(--default-grid-baseline);
 }
 
 .totem-stats__table tbody th {
-	font-size: 16px;
 	font-weight: 600;
 	color: var(--color-main-text);
 	white-space: normal;
@@ -154,22 +172,26 @@ export default {
 
 .totem-stats__dot {
 	display: inline-block;
-	width: 12px;
-	height: 12px;
-	margin-inline-end: 8px;
+	width: 0.75em;
+	height: 0.75em;
 	border-radius: 50%;
-	vertical-align: -1px;
+	border: 1px solid var(--color-border-maxcontrast);
 }
 
 .totem-stats__off {
-	margin-inline-start: 6px;
-	font-size: 13px;
+	margin-inline-start: calc(var(--default-grid-baseline) * 1.5);
+	font-size: var(--font-size-small);
 	font-weight: normal;
 	color: var(--color-text-maxcontrast);
 }
 
 .totem-stats__total {
 	font-weight: 700;
+}
+
+.totem-stats__selected th,
+.totem-stats__selected td {
+	background: var(--color-primary-element-light);
 }
 
 .totem-stats__zero,
@@ -180,7 +202,6 @@ export default {
 
 .totem-stats__table tfoot th,
 .totem-stats__table tfoot td {
-	font-size: 16px;
 	font-weight: 700;
 	color: var(--color-main-text);
 	border-top: 2px solid var(--color-main-text);
@@ -199,11 +220,11 @@ export default {
 @container totem-stats (max-width: 520px) {
 	.totem-stats__table th,
 	.totem-stats__table td {
-		padding: 9px 7px;
+		padding: calc(var(--default-grid-baseline) * 2);
 	}
 
 	.totem-stats__table tbody th {
-		min-width: 7.5em;
+		min-width: 9em;
 	}
 }
 </style>

@@ -92,7 +92,7 @@ class TurnoServiceTest extends TestCase {
 		$this->servicio(['active' => false]);
 
 		$this->expectException(Refused::class);
-		$this->expectExceptionMessage('Este servicio no está disponible.');
+		$this->expectExceptionMessage('Esta unidad no está disponible.');
 		$this->service->issue(3, true);
 	}
 

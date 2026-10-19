@@ -56,5 +56,5 @@ export function warmUp(voice) {
 
 /** Play the chimes and the chosen voice once, as a Pantalla would, so an admin can hear its settings. */
 export function testAnnouncement({ volume, voice }) {
-	return announce({ text: 'Turno Farmacia, preferente 12. Diríjase al Box 2.', volume, voice })
+	return announce({ text: 'Turno Farmacia, preferente 12. Diríjase a Ventanilla 2.', volume, voice })
 }

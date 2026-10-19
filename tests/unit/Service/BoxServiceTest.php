@@ -61,7 +61,7 @@ class BoxServiceTest extends TestCase {
 		$this->boxes->expects($this->never())->method('insert');
 
 		$this->expectException(Refused::class);
-		$this->expectExceptionMessage('Elija al menos un servicio para el box.');
+		$this->expectExceptionMessage('Elija al menos una unidad para la ventanilla.');
 		$this->service->create(['name' => 'Box 3', 'servicioIds' => []]);
 	}
 
@@ -70,7 +70,7 @@ class BoxServiceTest extends TestCase {
 		$this->boxes->expects($this->never())->method('insert');
 
 		$this->expectException(Refused::class);
-		$this->expectExceptionMessage('Algún servicio elegido ya no existe.');
+		$this->expectExceptionMessage('Alguna unidad elegida ya no existe.');
 		$this->service->create(['name' => 'Box 3', 'servicioIds' => [99]]);
 	}
 
@@ -102,7 +102,7 @@ class BoxServiceTest extends TestCase {
 		$this->boxes->expects($this->never())->method('delete');
 
 		$this->expectException(Refused::class);
-		$this->expectExceptionMessage('Este box tiene un turno en curso.');
+		$this->expectExceptionMessage('Esta ventanilla tiene un turno en curso.');
 		$this->service->delete(4);
 	}
 

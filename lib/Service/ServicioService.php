@@ -85,14 +85,14 @@ class ServicioService {
 		try {
 			$same = $this->servicios->findBySlug($slug);
 			if ($same->getId() !== $servicio->getId()) {
-				throw new Refused('Ya existe un servicio con ese nombre.');
+				throw new Refused('Ya existe una unidad con ese nombre.');
 			}
 		} catch (DoesNotExistException) {
 			// free
 		}
 		foreach ($this->servicios->findAll() as $other) {
 			if ($other->getPrefix() === $prefix && $other->getId() !== $servicio->getId()) {
-				throw new Refused("Ya existe un servicio con el prefijo $prefix.");
+				throw new Refused("Ya existe una unidad con el prefijo $prefix.");
 			}
 		}
 	}

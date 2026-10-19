@@ -40,36 +40,36 @@ class CallController extends Controller {
 	#[NoAdminRequired]
 	#[UserRateLimit(limit: 120, period: 60)]
 	public function state(int $boxId): JSONResponse {
-		return $this->attempt(fn () => $this->calls->state($boxId), 'Ese box ya no existe.');
+		return $this->attempt(fn () => $this->calls->state($boxId), 'Esa ventanilla ya no existe.');
 	}
 
 	#[NoAdminRequired]
 	#[UserRateLimit(limit: 120, period: 60)]
 	public function call(int $boxId): JSONResponse {
-		return $this->attempt(fn () => $this->calls->callNext($boxId), 'Ese box ya no existe.');
+		return $this->attempt(fn () => $this->calls->callNext($boxId), 'Esa ventanilla ya no existe.');
 	}
 
 	#[NoAdminRequired]
 	#[UserRateLimit(limit: 120, period: 60)]
 	public function recall(int $boxId): JSONResponse {
-		return $this->attempt(fn () => $this->calls->recall($boxId), 'Ese box ya no existe.');
+		return $this->attempt(fn () => $this->calls->recall($boxId), 'Esa ventanilla ya no existe.');
 	}
 
 	#[NoAdminRequired]
 	#[UserRateLimit(limit: 120, period: 60)]
 	public function start(int $boxId): JSONResponse {
-		return $this->attempt(fn () => $this->calls->start($boxId), 'Ese box ya no existe.');
+		return $this->attempt(fn () => $this->calls->start($boxId), 'Esa ventanilla ya no existe.');
 	}
 
 	#[NoAdminRequired]
 	#[UserRateLimit(limit: 120, period: 60)]
 	public function finish(int $boxId): JSONResponse {
-		return $this->attempt(fn () => $this->calls->finish($boxId), 'Ese box ya no existe.');
+		return $this->attempt(fn () => $this->calls->finish($boxId), 'Esa ventanilla ya no existe.');
 	}
 
 	#[NoAdminRequired]
 	#[UserRateLimit(limit: 120, period: 60)]
 	public function absent(int $boxId): JSONResponse {
-		return $this->attempt(fn () => $this->calls->absent($boxId), 'Ese box ya no existe.');
+		return $this->attempt(fn () => $this->calls->absent($boxId), 'Esa ventanilla ya no existe.');
 	}
 }

@@ -28,7 +28,7 @@ export default {
 	name: 'ConfirmDelete',
 	components: { NcButton },
 	props: {
-		/** The first-step button ("Eliminar box"). */
+		/** The first-step button ("Eliminar ventanilla"). */
 		label: { type: String, required: true },
 		/** The question the second step asks ("¿Eliminar Box 3?"). */
 		question: { type: String, required: true },

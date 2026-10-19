@@ -119,6 +119,16 @@ describe('opening the board', () => {
 	})
 })
 
+describe('the header', () => {
+	it('titles the page Estadísticas and holds the refresh and the download', async () => {
+		await open()
+
+		expect(wrapper.find('h2').text()).toBe('Estadísticas')
+		expect(wrapper.find('.totem-pane__acts').text()).toContain('Actualizar')
+		expect(wrapper.find('.totem-pane__acts').text()).toContain('Descargar CSV')
+	})
+})
+
 describe('the tables', () => {
 	it('lists each sector with its preferente, general and total, then the totals of the block', async () => {
 		await open()
@@ -133,12 +143,12 @@ describe('the tables', () => {
 
 	it('lists the other servicios apart, marking one that is switched off', async () => {
 		await open()
-		const servicios = tableOf('Tickets por servicio')
+		const servicios = tableOf('Tickets por unidad')
 		expect(bodyRows(servicios)).toEqual([
 			['Farmacia', '24', '1.200', '1.224', '1.214', '6', '4'],
 			['Dental desactivado', '1', '2', '3', '3', '0', '0'],
 		])
-		expect(cells(servicios.find('tfoot tr'))[0]).toBe('Total otros servicios')
+		expect(cells(servicios.find('tfoot tr'))[0]).toBe('Total otras unidades')
 	})
 
 	it('shows each row with its servicio colour', async () => {
@@ -166,7 +176,7 @@ describe('the tables', () => {
 	it('says so when no servicio is marked as a sector', async () => {
 		stats.board.mockResolvedValue({ ...WEEK, sectores: block([]) })
 		await open()
-		expect(wrapper.text()).toContain('Ningún servicio está marcado como sector. Márquelo en Administración')
+		expect(wrapper.text()).toContain('Ninguna unidad está marcada como sector. Márquela en Configuración')
 		expect(tableOf('Tickets por sector')).toBeUndefined()
 	})
 
@@ -182,6 +192,111 @@ describe('the tables', () => {
 	it('does not claim an empty period when there are tickets', async () => {
 		await open()
 		expect(wrapper.text()).not.toContain('Sin tickets en este período.')
+	})
+})
+
+describe('the detail in the sidebar', () => {
+	const sidebar = () => wrapper.find('aside')
+	const pick = async (name) => {
+		await wrapper.findAll('tbody button').find((b) => b.text() === name).trigger('click')
+		await settle()
+	}
+	const detail = () => sidebar().findAll('tbody tr').map(cells)
+
+	it('is closed until a unidad or a day is picked', async () => {
+		await open()
+		expect(sidebar().exists()).toBe(false)
+	})
+
+	it('shows the full split of the unidad picked: preferente, general and total for each outcome', async () => {
+		await open()
+
+		await pick('Sector Azul')
+
+		expect(sidebar().find('h2').text()).toBe('Sector Azul')
+		expect(sidebar().text()).toContain('Semana del 19 al 25 de octubre de 2026')
+		expect(sidebar().findAll('thead th').map((th) => th.text())).toEqual(['', 'Preferente', 'General', 'Total'])
+		expect(detail()).toEqual([
+			['Emitidos', '25', '77', '102'],
+			['Atendidos', '25', '70', '95'],
+			['No se presentó', '0', '2', '2'],
+			['Sin atender', '0', '5', '5'],
+		])
+	})
+
+	it('pads its content away from the edges of the sidebar', async () => {
+		await open()
+
+		await pick('Sector Azul')
+
+		expect(sidebar().find('.totem-side').exists()).toBe(true)
+	})
+
+	it('shows the split of a day when a day is picked', async () => {
+		await open()
+
+		await pick('mié, 21 oct')
+
+		expect(sidebar().find('h2').text()).toBe('mié, 21 oct')
+		expect(detail()).toEqual([
+			['Emitidos', '30', '107', '137'],
+			['Atendidos', '30', '52', '82'],
+			['No se presentó', '0', '6', '6'],
+			['Sin atender', '0', '49', '49'],
+		])
+	})
+
+	it('marks the row picked and moves to another when another is picked', async () => {
+		await open()
+
+		await pick('Sector Azul')
+		expect(wrapper.findAll('tbody button').find((b) => b.text() === 'Sector Azul').attributes('aria-pressed')).toBe('true')
+
+		await pick('Farmacia')
+		expect(sidebar().find('h2').text()).toBe('Farmacia')
+		expect(wrapper.findAll('tbody button').filter((b) => b.attributes('aria-pressed') === 'true')).toHaveLength(1)
+	})
+
+	it('closes with its own close button', async () => {
+		await open()
+		await pick('Sector Azul')
+
+		await sidebar().find('button[aria-label]').trigger('click')
+
+		expect(sidebar().exists()).toBe(false)
+		expect(wrapper.findAll('tbody button').every((b) => b.attributes('aria-pressed') === 'false')).toBe(true)
+	})
+
+	it('does not offer a day that has not happened yet', async () => {
+		await open()
+
+		expect(wrapper.findAll('tbody button').some((b) => b.text() === 'jue, 22 oct')).toBe(false)
+		expect(wrapper.text()).toContain('jue, 22 oct')
+	})
+
+	it('keeps showing the same unidad when the period changes, with its numbers for the new period', async () => {
+		await open()
+		await pick('Sector Azul')
+		const lastWeek = { ...LAST_WEEK, sectores: block([row(1, 'Sector Azul', counts(3), counts(4)), row(2, 'Sector Verde', counts(0), counts(0))]) }
+		stats.board.mockResolvedValue(lastWeek)
+
+		await wrapper.find('[aria-label="Período anterior"]').trigger('click')
+		await settle()
+
+		expect(sidebar().find('h2').text()).toBe('Sector Azul')
+		expect(detail()[0]).toEqual(['Emitidos', '3', '4', '7'])
+	})
+
+	it('closes when what it showed is not in the new period, such as a day', async () => {
+		await open()
+		await pick('mié, 21 oct')
+		const earlierDays = WEEK.days.map((d, i) => ({ ...d, day: `2026-10-${12 + i}` }))
+		stats.board.mockResolvedValue({ ...LAST_WEEK, days: earlierDays })
+
+		await wrapper.find('[aria-label="Período anterior"]').trigger('click')
+		await settle()
+
+		expect(sidebar().exists()).toBe(false)
 	})
 })
 

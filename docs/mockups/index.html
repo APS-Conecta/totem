@@ -253,7 +253,7 @@ h1 { font-size: 1.75rem; line-height: 1.15; margin: 0; text-wrap: balance; }
       <ul>
         <li>El número y el box se leen desde el fondo de la sala. Solo aparecen número y box. En vertical, el llamado va arriba y la lista abajo.</li>
         <li>Los llamados siguen la regla real. En cada servicio, después de dos turnos preferentes toca uno general; si no hay del otro tipo, sigue el que haya. Cada botón dice qué turno llamaría.</li>
-        <li>Aviso para el oído: dos pares de tonos (cuatro toques) y después la voz, dos veces: "Turno Farmacia, preferente 12. Diríjase al Box 2." En la app la voz la genera un modelo de código abierto incluido en la app, sin internet. Aquí, en los llamados simulados, la voz es la del navegador; la voz real se escucha con "Probar aviso" en Administración > Pantallas.</li>
+        <li>Aviso para el oído: dos pares de tonos (cuatro toques) y después la voz, dos veces: "Turno Farmacia, preferente 12. Diríjase a Ventanilla 2." En la app la voz la genera un modelo de código abierto incluido en la app, sin internet. Aquí, en los llamados simulados, la voz es la del navegador; la voz real se escucha con "Probar aviso" en Administración > Pantallas.</li>
         <li>Aviso para la vista: un marco dorado que respira una vez por segundo durante 6 s. Con "reducir movimiento" queda fijo, sin animación. Lo que se dice aparece escrito abajo.</li>
         <li>El volumen y la voz (Mujer o Hombre) se ajustan por pantalla en Administración > Pantallas. El tope real lo fija el volumen del equipo.</li>
         <li>Un turno que saca en el totem entra a la cola y se llama cuando le toca. Llamar de nuevo (pestaña Box) repite el aviso sin sumar otra fila.</li>
@@ -367,17 +367,17 @@ h1 { font-size: 1.75rem; line-height: 1.15; margin: 0; text-wrap: balance; }
     return addTurno(s, p, seq, "waiting", 0);
   }
   function explain(b) {
-    var t = nextFor(b); if (!t) return "No hay turnos en espera en los servicios de este box.";
+    var t = nextFor(b); if (!t) return "No hay turnos en espera en las unidades de esta ventanilla.";
     var g = wantsGeneral(t.s), why;
     if (t.p) why = g ? "no hay atención general en espera, sigue la preferente" : "toca atención preferente";
     else why = g ? "las 2 últimas llamadas fueron preferentes, toca atención general" : "no hay atención preferente en espera";
     var out = "Siguiente: " + lbl(t) + " (" + byId(t.s).name + "): " + why + ".";
     var others = BOX[b].srv.filter(function (x) { return x !== t.s && candidate(x); });
-    if (others.length) out += " Entre los servicios del box, es el que más espera.";
+    if (others.length) out += " Entre las unidades de la ventanilla, es el que más espera.";
     return out;
   }
   /* what the room hears, and the same words shown as a caption */
-  function phrase(t, b) { return "Turno " + byId(t.s).name + ", " + (t.p ? "preferente" : "general") + " " + t.seq + ". Diríjase al " + BOX[b].name + "."; }
+  function phrase(t, b) { return "Turno " + byId(t.s).name + ", " + (t.p ? "preferente" : "general") + " " + t.seq + ". Diríjase a " + BOX[b].name + "."; }
   function announce(t, b) {
     pulseUntil = Date.now() + 6000; setTimeout(displayRender, 6100);
     if (!document.getElementById("p-display").hidden) playAnnouncement(phrase(t, b));
@@ -508,7 +508,7 @@ h1 { font-size: 1.75rem; line-height: 1.15; margin: 0; text-wrap: balance; }
   function totemRender() {
     var s = T.srv, h = "";
     if (T.step === "home") {
-      h = '<div class="t-head">¿A qué servicio viene?</div><div class="t-sub">Toque el servicio para sacar su turno.</div><div class="t-bars">' +
+      h = '<div class="t-head">¿A qué unidad viene?</div><div class="t-sub">Toque la unidad para sacar su turno.</div><div class="t-bars">' +
         SERV.map(function (x) {
           return '<button class="t-bar" data-act="srv" data-id="' + x.id + '" style="background:' + x.color + ";color:" + readableOn(x.color) + '"><span>' + esc(x.name) + '</span><span class="pre">' + x.pre + "</span></button>";
         }).join("") + '</div><div class="t-foot"><span>CESFAM Ejemplo</span><span id="clock"></span></div>';
@@ -601,7 +601,7 @@ h1 { font-size: 1.75rem; line-height: 1.15; margin: 0; text-wrap: balance; }
       return '<div class="q-row' + (isNext ? " next" : "") + '"><span class="kind ' + (t.p ? "p" : "g") + '">' + (t.p ? "P" : "G") + "</span><span>" + lbl(t) + '</span><span class="sw" style="background:' + byId(t.s).color + '"></span>' +
         (isNext ? '<span class="tag">SIGUIENTE</span>' : "") + '<span class="w">' + Math.max(0, Math.round((Date.now() - t.created) / 60000)) + " min</span></div>";
     }).join("");
-    boxEl.innerHTML = '<div class="nc-top">Totem <span>Box</span></div><div class="nc-body"><div class="b-main"><div class="b-who"><span>Box 3 · Farmacia, Toma de Muestras</span><button type="button">Cambiar box</button></div>' +
+    boxEl.innerHTML = '<div class="nc-top">Totem <span>Box</span></div><div class="nc-body"><div class="b-main"><div class="b-who"><span>Box 3 · Farmacia, Toma de Muestras</span><button type="button">Cambiar ventanilla</button></div>' +
       '<div class="b-cur" aria-live="polite">' + curHtml + '</div><div class="b-hint">' + (st === "idle" ? esc(explain("b3")) : "") + '</div><button class="b-primary' + (st === "in" ? " ok" : "") + '" data-act="main"' + (st === "idle" && !nxt ? " disabled" : "") + ">" + label + "</button>" +
       '<div class="b-sec"><button data-act="again"' + (st === "called" ? "" : " disabled") + '>Llamar de nuevo</button><button data-act="absent"' + (st === "called" ? "" : " disabled") + ">No se presentó</button></div></div>" +
       '<aside class="b-side"><h3>En espera (' + list.length + ")</h3>" + rows + '<div class="legend">P atención preferente · G atención general</div></aside></div>';
@@ -636,13 +636,13 @@ h1 { font-size: 1.75rem; line-height: 1.15; margin: 0; text-wrap: balance; }
         '<div class="a-row"><label for="f-pre">Prefijo<input type="text" id="f-pre" value="' + s.pre + '" maxlength="4"></label><label for="f-quota">Cupo diario<input type="number" id="f-quota" value="' + hr[2] + '" placeholder="Sin límite"></label></div>' +
         '<div class="a-row"><label for="f-open">Abre<input type="time" id="f-open" value="' + hr[0] + '"></label><label for="f-close">Cierra<input type="time" id="f-close" value="' + hr[1] + '"></label></div>' +
         '<label for="f-color">Color<span class="a-color"><input type="color" id="f-color" value="' + s.color + '"><span class="a-prev" id="a-prev"></span><span class="a-ratio" id="a-ratio"></span></span></label>' +
-        '<button type="submit" class="a-save">Guardar servicio</button></form></div>';
+        '<button type="submit" class="a-save">Guardar unidad</button></form></div>';
     } else if (A.tab === "boxes") {
       body = '<div class="a-scroll"><table class="a-table"><thead><tr><th>Box</th><th>Atiende</th></tr></thead><tbody><tr><td>Box 1</td><td>Sector Azul</td></tr><tr><td>Box 2</td><td>Farmacia</td></tr><tr><td>Box 3</td><td>Farmacia, Toma de Muestras</td></tr><tr><td>Box 4</td><td>Vacunatorio</td></tr></tbody></table></div>';
     } else {
-      body = '<div class="a-grid"><div class="a-scroll"><table class="a-table"><thead><tr><th>Pantalla</th><th>Muestra</th><th>Aviso</th></tr></thead><tbody><tr class="sel"><td>Sala Farmacia</td><td>Farmacia</td><td>Volumen <span id="t-vol">' + P.vol + '</span> %, <span id="t-voice">' + (P.voice === "off" ? "sin voz" : "voz de " + P.voice) + '</span></td></tr><tr><td>Central</td><td>Todos los servicios</td><td>Volumen 100 %, voz de mujer</td></tr><tr><td>Sala Sector Azul</td><td>Sector Azul</td><td>Volumen 100 %, voz de hombre</td></tr></tbody></table></div>' +
+      body = '<div class="a-grid"><div class="a-scroll"><table class="a-table"><thead><tr><th>Pantalla</th><th>Muestra</th><th>Aviso</th></tr></thead><tbody><tr class="sel"><td>Sala Farmacia</td><td>Farmacia</td><td>Volumen <span id="t-vol">' + P.vol + '</span> %, <span id="t-voice">' + (P.voice === "off" ? "sin voz" : "voz de " + P.voice) + '</span></td></tr><tr><td>Central</td><td>Todas las unidades</td><td>Volumen 100 %, voz de mujer</td></tr><tr><td>Sala Sector Azul</td><td>Sector Azul</td><td>Volumen 100 %, voz de hombre</td></tr></tbody></table></div>' +
         '<form class="a-form" onsubmit="return false"><label for="f-pname">Nombre<input type="text" id="f-pname" value="Sala Farmacia"></label>' +
-        '<fieldset><legend>Servicios que muestra (ninguno marcado = todos)</legend><label class="inline"><input type="checkbox" checked> Farmacia</label><label class="inline"><input type="checkbox"> Toma de Muestras</label><label class="inline"><input type="checkbox"> Vacunatorio</label></fieldset>' +
+        '<fieldset><legend>Unidades que muestra (ninguna marcada = todas)</legend><label class="inline"><input type="checkbox" checked> Farmacia</label><label class="inline"><input type="checkbox"> Toma de Muestras</label><label class="inline"><input type="checkbox"> Vacunatorio</label></fieldset>' +
         '<label for="f-vol">Volumen del aviso: <b id="f-volv">' + P.vol + " %</b><input type=\"range\" id=\"f-vol\" min=\"0\" max=\"100\" step=\"5\" value=\"" + P.vol + '"></label>' +
         '<label for="f-voice">Voz del aviso<select id="f-voice">' + [["mujer", VOICES.mujer.label], ["hombre", VOICES.hombre.label], ["off", "Sin voz, solo tonos"]].map(function (o) { return '<option value="' + o[0] + '"' + (P.voice === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + '</select></label>' +
         '<div class="a-row"><button type="button" class="a-save alt" data-act="test">Probar aviso</button><button type="submit" class="a-save">Guardar pantalla</button></div></form></div>';

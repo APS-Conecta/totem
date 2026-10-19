@@ -24,6 +24,6 @@ final class TurnoLabel {
 	 * letters P and G sound alike across a room.
 	 */
 	public static function spoken(string $servicio, bool $preferente, int $seq, string $box): string {
-		return sprintf('Turno %s, %s %d. Diríjase al %s.', $servicio, $preferente ? 'preferente' : 'general', $seq, $box);
+		return sprintf('Turno %s, %s %d. Diríjase a %s.', $servicio, $preferente ? 'preferente' : 'general', $seq, $box);
 	}
 }

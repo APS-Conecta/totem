@@ -123,10 +123,10 @@ onBeforeUnmount(() => {
 			<div class="screen totem">
 				<template v-if="step === 'home'">
 					<h1 class="t-head">
-						¿A qué servicio viene?
+						¿A qué unidad viene?
 					</h1>
 					<div class="t-sub">
-						Toque el servicio para sacar su turno.
+						Toque la unidad para sacar su turno.
 					</div>
 					<div class="t-bars">
 						<button

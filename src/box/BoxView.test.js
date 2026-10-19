@@ -55,9 +55,9 @@ describe('the box picker', () => {
 	it('offers the boxes in a labeled select with a placeholder', async () => {
 		await open()
 		const select = wrapper.find('select')
-		expect(wrapper.find('label[for="' + select.attributes('id') + '"]').text()).toBe('Box')
+		expect(wrapper.find('label[for="' + select.attributes('id') + '"]').text()).toBe('Ventanilla')
 		const options = select.findAll('option').map((o) => o.text())
-		expect(options).toEqual(['Elija su box', 'Box 3', 'Box 4'])
+		expect(options).toEqual(['Elija su ventanilla', 'Box 3', 'Box 4'])
 	})
 })
 
@@ -67,7 +67,7 @@ const idle = (extra = {}) => ({
 	current: null,
 	waiting: [],
 	next: null,
-	why: 'No hay turnos en espera en los servicios de este box.',
+	why: 'No hay turnos en espera en las unidades de esta ventanilla.',
 	...extra,
 })
 
@@ -83,7 +83,8 @@ describe('choosing a box', () => {
 		box.state.mockResolvedValue(idle())
 		await choose()
 		expect(box.state).toHaveBeenCalledWith(3)
-		expect(wrapper.text()).toContain('Box 3 · Farmacia, Toma de Muestras')
+		expect(wrapper.find('h2').text()).toBe('Box 3')
+		expect(seen()).toContain('Farmacia, Toma de Muestras')
 		expect(wrapper.find('select').exists()).toBe(false)
 	})
 
@@ -91,12 +92,12 @@ describe('choosing a box', () => {
 		let answer
 		box.state.mockReturnValue(new Promise((resolve) => { answer = resolve }))
 		await choose()
-		expect(wrapper.text()).toContain('Box 3')
+		expect(wrapper.find('h2').text()).toBe('Box 3')
 		expect(wrapper.text()).not.toContain('Farmacia')
 
 		answer(idle())
 		await settle()
-		expect(wrapper.text()).toContain('Box 3 · Farmacia, Toma de Muestras')
+		expect(seen()).toContain('Farmacia, Toma de Muestras')
 	})
 
 	it('remembers the choice in localStorage', async () => {
@@ -112,7 +113,8 @@ describe('restoring the remembered box', () => {
 		box.state.mockResolvedValue(idle({ box: STATE_BOXES[1] }))
 		await open()
 		expect(box.state).toHaveBeenCalledWith(4)
-		expect(wrapper.text()).toContain('Box 4 · Vacunatorio')
+		expect(wrapper.find('h2').text()).toBe('Box 4')
+		expect(seen()).toContain('Vacunatorio')
 	})
 
 	it('falls back to the picker when the stored box is gone', async () => {
@@ -135,7 +137,7 @@ describe('restoring the remembered box', () => {
 		try {
 			box.state.mockResolvedValue(idle())
 			await choose()
-			expect(wrapper.text()).toContain('Box 3 · Farmacia, Toma de Muestras')
+			expect(wrapper.find('h2').text()).toBe('Box 3')
 		} finally {
 			get.mockRestore()
 			set.mockRestore()
@@ -145,11 +147,11 @@ describe('restoring the remembered box', () => {
 
 const button = (name) => wrapper.findAll('button').find((b) => b.text() === name)
 
-describe('Cambiar box', () => {
+describe('Cambiar ventanilla', () => {
 	it('returns to the picker and stops reading the state', async () => {
 		box.state.mockResolvedValue(idle())
 		await choose()
-		await button('Cambiar box').trigger('click')
+		await button('Cambiar ventanilla').trigger('click')
 		expect(wrapper.find('select').exists()).toBe(true)
 		const calls = box.state.mock.calls.length
 		await vi.advanceTimersByTimeAsync(9000)
@@ -338,7 +340,7 @@ describe('the waiting list', () => {
 		const items = wrapper.findAll('li')
 		expect(items[0].find('[data-kind="P"]').exists()).toBe(true)
 		expect(items[1].find('[data-kind="G"]').exists()).toBe(true)
-		expect(items[1].find('.totem-box__dot').attributes('style')).toContain('background: rgb(229, 57, 53)')
+		expect(items[1].find('.totem-waiting__dot').attributes('style')).toContain('background: rgb(229, 57, 53)')
 	})
 
 	it('drops SIGUIENTE while a turno is held', async () => {
@@ -359,6 +361,70 @@ describe('the waiting list', () => {
 		expect(seen()).toContain('En espera (0)')
 		expect(seen()).toContain('No hay turnos en espera.')
 		expect(rows()).toEqual([])
+	})
+})
+
+describe('the sidebar', () => {
+	const state = () => idle({ next: QUEUE[0], waiting: QUEUE })
+	const sidebar = () => wrapper.find('aside')
+
+	it('opens with the waiting list, titled and counted, once a ventanilla is chosen', async () => {
+		box.state.mockResolvedValue(state())
+		await choose()
+
+		expect(sidebar().exists()).toBe(true)
+		expect(sidebar().find('h2').text()).toBe('En espera')
+		expect(sidebar().text()).toContain('3 turnos')
+		expect(sidebar().findAll('li')).toHaveLength(3)
+	})
+
+	it('pads its content away from the edges of the sidebar', async () => {
+		box.state.mockResolvedValue(state())
+		await choose()
+
+		expect(sidebar().find('.totem-side').exists()).toBe(true)
+	})
+
+	it('is not there before a ventanilla is chosen', async () => {
+		await open()
+
+		expect(sidebar().exists()).toBe(false)
+	})
+
+	it('closes with its own close button and opens again from "En espera (n)"', async () => {
+		box.state.mockResolvedValue(state())
+		await choose()
+
+		await sidebar().find('button[aria-label]').trigger('click')
+		expect(sidebar().exists()).toBe(false)
+
+		await button('En espera (3)').trigger('click')
+		expect(sidebar().exists()).toBe(true)
+	})
+
+	it('waits to be asked on a narrow screen, where it would cover the page', async () => {
+		window.matchMedia = vi.fn().mockReturnValue({ matches: false })
+		try {
+			box.state.mockResolvedValue(state())
+			await choose()
+			expect(sidebar().exists()).toBe(false)
+
+			await button('En espera (3)').trigger('click')
+			expect(sidebar().exists()).toBe(true)
+		} finally {
+			delete window.matchMedia
+		}
+	})
+
+	it('keeps listing the queue as the poll brings new turnos', async () => {
+		box.state.mockResolvedValueOnce(state())
+		await choose()
+		box.state.mockResolvedValue(idle({ next: QUEUE[0], waiting: [...QUEUE, row(45, 'FAR-G-021', false, 1)] }))
+
+		await vi.advanceTimersByTimeAsync(3000)
+
+		expect(sidebar().findAll('li')).toHaveLength(4)
+		expect(sidebar().text()).toContain('4 turnos')
 	})
 })
 
@@ -402,7 +468,7 @@ describe('leaving a box', () => {
 		await choose()
 		await button('Llamar siguiente').trigger('click')
 		await settle()
-		await button('Cambiar box').trigger('click')
+		await button('Cambiar ventanilla').trigger('click')
 		await wrapper.find('select').findAll('option').find((o) => o.text() === 'Box 4').setSelected()
 		await settle()
 		expect(wrapper.find('[role="alert"]').exists()).toBe(false)
@@ -413,7 +479,7 @@ describe('when the list of boxes cannot be read', () => {
 	it('says so instead of showing an empty picker silently', async () => {
 		box.boxes.mockRejectedValue(new Error('Network Error'))
 		await open()
-		expect(wrapper.find('[role="alert"]').text()).toBe('No se pudo cargar la lista de boxes. Recargue la página.')
+		expect(wrapper.find('[role="alert"]').text()).toBe('No se pudo cargar la lista de ventanillas. Recargue la página.')
 	})
 })
 
@@ -424,7 +490,7 @@ describe('changing box while a request is in flight', () => {
 		box.act.mockReturnValue(new Promise((resolve) => { answer = resolve }))
 		await choose()
 		await button('Llamar siguiente').trigger('click')
-		await button('Cambiar box').trigger('click')
+		await button('Cambiar ventanilla').trigger('click')
 		box.state.mockResolvedValue(idle({ box: STATE_BOXES[1], why: 'Nada en espera en Box 4.' }))
 		await wrapper.find('select').findAll('option').find((o) => o.text() === 'Box 4').setSelected()
 		await settle()

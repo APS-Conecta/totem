@@ -57,8 +57,8 @@ describe('home screen', () => {
 	it('offers one bar per servicio, with its name and prefix, under the question', async () => {
 		const wrapper = await mountTotem()
 
-		expect(wrapper.text()).toContain('¿A qué servicio viene?')
-		expect(wrapper.text()).toContain('Toque el servicio para sacar su turno.')
+		expect(wrapper.text()).toContain('¿A qué unidad viene?')
+		expect(wrapper.text()).toContain('Toque la unidad para sacar su turno.')
 		expect(buttons(wrapper)).toEqual(['FarmaciaFAR', 'VacunatorioVAC'])
 	})
 
@@ -176,7 +176,7 @@ describe('question screen', () => {
 		expect(wrapper.text()).toContain('Farmacia')
 		expect(wrapper.text()).toContain('¿Tiene 60 años o más, una discapacidad o cuida a una persona con discapacidad?')
 		expect(buttons(wrapper)).toEqual(['‹ Volver', 'Sí, atención preferente', 'No, atención general'])
-		expect(wrapper.text()).not.toContain('¿A qué servicio viene?')
+		expect(wrapper.text()).not.toContain('¿A qué unidad viene?')
 		expect(issueTurno).not.toHaveBeenCalled()
 	})
 
@@ -192,7 +192,7 @@ describe('question screen', () => {
 		const wrapper = await openFarmacia()
 		await button(wrapper, '‹ Volver').trigger('click')
 
-		expect(wrapper.text()).toContain('¿A qué servicio viene?')
+		expect(wrapper.text()).toContain('¿A qué unidad viene?')
 		expect(issueTurno).not.toHaveBeenCalled()
 	})
 })
@@ -265,7 +265,7 @@ describe('issuing a turno', () => {
 		expect(wrapper.text()).toContain('Volviendo al inicio en 1 s')
 		await vi.advanceTimersByTimeAsync(1000)
 
-		expect(wrapper.text()).toContain('¿A qué servicio viene?')
+		expect(wrapper.text()).toContain('¿A qué unidad viene?')
 		expect(wrapper.text()).not.toContain('FAR-G-007')
 	})
 
@@ -345,14 +345,14 @@ describe('when the server refuses the turno', () => {
 		expect(wrapper.text()).not.toContain('Sin conexión')
 
 		await button(wrapper, 'Volver al inicio').trigger('click')
-		expect(wrapper.text()).toContain('¿A qué servicio viene?')
+		expect(wrapper.text()).toContain('¿A qué unidad viene?')
 		expect(wrapper.find('[role="alert"]').exists()).toBe(false)
 	})
 
 	it('says that the servicio no longer exists when the server does (404)', async () => {
-		const wrapper = await refused(refusal(404, 'Ese servicio ya no existe.'))
+		const wrapper = await refused(refusal(404, 'Esa unidad ya no existe.'))
 
-		expect(wrapper.find('[role="alert"]').text()).toContain('Ese servicio ya no existe.')
+		expect(wrapper.find('[role="alert"]').text()).toContain('Esa unidad ya no existe.')
 	})
 
 	it('still says something when the server gave no sentence', async () => {
@@ -449,7 +449,7 @@ describe('a patient who walks away', () => {
 		expect(wrapper.text()).toContain('¿Tiene 60 años o más')
 		await vi.advanceTimersByTimeAsync(1)
 
-		expect(wrapper.text()).toContain('¿A qué servicio viene?')
+		expect(wrapper.text()).toContain('¿A qué unidad viene?')
 		expect(issueTurno).not.toHaveBeenCalled()
 	})
 
@@ -462,7 +462,7 @@ describe('a patient who walks away', () => {
 		expect(wrapper.text()).toContain('¿Tiene 60 años o más')
 		await vi.advanceTimersByTimeAsync(10000)
 
-		expect(wrapper.text()).toContain('¿A qué servicio viene?')
+		expect(wrapper.text()).toContain('¿A qué unidad viene?')
 	})
 
 	it('does not cut the ticket screen short when the answer was slow to arrive', async () => {

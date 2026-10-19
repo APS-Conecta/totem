@@ -20,9 +20,11 @@ use OCP\IRequest;
 use OCP\Util;
 
 /**
- * The five pages, each its own small bundle. A top-level navigation carries no
+ * The pages: the kiosk and the display (each its own small bundle) and the staff app, one bundle that
+ * three addresses open at their own section. A top-level navigation carries no
  * request token, so every page is NoCSRFRequired (NC 34 would answer 412).
- * The kiosk and the display are chromeless (the base layout: scripts but no Nextcloud chrome) and public. Thin glue
+ * The kiosk and the display are chromeless (the base layout: scripts but no Nextcloud chrome) and public;
+ * the staff app is for any logged-in user and has Nextcloud's own chrome. Thin glue
  * around framework statics, so it is covered by the e2e walking skeleton rather
  * than a unit test (farmacia's PageController is the same).
  */
@@ -53,19 +55,26 @@ class PageController extends Controller {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	public function box(): TemplateResponse {
-		return $this->page('box');
+		return $this->staff('box');
 	}
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	public function stats(): TemplateResponse {
-		return $this->page('stats');
+		return $this->staff('estadisticas');
 	}
 
+	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	public function admin(): TemplateResponse {
-		// "Probar aviso" plays the voice, so the admin page needs the worker too.
-		return $this->withVoice($this->page('admin'));
+		return $this->staff('servicios');
+	}
+
+	/** The one staff app, opened at `$section`. "Probar aviso" plays the voice, so it needs the worker. */
+	private function staff(string $section): TemplateResponse {
+		$this->initialState->provideInitialState('section', $section);
+
+		return $this->withVoice($this->page('staff'));
 	}
 
 	/**

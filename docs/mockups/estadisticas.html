@@ -114,7 +114,7 @@ tr.future td, tr.future th { color: var(--nc-muted); }
       <select id="view">
         <option value="data">Con datos</option>
         <option value="empty">Sin tickets en el período</option>
-        <option value="nosectors">Ningún servicio marcado como sector</option>
+        <option value="nosectors">Ninguna unidad marcada como sector</option>
         <option value="error">Error al cargar</option>
       </select>
     </label>
@@ -244,7 +244,7 @@ function render() {
   const days = perDay.map((r) => ({ ...r, label: fmt(r.d, { weekday: 'short', day: 'numeric', month: 'short' }), future: r.d > TODAY }));
   const sectorBlock = sectors.length
     ? table('Tickets por sector', 'Sector', sectors, { ...sum(sectors), label: 'Total sectores' }, 'servicio')
-    : `<div class="state">Ningún servicio está marcado como sector. Márquelo en Administración, en la pestaña Servicios.</div>`;
+    : `<div class="state">Ninguna unidad está marcada como sector. Márquela en Configuración, en Unidades.</div>`;
   const note = empty ? `<div class="state">Sin tickets en este período.</div>` : '';
 
   document.getElementById('page').innerHTML = `
@@ -258,8 +258,8 @@ function render() {
       ${view === 'error' ? `<div class="state err" role="alert">No se pudieron cargar las estadísticas. Revise la conexión e intente de nuevo.</div>` : `
       ${note}
       <div class="figures" role="group" aria-label="Totales del período">${figures}</div>
-      <section><h2>Sectores <small>Servicios marcados como sector</small></h2>${sectorBlock}</section>
-      <section><h2>Otros servicios</h2>${others.length ? table('Tickets por servicio', 'Servicio', others, { ...sum(others), label: 'Total otros servicios' }, 'servicio') : '<div class="state">No hay otros servicios.</div>'}</section>
+      <section><h2>Sectores <small>Unidades marcadas como sector</small></h2>${sectorBlock}</section>
+      <section><h2>Otras unidades</h2>${others.length ? table('Tickets por unidad', 'Unidad', others, { ...sum(others), label: 'Total otras unidades' }, 'servicio') : '<div class="state">No hay otras unidades.</div>'}</section>
       ${state.kind === 'day' ? '' : `<section><h2>Por día</h2>${table('Tickets por día', 'Día', days, { ...sum(rows), label: 'Total del período' }, 'dia')}</section>`}`}
       <p class="note">Se cuentan tickets, no personas: quien saca dos tickets cuenta dos veces. No se guarda ningún dato personal. “Sin atender” son los tickets que quedaron esperando, llamados o en atención al terminar el día.</p>
     </main>`;

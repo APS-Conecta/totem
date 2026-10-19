@@ -9,18 +9,20 @@ vi.mock('../api.js', async (importActual) => ({
 }))
 
 import { admin } from '../api.js'
-import ServiciosTab from './ServiciosTab.vue'
+import ServiciosView from './ServiciosView.vue'
 import { field } from './test-helpers.js'
 
 const FARMACIA = { id: 1, name: 'Farmacia', prefix: 'FAR', color: '#0b6e4f', opens: '07:30', closes: '16:30', dailyQuota: null, active: true, isSector: false }
 const MUESTRAS = { id: 2, name: 'Toma de Muestras', prefix: 'MUE', color: '#7a3e9d', opens: '07:30', closes: '10:30', dailyQuota: 80, active: false, isSector: false }
 const AZUL = { id: 4, name: 'Sector Azul', prefix: 'AZU', color: '#1d5a8a', opens: '08:00', closes: '17:00', dailyQuota: null, active: true, isSector: true }
 
-async function mountTab() {
-	const wrapper = mount(ServiciosTab, { attachTo: document.body })
+async function mountView() {
+	const wrapper = mount(ServiciosView, { attachTo: document.body })
 	await flushPromises()
 	return wrapper
 }
+
+const openNew = (wrapper) => wrapper.findAll('button').find((button) => button.text() === 'Nueva unidad').trigger('click')
 
 beforeEach(() => {
 	vi.clearAllMocks()
@@ -28,48 +30,86 @@ beforeEach(() => {
 	admin.servicios.list.mockResolvedValue([FARMACIA, MUESTRAS])
 })
 
-describe('ServiciosTab list', () => {
+describe('ServiciosView list', () => {
 	it('lists each servicio with prefix, hours, daily quota and state', async () => {
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 
 		const rows = wrapper.findAll('tbody tr')
-		expect(rows.map((row) => row.findAll('td').map((cell) => cell.text()))).toEqual([
-			['Farmacia', 'FAR', '07:30–16:30', 'Sin límite', 'Activo', 'Servicio'],
-			['Toma de Muestras', 'MUE', '07:30–10:30', '80', 'Inactivo', 'Servicio'],
+		expect(rows.map((row) => row.findAll('th, td').map((cell) => cell.text()))).toEqual([
+			['Farmacia', 'FAR', '07:30–16:30', 'Sin límite', 'Activa', 'Unidad'],
+			['Toma de Muestras', 'MUE', '07:30–10:30', '80', 'Inactiva', 'Unidad'],
 		])
 	})
 
 	it('says which servicios are sectors', async () => {
 		admin.servicios.list.mockResolvedValue([FARMACIA, AZUL])
 
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 
-		expect(wrapper.findAll('tbody tr').map((row) => row.findAll('td').at(-1).text())).toEqual(['Servicio', 'Sector'])
+		expect(wrapper.findAll('tbody tr').map((row) => row.findAll('td').at(-1).text())).toEqual(['Unidad', 'Sector'])
 	})
 })
 
-describe('ServiciosTab loading', () => {
+describe('ServiciosView loading', () => {
 	it('tells the admin when the list could not be loaded', async () => {
 		vi.spyOn(console, 'warn').mockImplementation(() => {})
 		admin.servicios.list.mockRejectedValue(new Error('Network Error'))
 
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 
-		expect(wrapper.find('[role="alert"]').text()).toBe('No se pudo cargar la lista de servicios.')
+		expect(wrapper.find('[role="alert"]').text()).toBe('No se pudo cargar la lista de unidades.')
 	})
 
 	it('invites the admin to create the first servicio when there are none', async () => {
 		admin.servicios.list.mockResolvedValue([])
 
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 
-		expect(wrapper.text()).toContain('Todavía no hay servicios. Complete el formulario para crear el primero.')
+		expect(wrapper.text()).toContain('Todavía no hay unidades. Complete el formulario para crear la primera.')
 	})
 })
 
-describe('ServiciosTab form', () => {
+describe('ServiciosView section', () => {
+	it('titles the page Unidades and keeps the form closed until one is picked or a new one is asked for', async () => {
+		const wrapper = await mountView()
+
+		expect(wrapper.find('h2').text()).toBe('Unidades')
+		expect(wrapper.find('aside').exists()).toBe(false)
+	})
+
+	it('opens an empty form in the sidebar for "Nueva unidad"', async () => {
+		const wrapper = await mountView()
+
+		await openNew(wrapper)
+
+		expect(wrapper.find('aside h2').text()).toBe('Nueva unidad')
+		expect(wrapper.find('aside').text()).toContain('Complete el formulario')
+		expect(field(wrapper, 'Nombre').value).toBe('')
+	})
+
+	it('opens the picked unidad in the sidebar, named for it', async () => {
+		const wrapper = await mountView()
+
+		await wrapper.findAll('tbody button').find((button) => button.text() === 'Farmacia').trigger('click')
+
+		expect(wrapper.find('aside h2').text()).toBe('Farmacia')
+		expect(wrapper.find('aside').text()).toContain('Editar unidad')
+	})
+
+	it('closes the sidebar with its own close button', async () => {
+		const wrapper = await mountView()
+		await openNew(wrapper)
+
+		await wrapper.find('aside button[aria-label]').trigger('click')
+
+		expect(wrapper.find('aside').exists()).toBe(false)
+	})
+})
+
+describe('ServiciosView form', () => {
 	it('offers the fields of a new servicio, each with a visible label and the capped lengths', async () => {
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
+		await openNew(wrapper)
 
 		expect(field(wrapper, 'Nombre').maxLength).toBe(28)
 		expect(field(wrapper, 'Prefijo').maxLength).toBe(4)
@@ -77,19 +117,21 @@ describe('ServiciosTab form', () => {
 		expect(field(wrapper, 'Abre').type).toBe('time')
 		expect(field(wrapper, 'Cierra').type).toBe('time')
 		expect(field(wrapper, 'Color').type).toBe('color')
-		expect(wrapper.find('button[type="submit"]').text()).toBe('Guardar servicio')
+		expect(wrapper.find('button[type="submit"]').text()).toBe('Guardar unidad')
 	})
 
 	it('offers "Es un sector", off for a new servicio', async () => {
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
+		await openNew(wrapper)
 
 		expect(field(wrapper, 'Es un sector').checked).toBe(false)
 	})
 })
 
-describe('ServiciosTab live color preview', () => {
+describe('ServiciosView live color preview', () => {
 	it('previews the prefix on the chosen color with readable text and reports a legible contrast', async () => {
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
+		await openNew(wrapper)
 
 		await wrapper.find('input[type="color"]').setValue('#1d5a8a')
 		await wrapper.find('input[maxlength="4"]').setValue('far')
@@ -103,7 +145,8 @@ describe('ServiciosTab live color preview', () => {
 	})
 
 	it('says so, and how to fix it, when the best text color is not legible on the chosen color', async () => {
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
+		await openNew(wrapper)
 
 		await wrapper.find('input[type="color"]').setValue('#6f7f8f')
 
@@ -111,13 +154,13 @@ describe('ServiciosTab live color preview', () => {
 	})
 })
 
-describe('ServiciosTab picking', () => {
+describe('ServiciosView picking', () => {
 	async function pick(wrapper, name) {
 		await wrapper.findAll('tbody button').find((button) => button.text() === name).trigger('click')
 	}
 
 	it('loads a picked servicio into the form, state included', async () => {
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 
 		await pick(wrapper, 'Toma de Muestras')
 
@@ -127,35 +170,35 @@ describe('ServiciosTab picking', () => {
 		expect(field(wrapper, 'Abre').value).toBe('07:30')
 		expect(field(wrapper, 'Cierra').value).toBe('10:30')
 		expect(field(wrapper, 'Color').value).toBe('#7a3e9d')
-		expect(field(wrapper, 'Activo').checked).toBe(false)
+		expect(field(wrapper, 'Activa').checked).toBe(false)
 		expect(field(wrapper, 'Es un sector').checked).toBe(false)
 	})
 
-	it('loads a sector with "Es un sector" on, and "Nuevo servicio" turns it off again', async () => {
+	it('loads a sector with "Es un sector" on, and "Nueva unidad" turns it off again', async () => {
 		admin.servicios.list.mockResolvedValue([FARMACIA, AZUL])
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 
 		await pick(wrapper, 'Sector Azul')
 		expect(field(wrapper, 'Es un sector').checked).toBe(true)
 
-		await wrapper.findAll('button').find((button) => button.text() === 'Nuevo servicio').trigger('click')
+		await wrapper.findAll('button').find((button) => button.text() === 'Nueva unidad').trigger('click')
 		expect(field(wrapper, 'Es un sector').checked).toBe(false)
 	})
 
-	it('"Nuevo servicio" clears the form back to a new one, active by default', async () => {
-		const wrapper = await mountTab()
+	it('"Nueva unidad" clears the form back to a new one, active by default', async () => {
+		const wrapper = await mountView()
 		await pick(wrapper, 'Toma de Muestras')
 
-		await wrapper.findAll('button').find((button) => button.text() === 'Nuevo servicio').trigger('click')
+		await wrapper.findAll('button').find((button) => button.text() === 'Nueva unidad').trigger('click')
 
 		expect(field(wrapper, 'Nombre').value).toBe('')
 		expect(field(wrapper, 'Prefijo').value).toBe('')
 		expect(field(wrapper, 'Cupo diario').value).toBe('')
-		expect(field(wrapper, 'Activo').checked).toBe(true)
+		expect(field(wrapper, 'Activa').checked).toBe(true)
 	})
 })
 
-describe('ServiciosTab saving', () => {
+describe('ServiciosView saving', () => {
 	async function submit(wrapper) {
 		await wrapper.find('form').trigger('submit')
 		await flushPromises()
@@ -163,7 +206,8 @@ describe('ServiciosTab saving', () => {
 
 	it('creates a servicio with an empty quota sent as null, refreshes the list and says "Guardado."', async () => {
 		admin.servicios.save.mockResolvedValue({ ...FARMACIA, id: 3 })
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
+		await openNew(wrapper)
 		await wrapper.find('input[maxlength="28"]').setValue('Vacunatorio')
 		await wrapper.find('input[maxlength="4"]').setValue('vac')
 		await wrapper.find('input[type="color"]').setValue('#1d5a8a')
@@ -180,7 +224,8 @@ describe('ServiciosTab saving', () => {
 
 	it('saves a servicio marked as a sector as one', async () => {
 		admin.servicios.save.mockResolvedValue(AZUL)
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
+		await openNew(wrapper)
 		await wrapper.find('input[maxlength="28"]').setValue('Sector Azul')
 		await wrapper.find('input[maxlength="4"]').setValue('azu')
 		await field(wrapper, 'Es un sector').click()
@@ -192,7 +237,7 @@ describe('ServiciosTab saving', () => {
 
 	it('updates a picked servicio under its id, sending the quota as a number', async () => {
 		admin.servicios.save.mockResolvedValue(MUESTRAS)
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 		await wrapper.findAll('tbody button').find((button) => button.text() === 'Toma de Muestras').trigger('click')
 		await wrapper.find('input[type="number"]').setValue('90')
 
@@ -203,7 +248,8 @@ describe('ServiciosTab saving', () => {
 
 	it('keeps editing the servicio it just created, so saving again updates instead of duplicating', async () => {
 		admin.servicios.save.mockResolvedValue({ ...FARMACIA, id: 3 })
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
+		await openNew(wrapper)
 		await submit(wrapper)
 
 		await submit(wrapper)
@@ -213,30 +259,32 @@ describe('ServiciosTab saving', () => {
 	})
 
 	it('shows the sentence of a refusal next to the form and does not claim it saved', async () => {
-		admin.servicios.save.mockRejectedValue({ response: { status: 422, data: { message: 'Ya existe un servicio con el prefijo FAR.' } } })
-		const wrapper = await mountTab()
+		admin.servicios.save.mockRejectedValue({ response: { status: 422, data: { message: 'Ya existe una unidad con el prefijo FAR.' } } })
+		const wrapper = await mountView()
+		await openNew(wrapper)
 
 		await submit(wrapper)
 
-		expect(wrapper.find('[role="alert"]').text()).toBe('Ya existe un servicio con el prefijo FAR.')
+		expect(wrapper.find('[role="alert"]').text()).toBe('Ya existe una unidad con el prefijo FAR.')
 		expect(wrapper.text()).not.toContain('Guardado.')
 	})
 
 	it('says the servicio no longer exists on a 404, and refreshes the list', async () => {
 		admin.servicios.save.mockRejectedValue({ response: { status: 404 } })
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
 		await wrapper.findAll('tbody button').find((button) => button.text() === 'Farmacia').trigger('click')
 		admin.servicios.list.mockClear()
 
 		await submit(wrapper)
 
-		expect(wrapper.find('[role="alert"]').text()).toBe('Este servicio ya no existe.')
+		expect(wrapper.find('[role="alert"]').text()).toBe('Esta unidad ya no existe.')
 		expect(admin.servicios.list).toHaveBeenCalledTimes(1)
 	})
 
 	it('drops the previous outcome when another servicio is picked or a new one is started', async () => {
 		admin.servicios.save.mockResolvedValue(FARMACIA)
-		const wrapper = await mountTab()
+		const wrapper = await mountView()
+		await openNew(wrapper)
 		await submit(wrapper)
 		expect(wrapper.text()).toContain('Guardado.')
 

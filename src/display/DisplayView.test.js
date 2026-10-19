@@ -14,7 +14,7 @@ import { audioReady, unlockAudio } from '../lib/chime.js'
 
 const pantalla = { name: 'Sala Farmacia', volume: 80, voice: 'mujer' }
 const llamado = (id, label, box = 'Box 2', extra = {}) => ({
-	id, label, spoken: `Turno ${label}. Diríjase al ${box}.`, servicio: 'Farmacia', color: '#0b6e69', preferente: label.includes('-P-'), box, calledAt: 1000 + id, ...extra,
+	id, label, spoken: `Turno ${label}. Diríjase a ${box}.`, servicio: 'Farmacia', color: '#0b6e69', preferente: label.includes('-P-'), box, calledAt: 1000 + id, ...extra,
 })
 const feed = (llamados, cursor = llamados.at(-1)?.id ?? 0) => ({ pantalla, llamados, cursor })
 
@@ -89,8 +89,8 @@ describe('DisplayView', () => {
 		await next(feed([llamado(2, 'FAR-P-013'), llamado(3, 'MUE-G-006', 'Box 5')]))
 
 		expect(announce).toHaveBeenCalledTimes(2)
-		expect(announce).toHaveBeenNthCalledWith(1, { text: 'Turno FAR-P-013. Diríjase al Box 2.', volume: 80, voice: 'mujer' })
-		expect(announce).toHaveBeenNthCalledWith(2, { text: 'Turno MUE-G-006. Diríjase al Box 5.', volume: 80, voice: 'mujer' })
+		expect(announce).toHaveBeenNthCalledWith(1, { text: 'Turno FAR-P-013. Diríjase a Box 2.', volume: 80, voice: 'mujer' })
+		expect(announce).toHaveBeenNthCalledWith(2, { text: 'Turno MUE-G-006. Diríjase a Box 5.', volume: 80, voice: 'mujer' })
 	})
 
 	it('warms the voice up as soon as it knows the pantalla, so the first call is not slowed by loading the model', async () => {
@@ -130,7 +130,7 @@ describe('DisplayView', () => {
 	it('writes what is said in the footer, with the sound state', async () => {
 		const wrapper = await open(feed([llamado(1, 'FAR-P-012', 'Box 2')]))
 
-		expect(wrapper.get('.d-foot').text()).toContain('Sonido y voz activados · Turno FAR-P-012. Diríjase al Box 2.')
+		expect(wrapper.get('.d-foot').text()).toContain('Sonido y voz activados · Turno FAR-P-012. Diríjase a Box 2.')
 	})
 
 	it('says plainly when the pantalla has no voice or no sound', async () => {

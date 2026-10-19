@@ -53,7 +53,7 @@ test('the board counts the tickets of the day, the week and the month by sector,
 	// Semana is the opening view. Columns: Preferente, General, Total, Atendidos, No se presentó, Sin atender.
 	await expect(row(page, 'Tickets por sector', sectorName)).toBeVisible()
 	expect(await cells(row(page, 'Tickets por sector', sectorName))).toEqual([sectorName, '1', '2', '3', '1', '1', '1'])
-	expect(await cells(row(page, 'Tickets por servicio', otherName))).toEqual([otherName, '0', '1', '1', '0', '0', '1'])
+	expect(await cells(row(page, 'Tickets por unidad', otherName))).toEqual([otherName, '0', '1', '1', '0', '0', '1'])
 	await expect(page.getByRole('button', { name: 'Semana' })).toHaveAttribute('aria-pressed', 'true')
 
 	for (const kind of ['Día', 'Mes']) {
@@ -80,11 +80,11 @@ test('the CSV carries the day-by-day detail of the period and nothing that ident
 
 	expect(download.suggestedFilename()).toMatch(/^tickets-semana-\d{4}-\d{2}-\d{2}\.csv$/)
 	const csv = fs.readFileSync(await download.path(), 'utf8')
-	expect(csv.startsWith('﻿Fecha;Bloque;Servicio;Atención;Emitidos;Atendidos;No se presentó;Sin atender\n')).toBe(true)
+	expect(csv.startsWith('﻿Fecha;Bloque;Unidad;Atención;Emitidos;Atendidos;No se presentó;Sin atender\n')).toBe(true)
 	const line = (block, name, atencion, counts) => new RegExp(`^\\d{4}-\\d{2}-\\d{2};${block};${name};${atencion};${counts}$`, 'm')
 	expect(csv).toMatch(line('Sector', sectorName, 'Preferente', '1;1;0;0'))
 	expect(csv).toMatch(line('Sector', sectorName, 'General', '2;0;1;1'))
-	expect(csv).toMatch(line('Servicio', otherName, 'General', '1;0;0;1'))
+	expect(csv).toMatch(line('Unidad', otherName, 'General', '1;0;0;1'))
 })
 
 test('only a logged-in user can read the board', async ({ browser }) => {

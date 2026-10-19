@@ -32,7 +32,7 @@ test('a preferente turno taken on the totem is called from the box and shown on 
 
 		// The staff member: picks the box, calls the next turno.
 		await page.goto('/apps/totem/box')
-		await page.getByLabel('Box', { exact: true }).selectOption({ label: w.box.name })
+		await page.getByLabel('Ventanilla', { exact: true }).selectOption({ label: w.box.name })
 		await page.getByRole('button', { name: 'Llamar siguiente' }).click()
 		await expect(page.getByText(`${w.prefix}-P-001`).first()).toBeVisible()
 

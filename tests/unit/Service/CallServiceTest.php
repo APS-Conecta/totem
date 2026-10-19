@@ -162,7 +162,7 @@ class CallServiceTest extends TestCase {
 		$this->llamados->expects($this->never())->method('insert');
 
 		$this->expectException(Refused::class);
-		$this->expectExceptionMessage('Otro box tomó ese turno. Intente de nuevo.');
+		$this->expectExceptionMessage('Otra ventanilla tomó ese turno. Intente de nuevo.');
 		$this->service->callNext(1);
 	}
 
@@ -172,7 +172,7 @@ class CallServiceTest extends TestCase {
 		$service = new CallService($this->boxes, $links, $this->servicios, $this->turnos, $this->llamados, $this->createMock(Today::class));
 
 		$this->expectException(Refused::class);
-		$this->expectExceptionMessage('Este box no tiene servicios asignados.');
+		$this->expectExceptionMessage('Esta ventanilla no tiene unidades asignadas.');
 		$service->callNext(1);
 	}
 
@@ -260,7 +260,7 @@ class CallServiceTest extends TestCase {
 		$this->assertSame(['MUE-G-006', 'FAR-P-014'], array_column($state['waiting'], 'label'));
 		$this->assertSame('MUE-G-006', $state['next']['label']);
 		$this->assertSame(
-			'Siguiente: MUE-G-006 (Toma de Muestras): no hay atención preferente en espera. Entre los servicios del box, es el que más espera.',
+			'Siguiente: MUE-G-006 (Toma de Muestras): no hay atención preferente en espera. Entre las unidades de la ventanilla, es el que más espera.',
 			$state['why'],
 		);
 	}
@@ -285,6 +285,6 @@ class CallServiceTest extends TestCase {
 		$state = $this->service->state(1);
 
 		$this->assertNull($state['next']);
-		$this->assertSame('No hay turnos en espera en los servicios de este box.', $state['why']);
+		$this->assertSame('No hay turnos en espera en las unidades de esta ventanilla.', $state['why']);
 	}
 }

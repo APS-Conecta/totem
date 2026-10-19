@@ -39,7 +39,7 @@ class MetadataTest extends TestCase {
 			$this->assertSame('totem', $app);
 			$this->assertContains("$controller#$action", $names);
 		}
-		$this->assertSame(['Totem' => 'totem.page.box', 'Estadísticas' => 'totem.page.stats'], $entries);
+		$this->assertSame(['Totem' => 'totem.page.box'], $entries);
 	}
 
 	/** @return array<string, array{string, string}> */
@@ -64,7 +64,7 @@ class MetadataTest extends TestCase {
 	}
 
 	public function testEveryPageHasItsTemplateAndItsBundleEntry(): void {
-		foreach (['totem', 'display', 'box', 'admin', 'stats'] as $page) {
+		foreach (['totem', 'display', 'staff'] as $page) {
 			$this->assertFileExists(self::APP_DIR . "/templates/$page.php");
 			$this->assertFileExists(self::APP_DIR . "/src/$page/main.js", "webpack.config.js builds src/$page/main.js");
 		}

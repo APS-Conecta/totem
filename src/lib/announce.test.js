@@ -12,9 +12,9 @@ function setup({ chimeMs = 2200 } = {}) {
 describe('createAnnouncer', () => {
 	it('rings the chime, waits for it to end, then speaks', async () => {
 		const { announcer, log, wait } = setup()
-		await announcer.announce({ text: 'Turno Farmacia, preferente 12. Diríjase al Box 2.', volume: 80, voice: 'mujer' })
+		await announcer.announce({ text: 'Turno Farmacia, preferente 12. Diríjase a Ventanilla 2.', volume: 80, voice: 'mujer' })
 
-		expect(log).toEqual([['chime', 80], ['speak', 'Turno Farmacia, preferente 12. Diríjase al Box 2.', 80]])
+		expect(log).toEqual([['chime', 80], ['speak', 'Turno Farmacia, preferente 12. Diríjase a Ventanilla 2.', 80]])
 		expect(wait).toHaveBeenCalledWith(2200 + 200)
 	})
 

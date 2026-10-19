@@ -92,7 +92,7 @@ class ServicioServiceTest extends TestCase {
 		$mapper->method('findAll')->willReturn([]);
 
 		$this->expectException(Refused::class);
-		$this->expectExceptionMessage('Ya existe un servicio con ese nombre.');
+		$this->expectExceptionMessage('Ya existe una unidad con ese nombre.');
 		(new ServicioService($mapper))->create($this->input());
 	}
 
@@ -102,7 +102,7 @@ class ServicioServiceTest extends TestCase {
 		$mapper->method('findAll')->willReturn([$this->existing(1, 'Farmacia Central', 'FAR')]);
 
 		$this->expectException(Refused::class);
-		$this->expectExceptionMessage('Ya existe un servicio con el prefijo FAR.');
+		$this->expectExceptionMessage('Ya existe una unidad con el prefijo FAR.');
 		(new ServicioService($mapper))->create($this->input());
 	}
 
