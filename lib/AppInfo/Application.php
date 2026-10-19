@@ -6,6 +6,8 @@ declare(strict_types=1);
 
 namespace OCA\Totem\AppInfo;
 
+use OCA\Totem\Service\PrinterTransport;
+use OCA\Totem\Service\TcpPrinterTransport;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
@@ -19,12 +21,15 @@ class Application extends App implements IBootstrap {
 	}
 
 	public function register(IRegistrationContext $context): void {
-		// Everything in this app is autowired, plus one autoload rule: aps-common
+		// Everything in this app is autowired, plus the one interface that has more than one possible
+		// implementation (tests replace it with a fake) and one autoload rule: aps-common
 		// ships as the committed vendor/aps/common/src subtree (farmacia's D1 —
 		// release tarballs are `git archive` of the tracked tree, and
 		// vendor/autoload.php is not committed), so its namespace is mapped here.
 		// In dev and tests the composer autoloader is registered earlier and
 		// wins; this is the production path.
+		$context->registerServiceAlias(PrinterTransport::class, TcpPrinterTransport::class);
+
 		$apsSrc = __DIR__ . '/../../vendor/aps/common/src';
 		if (is_dir($apsSrc)) {
 			spl_autoload_register(static function (string $class) use ($apsSrc): void {

@@ -6,7 +6,10 @@ declare(strict_types=1);
 
 namespace OCA\Totem\Service;
 
+use OCA\Totem\Db\ServicioLinks;
 use OCA\Totem\Db\ServicioMapper;
+use OCA\Totem\Db\Totem;
+use OCA\Totem\Db\TotemMapper;
 use OCA\Totem\Db\Turno;
 use OCA\Totem\Db\TurnoMapper;
 use OCA\Totem\Domain\Estado;
@@ -19,6 +22,9 @@ use OCP\DB\Exception as DbException;
  * Issuing a turno: what the totem does with its two taps. The public totem is
  * anonymous and identifies nobody, so the only guards are the servicio's own:
  * active, inside its hours, under its daily quota (docs/threat-model.md).
+ *
+ * A turno may be taken at a totem. If that totem has a network printer the ticket is printed there once the
+ * turno is stored; whatever happens to the printer, the turno stands (printing can only add `printed: false`).
  */
 class TurnoService {
 	/** Issuing is MAX(seq)+1 with the unique index as the net; this many tries before giving up. */
@@ -28,16 +34,22 @@ class TurnoService {
 		private ServicioMapper $servicios,
 		private TurnoMapper $turnos,
 		private Today $today,
+		private TotemMapper $totems,
+		private ServicioLinks $links,
+		private TicketPrinting $printing,
 	) {
 	}
 
 	/**
-	 * @return array{id: int, label: string, servicio: string, preferente: bool}
+	 * @param ?string $totem the slug of the totem the turno is taken at; null = the default kiosk
+	 * @return array{id: int, label: string, servicio: string, preferente: bool, printed: ?bool} `printed` is null when
+	 *         there is no network printer (the browser prints), true or false when the server tried
 	 * @throws DoesNotExistException the servicio is unknown
-	 * @throws Refused the servicio cannot issue a turno right now
+	 * @throws Refused the servicio cannot issue a turno right now, or the totem does not offer it
 	 */
-	public function issue(int $servicioId, bool $preferente): array {
+	public function issue(int $servicioId, bool $preferente, ?string $totem = null): array {
 		$servicio = $this->servicios->find($servicioId);
+		$kiosk = $totem === null ? null : $this->kiosk($totem, $servicioId);
 		$name = $servicio->getName();
 		$day = $this->today->day();
 
@@ -70,14 +82,32 @@ class TurnoService {
 				continue; // another totem took this sequence a moment ago
 			}
 
+			$label = TurnoLabel::of($servicio->getPrefix(), $preferente, $turno->getSeq());
+
 			return [
 				'id' => (int)$turno->getId(),
-				'label' => TurnoLabel::of($servicio->getPrefix(), $preferente, $turno->getSeq()),
+				'label' => $label,
 				'servicio' => $name,
 				'preferente' => $preferente,
+				'printed' => $kiosk?->hasPrinter() ? $this->printing->printTurno($kiosk, $label, $name, $preferente) : null,
 			];
 		}
 
 		throw new Refused('No pudimos entregar su turno. Intente de nuevo.');
+	}
+
+	/** @throws Refused the totem is unknown, or lists unidades and not this one */
+	private function kiosk(string $slug, int $servicioId): Totem {
+		try {
+			$kiosk = $this->totems->findBySlug($slug);
+		} catch (DoesNotExistException) {
+			throw new Refused('Este tótem ya no existe.');
+		}
+		$offered = $this->links->ids(ServicioLinks::TOTEM, (int)$kiosk->getId());
+		if ($offered !== [] && !in_array($servicioId, $offered, true)) {
+			throw new Refused('Este tótem no ofrece esa unidad.');
+		}
+
+		return $kiosk;
 	}
 }

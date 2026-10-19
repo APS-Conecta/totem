@@ -7,10 +7,14 @@ declare(strict_types=1);
 namespace OCA\Totem\Tests\Unit\Service;
 
 use OCA\Totem\Db\Servicio;
+use OCA\Totem\Db\ServicioLinks;
 use OCA\Totem\Db\ServicioMapper;
+use OCA\Totem\Db\Totem;
+use OCA\Totem\Db\TotemMapper;
 use OCA\Totem\Db\Turno;
 use OCA\Totem\Db\TurnoMapper;
 use OCA\Totem\Exception\Refused;
+use OCA\Totem\Service\TicketPrinting;
 use OCA\Totem\Service\Today;
 use OCA\Totem\Service\TurnoService;
 use OCP\AppFramework\Db\DoesNotExistException;
@@ -22,6 +26,9 @@ class TurnoServiceTest extends TestCase {
 	private ServicioMapper&MockObject $servicios;
 	private TurnoMapper&MockObject $turnos;
 	private Today&MockObject $today;
+	private TotemMapper&MockObject $totems;
+	private ServicioLinks&MockObject $links;
+	private TicketPrinting&MockObject $printing;
 	private TurnoService $service;
 
 	protected function setUp(): void {
@@ -31,7 +38,10 @@ class TurnoServiceTest extends TestCase {
 		$this->today->method('now')->willReturn(1_000_000);
 		$this->today->method('day')->willReturn('2026-10-18');
 		$this->today->method('time')->willReturn('10:00');
-		$this->service = new TurnoService($this->servicios, $this->turnos, $this->today);
+		$this->totems = $this->createMock(TotemMapper::class);
+		$this->links = $this->createMock(ServicioLinks::class);
+		$this->printing = $this->createMock(TicketPrinting::class);
+		$this->service = new TurnoService($this->servicios, $this->turnos, $this->today, $this->totems, $this->links, $this->printing);
 	}
 
 	private function servicio(array $over = []): Servicio {
@@ -67,7 +77,7 @@ class TurnoServiceTest extends TestCase {
 
 		$issued = $this->service->issue(3, true);
 
-		$this->assertSame(['id' => 77, 'label' => 'FAR-P-014', 'servicio' => 'Farmacia', 'preferente' => true], $issued);
+		$this->assertSame(['id' => 77, 'label' => 'FAR-P-014', 'servicio' => 'Farmacia', 'preferente' => true, 'printed' => null], $issued);
 	}
 
 	public function testTheStoredTurnoIsWaitingForTheDayWithTheClocksTime(): void {
@@ -179,5 +189,133 @@ class TurnoServiceTest extends TestCase {
 
 		$this->expectException(DbException::class);
 		$this->service->issue(3, true);
+	}
+
+	private function totem(?string $host = '192.168.1.50'): Totem {
+		$totem = new Totem();
+		$totem->setId(4);
+		$totem->setSlug('sala');
+		$totem->setPrinterHost($host);
+		$this->totems->method('findBySlug')->with('sala')->willReturn($totem);
+
+		return $totem;
+	}
+
+	private function storing(): void {
+		$this->turnos->method('maxSeq')->willReturn(13);
+		$this->turnos->method('insert')->willReturnCallback(static function (Turno $t): Turno {
+			$t->setId(77);
+
+			return $t;
+		});
+	}
+
+	public function testATotemWithAPrinterPrintsTheTicketOnceAndSaysSo(): void {
+		$this->servicio();
+		$this->storing();
+		$totem = $this->totem();
+		$this->printing->expects($this->once())->method('printTurno')->with($totem, 'FAR-P-014', 'Farmacia', true)->willReturn(true);
+
+		$this->assertTrue($this->service->issue(3, true, 'sala')['printed']);
+	}
+
+	public function testTheTicketIsPrintedOnlyAfterTheTurnoIsStored(): void {
+		$this->servicio();
+		$this->totem();
+		$order = [];
+		$this->turnos->method('maxSeq')->willReturn(13);
+		$this->turnos->method('insert')->willReturnCallback(static function (Turno $t) use (&$order): Turno {
+			$order[] = 'stored';
+			$t->setId(77);
+
+			return $t;
+		});
+		$this->printing->method('printTurno')->willReturnCallback(static function () use (&$order): bool {
+			$order[] = 'printed';
+
+			return true;
+		});
+
+		$this->service->issue(3, true, 'sala');
+
+		$this->assertSame(['stored', 'printed'], $order);
+	}
+
+	public function testAPrinterThatFailsNeverStopsTheTurnoFromBeingIssued(): void {
+		$this->servicio();
+		$this->storing();
+		$this->totem();
+		$this->printing->method('printTurno')->willReturn(false);
+
+		$issued = $this->service->issue(3, true, 'sala');
+
+		$this->assertFalse($issued['printed']);
+		$this->assertSame(77, $issued['id']);
+		$this->assertSame('FAR-P-014', $issued['label']);
+	}
+
+	public function testWithoutATotemTheBrowserPrintsAndNothingIsSentToAPrinter(): void {
+		$this->servicio();
+		$this->storing();
+		$this->printing->expects($this->never())->method('printTurno');
+
+		$this->assertNull($this->service->issue(3, true)['printed']);
+	}
+
+	public function testATotemWithoutAPrinterLeavesPrintingToTheBrowserToo(): void {
+		$this->servicio();
+		$this->storing();
+		$this->totem(host: null);
+		$this->printing->expects($this->never())->method('printTurno');
+
+		$this->assertNull($this->service->issue(3, true, 'sala')['printed']);
+	}
+
+	public function testATotemThatListsUnidadesRefusesOneItDoesNotOffer(): void {
+		$this->servicio();
+		$this->totem();
+		$this->links->method('ids')->with(ServicioLinks::TOTEM, 4)->willReturn([5, 6]);
+		$this->turnos->expects($this->never())->method('insert');
+		$this->printing->expects($this->never())->method('printTurno');
+
+		$this->expectException(Refused::class);
+		$this->expectExceptionMessage('Este tótem no ofrece esa unidad.');
+		$this->service->issue(3, true, 'sala');
+	}
+
+	public function testATotemThatListsNoUnidadOffersAll(): void {
+		$this->servicio();
+		$this->storing();
+		$this->totem();
+		$this->links->method('ids')->willReturn([]);
+
+		$this->assertSame(77, $this->service->issue(3, true, 'sala')['id']);
+	}
+
+	public function testATotemThatOffersTheUnidadIssuesIt(): void {
+		$this->servicio();
+		$this->storing();
+		$this->totem();
+		$this->links->method('ids')->willReturn([3, 5]);
+
+		$this->assertSame(77, $this->service->issue(3, true, 'sala')['id']);
+	}
+
+	public function testATotemThatNoLongerExistsRefuses(): void {
+		$this->servicio();
+		$this->totems->method('findBySlug')->willThrowException(new DoesNotExistException('gone'));
+
+		$this->expectException(Refused::class);
+		$this->expectExceptionMessage('Este tótem ya no existe.');
+		$this->service->issue(3, true, 'borrado');
+	}
+
+	public function testARefusedIssuePrintsNothing(): void {
+		$this->servicio(['active' => false]);
+		$this->totem();
+		$this->printing->expects($this->never())->method('printTurno');
+
+		$this->expectException(Refused::class);
+		$this->service->issue(3, true, 'sala');
 	}
 }

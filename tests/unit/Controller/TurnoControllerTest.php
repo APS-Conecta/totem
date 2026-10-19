@@ -25,6 +25,14 @@ class TurnoControllerTest extends ControllerTestCase {
 		$this->assertSame('FAR-P-001', $response->getData()['label']);
 	}
 
+	public function testTheTotemTheTicketIsTakenAtTravelsToTheService(): void {
+		$turnos = $this->createMock(TurnoService::class);
+		$turnos->expects($this->once())->method('issue')->with(3, false, 'sala')->willReturn(['id' => 1, 'label' => 'FAR-G-001', 'servicio' => 'Farmacia', 'preferente' => false, 'printed' => true]);
+		$controller = new TurnoController($this->request(), $turnos, $this->createMock(ServicioService::class));
+
+		$this->assertTrue($controller->create(3, false, 'sala')->getData()['printed']);
+	}
+
 	public function testARefusalIsA422WithItsSentence(): void {
 		$turnos = $this->createMock(TurnoService::class);
 		$turnos->method('issue')->willThrowException(new Refused('Farmacia atiende de 07:30 a 16:30.'));
