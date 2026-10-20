@@ -5,8 +5,6 @@
 #   `make instance-*` — a throwaway Nextcloud 34 + PostgreSQL 18 (compose.dev.yaml)
 #                       for what the bare container cannot run: mappers, the seed,
 #                       occ. NOT the gestion stack — none of its .env or data.
-#
-# Slices add their gates here (smoke) as they land.
 
 IMG := totem-test
 APS ?= $(CURDIR)/../aps-common
@@ -75,7 +73,7 @@ instance-clean:
 	$(COMPOSE) down -v
 
 # The walking skeleton (e2e/): servicio + box + pantalla -> totem issues -> box
-# calls -> display shows it. Against the throwaway instance; red until slice 1 lands.
+# calls -> display shows it. Against the throwaway instance.
 e2e:
 	npx playwright test
 
