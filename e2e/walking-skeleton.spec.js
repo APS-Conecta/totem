@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// The walking skeleton: the thinnest path through every layer, written before any of it existed
-// and green only when slice 1 is complete. Unit cycles run inside it.
+// The walking skeleton: the thinnest path through every layer, written before any of it existed.
+// Unit cycles run inside it.
 //
 //   admin creates servicio + box + pantalla
 //   -> an anonymous patient takes a preferente turno on the totem   (PREFIX-P-001)
