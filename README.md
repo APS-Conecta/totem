@@ -25,3 +25,7 @@ make tts-assets                 # the bundled voice (re-creates the committed ru
 ```
 
 `aps-common` is consumed, never edited: `make aps-sync` copies it beside this repo into `vendor/aps/common/src` and `src/aps`.
+
+## Release
+
+The release workflow (`.github/workflows/release.yml`) builds the bundles and packs the tarball on every pull request; on a `v*` tag, inside the repo's protected `release` environment, it signs and publishes `totem.tar.gz`, `info.xml`, `SHA256SUMS` and `SHA256SUMS.minisig` (the org's shared workflow, instalador #31). The bundles in `js/` are build output, never committed — a fresh clone needs `npm ci && npm run build` before the app works — while `js/tts/`, the committed voice, ships inside every tarball (`docs/adr/0005`).

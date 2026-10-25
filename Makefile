@@ -91,7 +91,9 @@ aps-sync:
 	rm -f src/aps/*.test.js
 
 # vendor/aps/common/src and src/aps are committed, so they can drift from the
-# package the way js/ can drift from src/. `git status --porcelain` (not
+# package the way js/ used to drift from src/ (js/'s bundles are built and
+# ignored now; the release workflow packs them — js/tts stays tracked).
+# `git status --porcelain` (not
 # diff --exit-code) so a rename that deletes one file and adds another is
 # seen — the same lesson territorio's js/ CI arm records. totem has no CI
 # tree yet — this target IS the gate until the canon phase gives it one.
