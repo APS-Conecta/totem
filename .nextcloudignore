@@ -1,0 +1,40 @@
+# The runtime exclude list — what the release tarball carries and what stays out.
+#
+# pack-app.sh (the org's shared app-release workflow, instalador #31) reads this file
+# with rsync rules anchored at the app root, and it REPLACES the packer's defaults, so
+# it must list every development path itself; '!' re-include lines are refused. The
+# tarball carries appinfo/, lib/, templates/, img/, .htaccess, LICENSE, README.md and
+# js/ — BOTH halves of js/: the bundles the release builds, and the committed voice
+# under js/tts/ (the runtime and the two Piper models, so the display speaks offline
+# with no build step — docs/adr/0005, instalador #41).
+#
+# vendor/ needs no rule: the release packs a fresh checkout, which holds only what git
+# tracks under it (aps/common/src — .gitignore keeps composer's installed extras out),
+# and nothing in the release runs composer.
++ /.htaccess
+- /.*
+- /src
+- /tests
+- /e2e
+- /docs
+- /scripts
+- /AGENTS.md
+- /CLAUDE.md
+- /CONTEXT.md
+- /Makefile
+- /package.json
+- /package-lock.json
+- /composer.json
+- /composer.lock
+- /phpunit.xml
+- /phpunit.integration.xml
+- /eslint.config.mjs
+- /vitest.config.ts
+- /webpack.config.js
+- /playwright.config.js
+- /Dockerfile.test
+- /compose*.yaml
+- /compose*.yml
+# Sourcemaps stay out of the tarball (.gitignore's rule for the repo, this one for
+# the release): they name every source path of the build machine.
+- /js/*.map
