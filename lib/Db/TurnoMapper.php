@@ -138,13 +138,12 @@ class TurnoMapper extends QBMapper {
 		return $qb->executeStatement() === 1;
 	}
 
-	/** The turno a box is attending: called or in service. */
-	public function findActiveForBox(int $boxId, string $day): ?Turno {
+	/** The turno a box is attending: called or in service, whatever its Día. */
+	public function findActiveForBox(int $boxId): ?Turno {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('*')
 			->from($this->getTableName())
 			->where($qb->expr()->eq('box_id', $qb->createNamedParameter($boxId, IQueryBuilder::PARAM_INT)))
-			->andWhere($qb->expr()->eq('day', $qb->createNamedParameter($day)))
 			->andWhere($qb->expr()->in('estado', $qb->createNamedParameter(
 				[Estado::Called->value, Estado::InService->value], IQueryBuilder::PARAM_STR_ARRAY,
 			)))
