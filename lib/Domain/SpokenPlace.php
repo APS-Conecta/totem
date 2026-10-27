@@ -9,8 +9,7 @@ namespace OCA\Totem\Domain;
 /**
  * Where a patient is told to go, as it is said aloud: "ventanilla 2" when the box's name holds one number
  * ("Box 2", "Ventanilla 2") that no other box's name holds; just "ventanilla" when the clinic has only one box;
- * otherwise the name as the screen shows it ("Caja principal", "Sector 2 Box 1"). So the voice never names a
- * number that points to another box. Pure.
+ * otherwise the name as the screen shows it ("Caja principal", "Sector 2 Box 1"). Pure.
  */
 final class SpokenPlace {
 	/** @param list<string> $boxNames every box name in the instance; $boxName need not be in it */
