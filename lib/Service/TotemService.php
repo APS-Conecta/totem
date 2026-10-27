@@ -6,7 +6,6 @@ declare(strict_types=1);
 
 namespace OCA\Totem\Service;
 
-use APS\Common\Text;
 use OCA\Totem\Db\ServicioLinks;
 use OCA\Totem\Db\ServicioMapper;
 use OCA\Totem\Db\Totem;
@@ -21,6 +20,7 @@ use OCP\AppFramework\Db\DoesNotExistException;
  */
 class TotemService {
 	use ChecksServicios;
+	use ChecksNames;
 
 	public function __construct(
 		private TotemMapper $totems,
@@ -39,14 +39,9 @@ class TotemService {
 	public function create(array $data): array {
 		$totem = new Totem();
 		$servicioIds = $this->fill($totem, $data);
-		$slug = Text::slugFor($totem->getName());
-		try {
-			$this->totems->findBySlug($slug);
-			throw new Refused('Ya existe un tótem con ese nombre.');
-		} catch (DoesNotExistException) {
-			// free
-		}
-		$totem->setSlug($slug);
+		$all = $this->totems->findAll();
+		$this->assertNameFree($totem, $all, 'Ya existe un tótem con ese nombre.');
+		$totem->setSlug($this->freeAddress($totem->getName(), $all));
 		$totem = $this->totems->insert($totem);
 		$this->links->replace(ServicioLinks::TOTEM, (int)$totem->getId(), $servicioIds);
 
@@ -61,6 +56,7 @@ class TotemService {
 		$totem = $this->totems->find($id);
 		$before = [$totem->getPrinterHost(), $totem->getPrinterPort()];
 		$servicioIds = $this->fill($totem, $data);
+		$this->assertNameFree($totem, $this->totems->findAll(), 'Ya existe un tótem con ese nombre.');
 		if ($before !== [$totem->getPrinterHost(), $totem->getPrinterPort()]) {
 			// The last result was about another printer.
 			$totem->setPrinterOk(null);
