@@ -138,20 +138,44 @@ class TurnoMapper extends QBMapper {
 		return $qb->executeStatement() === 1;
 	}
 
-	/** The turno a box is attending: called or in service. */
-	public function findActiveForBox(int $boxId, string $day): ?Turno {
+	/**
+	 * Undo this request's own claim: the called turno is waiting again, with no box and no first call. Not an
+	 * Estado transition (nothing goes back); false when the turno is not called at this box any more.
+	 */
+	public function release(int $id, int $boxId): bool {
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('*')
-			->from($this->getTableName())
-			->where($qb->expr()->eq('box_id', $qb->createNamedParameter($boxId, IQueryBuilder::PARAM_INT)))
-			->andWhere($qb->expr()->eq('day', $qb->createNamedParameter($day)))
-			->andWhere($qb->expr()->in('estado', $qb->createNamedParameter(
-				[Estado::Called->value, Estado::InService->value], IQueryBuilder::PARAM_STR_ARRAY,
-			)))
-			->orderBy('called_at', 'DESC')
+		$qb->update($this->getTableName())
+			->set('estado', $qb->createNamedParameter(Estado::Waiting->value))
+			->set('box_id', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+			->set('called_at', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('box_id', $qb->createNamedParameter($boxId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('estado', $qb->createNamedParameter(Estado::Called->value)));
+
+		return $qb->executeStatement() === 1;
+	}
+
+	/** The turno a box is attending: called or in service, whatever its Día. */
+	public function findActiveForBox(int $boxId): ?Turno {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')->from($this->getTableName());
+		$this->whereActiveForBox($qb, $boxId);
+		$qb->orderBy('called_at', 'DESC')
 			->setMaxResults(1);
 
 		return $this->findEntities($qb)[0] ?? null;
+	}
+
+	/** How many turnos the box is attending; more than one only while two of its calls race. */
+	public function countActiveForBox(int $boxId): int {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select($qb->func()->count('*'))->from($this->getTableName());
+		$this->whereActiveForBox($qb, $boxId);
+		$result = $qb->executeQuery();
+		$count = $result->fetchOne();
+		$result->closeCursor();
+
+		return (int)$count;
 	}
 
 	/**
@@ -176,5 +200,13 @@ class TurnoMapper extends QBMapper {
 		$result->closeCursor();
 
 		return $flags;
+	}
+
+	/** What "the box holds a turno" means, shared by the lookup and the count so they never disagree. */
+	private function whereActiveForBox(IQueryBuilder $qb, int $boxId): void {
+		$qb->where($qb->expr()->eq('box_id', $qb->createNamedParameter($boxId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->in('estado', $qb->createNamedParameter(
+				[Estado::Called->value, Estado::InService->value], IQueryBuilder::PARAM_STR_ARRAY,
+			)));
 	}
 }

@@ -148,6 +148,30 @@ class TurnoServiceTest extends TestCase {
 		$this->assertSame('FAR-P-001', $this->service->issue(3, true)['label']);
 	}
 
+	public function testAnIssueThatEndsPastTheQuotaIsDeletedAndRefusedBeforePrinting(): void {
+		$this->servicio(['quota' => 80]);
+		$this->turnos->method('countForDay')->with(3, '2026-10-18')->willReturnOnConsecutiveCalls(79, 81);
+		$this->storing();
+		$this->totem();
+		$this->turnos->expects($this->once())->method('delete')->with($this->callback(
+			static fn (Turno $t) => $t->getId() === 77,
+		))->willReturnArgument(0);
+		$this->printing->expects($this->never())->method('printTurno');
+
+		$this->expectException(Refused::class);
+		$this->expectExceptionMessage('Farmacia ya entregó todos los turnos de hoy.');
+		$this->service->issue(3, true, 'sala');
+	}
+
+	public function testTheTurnoThatFillsTheQuotaIsIssued(): void {
+		$this->servicio(['quota' => 80]);
+		$this->turnos->method('countForDay')->willReturnOnConsecutiveCalls(79, 80);
+		$this->storing();
+		$this->turnos->expects($this->never())->method('delete');
+
+		$this->assertSame(77, $this->service->issue(3, true)['id']);
+	}
+
 	public function testWithoutAQuotaTheDayIsNeverCounted(): void {
 		$this->servicio(['quota' => null]);
 		$this->turnos->expects($this->never())->method('countForDay');

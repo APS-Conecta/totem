@@ -155,6 +155,19 @@ class CallServiceTest extends TestCase {
 		$this->assertSame('FAR-P-014', $this->service->callNext(1)['current']['label']);
 	}
 
+	public function testAClaimThatLeavesTheBoxHoldingTwoIsReleasedAndRefused(): void {
+		$this->active(null);
+		$this->waits($this->turno(10, 3, true, 14, 100));
+		$this->turnos->method('claim')->willReturn(true);
+		$this->turnos->expects($this->once())->method('countActiveForBox')->with(1)->willReturn(2);
+		$this->turnos->expects($this->once())->method('release')->with(10, 1)->willReturn(true);
+		$this->llamados->expects($this->never())->method('insert');
+
+		$this->expectException(Refused::class);
+		$this->expectExceptionMessage('Termine o marque como ausente el turno actual antes de llamar otro.');
+		$this->service->callNext(1);
+	}
+
 	public function testThreeLostRacesRefuse(): void {
 		$this->active(null);
 		$this->waits($this->turno(10, 3, true, 14, 100));

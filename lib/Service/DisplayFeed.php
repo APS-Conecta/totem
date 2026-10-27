@@ -6,6 +6,7 @@ declare(strict_types=1);
 
 namespace OCA\Totem\Service;
 
+use OCA\Totem\Db\Box;
 use OCA\Totem\Db\BoxMapper;
 use OCA\Totem\Db\LlamadoMapper;
 use OCA\Totem\Db\PantallaMapper;
@@ -49,16 +50,16 @@ class DisplayFeed {
 		$day = $this->today->day();
 		$out = [];
 		$last = $cursor;
-		$onlyOneVentanilla = null;
+		$boxNames = null;
 		foreach ($this->llamados->findSince($servicioIds, $day, $cursor, self::LIMIT) as $llamado) {
 			$turno = $this->turnos->find($llamado->getTurnoId());
 			$servicio = $this->servicios->find($llamado->getServicioId());
 			$box = $this->boxName($llamado->getBoxId());
-			$onlyOneVentanilla ??= count($this->boxes->findAll()) === 1;
+			$boxNames ??= array_map(static fn (Box $b): string => $b->getName(), $this->boxes->findAll());
 			$out[] = [
 				'id' => (int)$llamado->getId(),
 				'label' => TurnoLabel::of($servicio->getPrefix(), $turno->getPreferente(), $turno->getSeq()),
-				'spoken' => TurnoLabel::spoken($servicio->getName(), $turno->getPreferente(), $turno->getSeq(), SpokenPlace::of($box, $onlyOneVentanilla)),
+				'spoken' => TurnoLabel::spoken($servicio->getName(), $turno->getPreferente(), $turno->getSeq(), SpokenPlace::of($box, $boxNames)),
 				'servicio' => $servicio->getName(),
 				'color' => $servicio->getColor(),
 				'preferente' => $turno->getPreferente(),

@@ -27,11 +27,12 @@ describe('createAnnouncer', () => {
 	})
 
 	it('is silent at volume 0', async () => {
-		const { announcer, speak, chime } = setup()
+		const { announcer, speak, chime, wait } = setup()
 		await announcer.announce({ text: 'x', volume: 0, voice: 'mujer' })
 
 		expect(chime).not.toHaveBeenCalled()
 		expect(speak).not.toHaveBeenCalled()
+		expect(wait).not.toHaveBeenCalled()
 	})
 
 	it('announces calls that arrive together one after another, never over each other', async () => {
@@ -42,6 +43,26 @@ describe('createAnnouncer', () => {
 		])
 
 		expect(log.map((l) => l[0] + ':' + (l[1] ?? ''))).toEqual(['chime:100', 'speak:primero', 'chime:100', 'speak:segundo'])
+	})
+
+	it('rings calls that arrive together one after another when the pantalla has no voice, each after its chime ends', async () => {
+		const { announcer, log, wait } = setup()
+		let release
+		const gate = new Promise((r) => { release = r })
+		wait.mockImplementation((ms) => { log.push(['wait', ms]); return gate })
+
+		const both = Promise.all([
+			announcer.announce({ text: 'x', volume: 100, voice: 'off' }),
+			announcer.announce({ text: 'x', volume: 100, voice: 'off' }),
+		])
+		await new Promise((r) => setTimeout(r))
+
+		expect(log).toEqual([['chime', 100], ['wait', 2400]])
+
+		release()
+		await both
+
+		expect(log).toEqual([['chime', 100], ['wait', 2400], ['chime', 100], ['wait', 2400]])
 	})
 
 	it('keeps going after a failed announcement', async () => {

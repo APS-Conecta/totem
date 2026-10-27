@@ -72,4 +72,11 @@ class TcpPrinterTransportTest extends TestCase {
 	public function testSomethingThatIsNotAHostIsAFailure(): void {
 		$this->assertFalse((new TcpPrinterTransport(connectTimeout: 0.3))->send('not a host', 9100, 'x'));
 	}
+
+	public function testAHostThatIsNotAnIPv4AddressIsNeverConnectedTo(): void {
+		$port = $this->listen();
+
+		$this->assertFalse((new TcpPrinterTransport(connectTimeout: 0.3))->send('localhost', $port, 'x'));
+		$this->assertFalse(@stream_socket_accept($this->server, 0.2));
+	}
 }

@@ -6,8 +6,6 @@ declare(strict_types=1);
 
 namespace OCA\Totem\Tests\Integration;
 
-use OCA\Totem\Db\Servicio;
-use OCA\Totem\Db\ServicioMapper;
 use OCA\Totem\Db\Totem;
 use OCA\Totem\Db\TotemMapper;
 use OCA\Totem\Db\TurnoMapper;
@@ -39,19 +37,6 @@ final class IssueAndPrintTest extends IntegrationTestCase {
 	private function listen(int $port): void {
 		$this->printer = stream_socket_server("tcp://0.0.0.0:$port", $errorCode, $error);
 		$this->assertNotFalse($this->printer, "could not play the printer: $error");
-	}
-
-	private function servicio(): Servicio {
-		$s = new Servicio();
-		$s->setSlug('far');
-		$s->setName('Farmacia');
-		$s->setPrefix('FAR');
-		$s->setColor('#0b6e69');
-		$s->setOpens('00:00');
-		$s->setCloses('23:59');
-		$s->setActive(true);
-
-		return Server::get(ServicioMapper::class)->insert($s);
 	}
 
 	private function totem(?string $host, int $port): Totem {

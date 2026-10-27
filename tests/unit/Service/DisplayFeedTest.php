@@ -61,15 +61,13 @@ class DisplayFeedTest extends TestCase {
 		$servicios->method('find')->willReturn($s);
 		$boxes = $this->createMock(BoxMapper::class);
 		$boxes->method('findAll')->willReturnCallback(fn (): array => $this->allBoxes);
-		$boxes->method('find')->willReturnCallback(static function (int $id): Box {
-			if ($id !== 8) {
-				throw new DoesNotExistException('deleted');
+		$boxes->method('find')->willReturnCallback(function (int $id): Box {
+			foreach ($this->allBoxes as $b) {
+				if ($b->getId() === $id) {
+					return $b;
+				}
 			}
-			$b = new Box();
-			$b->setId(8);
-			$b->setName('Box 2');
-
-			return $b;
+			throw new DoesNotExistException('deleted');
 		});
 		$today = $this->createMock(Today::class);
 		$today->method('day')->willReturn('2026-10-18');
@@ -198,6 +196,30 @@ class DisplayFeedTest extends TestCase {
 		$this->llamados->method('findSince')->willReturn([$this->llamado(21)]);
 
 		$this->assertStringEndsWith('Diríjase a ventanilla 2.', $this->feed->since('sala', 0)['llamados'][0]['spoken']);
+	}
+
+	public function testABoxWhoseNameHoldsAnotherBoxsNumberIsSaidInFull(): void {
+		$this->allBoxes = [$this->boxNamed(8, 'Sector 2 Box 1'), $this->boxNamed(9, 'Box 2')];
+		$this->links->method('ids')->willReturn([]);
+		$this->llamados->method('findSince')->willReturn([$this->llamado(21, 8), $this->llamado(22, 9)]);
+
+		$spoken = array_column($this->feed->since('sala', 0)['llamados'], 'spoken');
+
+		$this->assertSame([
+			'Farmacia, preferente 12. Diríjase a Sector 2 Box 1.',
+			'Farmacia, preferente 12. Diríjase a Box 2.',
+		], $spoken);
+	}
+
+	public function testBoxesThatWouldSoundAlikeAreSaidByTheirNames(): void {
+		$this->allBoxes = [$this->boxNamed(8, 'Ventanilla 2 Norte'), $this->boxNamed(9, 'Ventanilla 2 Sur')];
+		$this->links->method('ids')->willReturn([]);
+		$this->llamados->method('findSince')->willReturn([$this->llamado(21, 8), $this->llamado(22, 9)]);
+
+		[$north, $south] = $this->feed->since('sala', 0)['llamados'];
+
+		$this->assertStringEndsWith('Diríjase a Ventanilla 2 Norte.', $north['spoken']);
+		$this->assertStringEndsWith('Diríjase a Ventanilla 2 Sur.', $south['spoken']);
 	}
 
 	public function testAnUnknownPantallaIsNotFound(): void {

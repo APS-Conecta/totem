@@ -12,7 +12,7 @@ The domain's words, fixed so the code says what the team says. **On screen two o
 
 **Llamado**: one call of a turno to a box. A re-llamado is another llamado of the same turno: the display feed is append-only, and the recent list shows a turno once. _Avoid_: aviso (that is the sound).
 
-**Tótem**: a kiosk where a patient takes a turno, with its own public address (`/apps/totem/totem/<name>`; the plain `/apps/totem/totem` is the default kiosk). It lists the unidades it offers (none listed means all) and may have a network ticket printer: with one the server prints the ticket there, without one the kiosk's browser prints. _Avoid_: kiosko, terminal.
+**Tótem**: a kiosk where a patient takes a turno, with its own public address (`/apps/totem/totem/<slug>`; the plain `/apps/totem/totem` is the default kiosk). It lists the unidades it offers (none listed means all) and may have a network ticket printer: with one the server prints the ticket there, without one the kiosk's browser prints. _Avoid_: kiosko, terminal.
 
 **Pantalla**: a waiting-room display. It lists the servicios it shows (none listed means all) and has its own volume and voice (Mujer, Hombre or none). _Avoid_: monitor, TV.
 
@@ -22,7 +22,7 @@ The domain's words, fixed so the code says what the team says. **On screen two o
 
 **No se presentó**: the called patient did not come. There is no editing of a turno: a wrong servicio or preferente means a new turno.
 
-**Día**: every turno, quota and sequence is scoped to a calendar day in the instance's time zone; nothing special happens at the end of the day.
+**Día**: every turno, quota and sequence is scoped to a calendar day in the instance's time zone; nothing special happens at the end of the day. A turno still waiting when its Día ends is never called again and counts as sin atender on that Día. A box keeps the turno it holds, whatever its Día, until it is completed or marked No se presentó.
 
 **Sector**: a servicio (unidad) the admin flags "Es un sector" (a clinic's division, such as Sector Azul). The patient is never asked for one; the statistics board counts sectors in a block apart from the other servicios. _Avoid_: zona, equipo.
 
