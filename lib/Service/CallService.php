@@ -30,6 +30,8 @@ class CallService {
 	/** Another box may win the turno this one chose; choose again this many times. */
 	private const ATTEMPTS = 3;
 
+	private const STILL_HOLDS = 'Termine o marque como ausente el turno actual antes de llamar otro.';
+
 	public function __construct(
 		private BoxMapper $boxes,
 		private ServicioLinks $links,
@@ -47,8 +49,9 @@ class CallService {
 	 */
 	public function callNext(int $boxId): array {
 		$this->boxes->find($boxId);
-		if ($this->turnos->findActiveForBox($boxId, $this->today->day()) !== null) {
-			throw new Refused('Termine o marque como ausente el turno actual antes de llamar otro.');
+		$day = $this->today->day();
+		if ($this->turnos->findActiveForBox($boxId, $day) !== null) {
+			throw new Refused(self::STILL_HOLDS);
 		}
 		$servicioIds = $this->links->ids(ServicioLinks::BOX, $boxId);
 		if ($servicioIds === []) {
@@ -60,8 +63,14 @@ class CallService {
 			if ($pick === null) {
 				throw new Refused('No hay turnos en espera.');
 			}
-			if ($this->turnos->claim($pick['queued']->id, $boxId, $this->today->now())) {
-				$this->log($pick['queued']->id, $pick['queued']->servicioId, $boxId);
+			$id = $pick['queued']->id;
+			if ($this->turnos->claim($id, $boxId, $this->today->now())) {
+				// The claim has committed before this count (autocommit; a caller's transaction under MySQL's REPEATABLE READ would hide a racing claim).
+				if ($this->turnos->countActiveForBox($boxId, $day) > 1) {
+					$this->turnos->release($id, $boxId); // false when a console already moved it on: it keeps that estado, unannounced, and the refusal stands
+					throw new Refused(self::STILL_HOLDS);
+				}
+				$this->log($id, $pick['queued']->servicioId, $boxId);
 
 				return $this->state($boxId);
 			}

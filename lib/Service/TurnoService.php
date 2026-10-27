@@ -27,8 +27,13 @@ use OCP\DB\Exception as DbException;
  * turno is stored; whatever happens to the printer, the turno stands (printing can only add `printed: false`).
  */
 class TurnoService {
-	/** Issuing is MAX(seq)+1 with the unique index as the net; this many tries before giving up. */
+	/**
+	 * Issuing is MAX(seq)+1 with the unique index as the net; this many tries before giving up.
+	 * The quota is counted again after the insert.
+	 */
 	private const ATTEMPTS = 3;
+
+	private const QUOTA_REACHED = '%s ya entregó todos los turnos de hoy.';
 
 	public function __construct(
 		private ServicioMapper $servicios,
@@ -62,7 +67,7 @@ class TurnoService {
 		}
 		$quota = $servicio->getDailyQuota();
 		if ($quota !== null && $this->turnos->countForDay($servicioId, $day) >= $quota) {
-			throw new Refused(sprintf('%s ya entregó todos los turnos de hoy.', $name));
+			throw new Refused(sprintf(self::QUOTA_REACHED, $name));
 		}
 
 		for ($attempt = 1; $attempt <= self::ATTEMPTS; $attempt++) {
@@ -80,6 +85,11 @@ class TurnoService {
 					throw $e;
 				}
 				continue; // another totem took this sequence a moment ago
+			}
+			// The insert has committed before this count (autocommit; a caller's transaction under MySQL's REPEATABLE READ would hide a racing issue).
+			if ($quota !== null && $this->turnos->countForDay($servicioId, $day) > $quota) {
+				$this->turnos->delete($turno);
+				throw new Refused(sprintf(self::QUOTA_REACHED, $name));
 			}
 
 			$label = TurnoLabel::of($servicio->getPrefix(), $preferente, $turno->getSeq());
