@@ -10,37 +10,55 @@ const defaultWorker = () => new Worker(new URL('./worker.js', import.meta.url))
 /**
  * The bundled voice: a Piper model run in a Web Worker (so the display never freezes while it
  * synthesizes), offline, from files this app ships (docs/adr/0005). It is an engine in the sense of
- * lib/voice.js: `available()` loads the model once and says whether it could, and `say()` plays a
- * phrase. `prepare()` synthesizes ahead, and the engine keeps the audio of the last `maxPhrases`
- * phrases said: the second saying of a call and a recent re-llamado reuse it, an older phrase is
- * synthesized again.
+ * lib/voice.js: `available()` says whether the bundled voice can speak now, and `say()` plays a
+ * phrase. After a failed load, `available()` loads again with a fresh worker, at most once per retry
+ * interval and only when asked, without waiting for that load. `prepare()` synthesizes ahead, and
+ * the engine keeps the audio of the last `maxPhrases` phrases said: the second saying of a call and
+ * a recent re-llamado reuse it, an older phrase is synthesized again.
  */
-export function piperEngine(voice, { base, createWorker = defaultWorker, getContext = sharedContext, loadTimeoutMs = 60000, maxPhrases = 50 } = {}) {
+export function piperEngine(voice, { base, createWorker = defaultWorker, getContext = sharedContext, loadTimeoutMs = 60000, maxPhrases = 50, retryIntervalMs = 10 * 60000 } = {}) {
 	let worker = null
-	let ready = null
+	let ready = null // the first load, replaced only by a later load that succeeds
+	let retryAt = Infinity // when a failed load may run again: never while one runs, or once one has succeeded
 	let nextId = 1
 	const pending = new Map()
 	const phrases = new Map()
 
 	function start() {
 		return new Promise((resolve) => {
-			const timer = setTimeout(() => { worker?.terminate(); resolve(false) }, loadTimeoutMs)
-			const settle = (ok) => { clearTimeout(timer); resolve(ok) }
+			const timer = setTimeout(() => settle(false), loadTimeoutMs)
+			let done = false
+			const settle = (ok) => {
+				if (done) return // only the load phase may end a worker: a later error or stray `failed` changes nothing
+				done = true
+				clearTimeout(timer)
+				if (!ok) worker?.terminate()
+				resolve(ok)
+			}
 			try {
 				worker = createWorker()
+				worker.onerror = () => settle(false)
+				worker.onmessage = ({ data }) => {
+					if (data.type === 'ready') settle(true)
+					else if (data.type === 'failed') settle(false)
+					else if (data.type === 'audio') pending.get(data.id)?.resolve({ pcm: data.pcm, sampleRate: data.sampleRate })
+					else if (data.type === 'error') pending.get(data.id)?.reject(new Error(data.error))
+				}
+				worker.postMessage({ type: 'init', base: base ?? defaultBase(), model: VOICES[voice] })
 			} catch {
 				settle(false)
-				return
 			}
-			worker.onerror = () => settle(false)
-			worker.onmessage = ({ data }) => {
-				if (data.type === 'ready') settle(true)
-				else if (data.type === 'failed') settle(false)
-				else if (data.type === 'audio') pending.get(data.id)?.resolve({ pcm: data.pcm, sampleRate: data.sampleRate })
-				else if (data.type === 'error') pending.get(data.id)?.reject(new Error(data.error))
-			}
-			worker.postMessage({ type: 'init', base: base ?? defaultBase(), model: VOICES[voice] })
 		})
+	}
+
+	function load() {
+		retryAt = Infinity
+		const attempt = start().then((ok) => {
+			if (ok) ready = attempt
+			else retryAt = performance.now() + retryIntervalMs
+			return ok
+		})
+		return attempt
 	}
 
 	function prepare(text) {
@@ -65,7 +83,8 @@ export function piperEngine(voice, { base, createWorker = defaultWorker, getCont
 	const engine = {
 		name: 'piper',
 		available() {
-			ready ??= start()
+			if (ready === null) ready = load() // the first load, which warmUp starts, is awaited by every caller
+			else if (performance.now() >= retryAt) load() // a retry is not awaited: until it succeeds, llamados fall back
 			return ready
 		},
 		prepare,
