@@ -32,8 +32,8 @@ export function createAnnouncer({ chime = playChime, speak: say = speak, wait = 
 		const list = voice === 'off' ? [] : engines(voice)
 		list[0]?.prepare?.(text)?.catch(() => {}) // a failure here surfaces at speaking time, where the chain falls back
 		const seconds = chime(volume)
-		if (voice === 'off') return
 		await wait(seconds * 1000 + 200)
+		if (voice === 'off') return
 		await say(text, { engines: list, volume, pauseMs: 700 })
 	}
 
