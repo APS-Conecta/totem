@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { generateFilePath } from '@nextcloud/router'
-import { sharedContext } from '../lib/chime.js'
+import { audioReady, sharedContext } from '../lib/chime.js'
 import { VOICES } from './feeds.js'
 
 const defaultBase = () => generateFilePath('totem', 'js', 'tts/')
@@ -71,8 +71,8 @@ export function piperEngine(voice, { base, createWorker = defaultWorker, getCont
 		prepare,
 		async say(text, volume) {
 			const { pcm, sampleRate } = await prepare(text)
+			if (!audioReady(getContext)) throw new Error('sound is locked')
 			const ctx = getContext()
-			if (ctx.state === 'suspended') ctx.resume()
 			const buffer = ctx.createBuffer(1, pcm.length, sampleRate)
 			buffer.getChannelData(0).set(pcm)
 			const source = ctx.createBufferSource()

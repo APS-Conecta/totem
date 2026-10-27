@@ -111,4 +111,21 @@ class PrinterAddressTest extends TestCase {
 	public function testTheAddressIsCheckedBeforeThePort(): void {
 		$this->assertSame(self::NETWORK, PrinterAddress::problem('8.8.8.8', 22, self::resolver(false)));
 	}
+
+	/** @return array<string, array{string, int, \Closure, array{?string, ?string}}> */
+	public static function checks(): array {
+		return [
+			'a private literal is its own address' => ['192.168.1.50', 9100, self::resolver(false), ['192.168.1.50', null]],
+			'a name connects to its first private answer' => ['printer', 9100, self::resolver(['172.18.0.4', '10.0.0.4']), ['172.18.0.4', null]],
+			'a name with any answer outside the clinic' => ['mixed.example', 9100, self::resolver(['192.168.1.20', '8.8.8.8']), [null, self::NETWORK]],
+			'a name that does not resolve' => ['no-existe', 9100, self::resolver(false), [null, self::NOT_FOUND]],
+			'a port that is not a printer\'s' => ['192.168.1.20', 22, self::resolver(false), [null, self::PORT]],
+		];
+	}
+
+	/** @param array{?string, ?string} $expected */
+	#[DataProvider('checks')]
+	public function testTheCheckAnswersTheAddressToConnectToOrWhyNot(string $host, int $port, \Closure $resolve, array $expected): void {
+		$this->assertSame($expected, PrinterAddress::check($host, $port, $resolve));
+	}
 }

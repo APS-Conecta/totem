@@ -21,17 +21,17 @@ function fakeWorker({ initError = null, never = false } = {}) {
 	return worker
 }
 
-/** A WebAudio stand-in that records what was played and ends the sound by itself. */
-function fakeAudio() {
+/** A WebAudio stand-in that records what was played and ends the sound by itself, but only while it runs. */
+function fakeAudio({ state = 'running' } = {}) {
 	const played = []
 	const ctx = {
-		state: 'running',
+		state,
 		destination: {},
 		resume: vi.fn(),
 		createBuffer: (channels, length, rate) => ({ channels, length, rate, getChannelData: () => new Float32Array(length) }),
 		createGain: () => ({ gain: { value: 1 }, connect: vi.fn() }),
 		createBufferSource: () => {
-			const source = { buffer: null, connect: vi.fn(), start: vi.fn(() => { played.push(source); queueMicrotask(() => source.onended?.()) }) }
+			const source = { buffer: null, connect: vi.fn(), start: vi.fn(() => { played.push(source); if (ctx.state === 'running') queueMicrotask(() => source.onended?.()) }) }
 			return source
 		},
 	}
@@ -167,6 +167,15 @@ describe('piperEngine', () => {
 		worker.postMessage = (m) => { worker.sent.push(m); queueMicrotask(() => worker.onmessage({ data: { type: 'error', id: m.id, error: 'phonemizer failed' } })) }
 
 		await expect(e.say('hola', 100)).rejects.toThrow('phonemizer failed')
+	})
+
+	it('fails the saying at once and plays nothing while the browser holds the sound back', async () => {
+		audio = fakeAudio({ state: 'suspended' })
+		const e = engine('mujer', fakeWorker())
+		await e.available()
+
+		await expect(e.say('hola', 100)).rejects.toThrow()
+		expect(audio.played).toHaveLength(0)
 	})
 
 	it('forgets a failed phrase so the next call may try again', async () => {
