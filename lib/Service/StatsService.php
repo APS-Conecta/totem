@@ -71,6 +71,7 @@ class StatsService {
 	private function period(string $kind, ?string $date): Period {
 		try {
 			$period = Period::of($kind, $date ?? $this->today->day());
+			$period->shift(-1); // a period whose previous one cannot be represented is unreadable too: the board links to it
 		} catch (\InvalidArgumentException) {
 			throw new Refused('Elija día, semana o mes y una fecha válida.');
 		}
