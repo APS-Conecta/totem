@@ -29,12 +29,13 @@ export default [
 				// aps-common) unwraps a blob response body behind a typeof guard.
 				Blob: 'readonly',
 				// Timers and the media surface the kiosk pages use: the display's poll and clock,
-				// the totem's idle reset, the announcement's speech synthesis.
+				// the totem's idle reset, the bundled voice's retry interval, the announcement's speech synthesis.
 				setTimeout: 'readonly',
 				clearTimeout: 'readonly',
 				setInterval: 'readonly',
 				clearInterval: 'readonly',
 				queueMicrotask: 'readonly',
+				performance: 'readonly',
 				SpeechSynthesisUtterance: 'readonly',
 				navigator: 'readonly',
 				localStorage: 'readonly',
