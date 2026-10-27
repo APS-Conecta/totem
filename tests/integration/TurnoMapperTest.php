@@ -21,7 +21,6 @@ use OCP\Server;
  * index, the atomic claim, the "last two called" read and the display cursor.
  */
 final class TurnoMapperTest extends IntegrationTestCase {
-	private const DAY = '2026-10-18';
 	private ServicioMapper $servicios;
 	private TurnoMapper $turnos;
 	private LlamadoMapper $llamados;
@@ -31,32 +30,6 @@ final class TurnoMapperTest extends IntegrationTestCase {
 		$this->servicios = Server::get(ServicioMapper::class);
 		$this->turnos = Server::get(TurnoMapper::class);
 		$this->llamados = Server::get(LlamadoMapper::class);
-	}
-
-	private function servicio(string $name = 'Farmacia', string $prefix = 'FAR'): Servicio {
-		$s = new Servicio();
-		$s->setSlug(strtolower($prefix));
-		$s->setName($name);
-		$s->setPrefix($prefix);
-		$s->setColor('#0b6e69');
-		$s->setOpens('00:00');
-		$s->setCloses('23:59');
-		$s->setDailyQuota(null);
-		$s->setActive(true);
-
-		return $this->servicios->insert($s);
-	}
-
-	private function turno(Servicio $s, bool $preferente, int $seq, int $createdAt = 1000, string $day = self::DAY): Turno {
-		$t = new Turno();
-		$t->setServicioId($s->getId());
-		$t->setDay($day);
-		$t->setPreferente($preferente);
-		$t->setSeq($seq);
-		$t->setEstado(Estado::Waiting->value);
-		$t->setCreatedAt($createdAt);
-
-		return $this->turnos->insert($t);
 	}
 
 	public function testAServicioRoundTripsWithItsNullableQuota(): void {
@@ -136,9 +109,12 @@ final class TurnoMapperTest extends IntegrationTestCase {
 		$this->turnos->transition($done->getId(), Estado::Called, Estado::InService, 5100);
 		$this->turnos->transition($done->getId(), Estado::InService, Estado::Completed, 5200);
 		$this->turnos->claim($open->getId(), 7, 5300);
+		$yesterdays = $this->turno($s, true, 9, 1000, '2026-10-17');
+		$this->turnos->claim($yesterdays->getId(), 8, 900);
 
-		$this->assertSame($open->getId(), $this->turnos->findActiveForBox(7, self::DAY)->getId());
-		$this->assertNull($this->turnos->findActiveForBox(8, self::DAY));
+		$this->assertSame($open->getId(), $this->turnos->findActiveForBox(7)->getId());
+		$this->assertSame($yesterdays->getId(), $this->turnos->findActiveForBox(8)?->getId(), 'a box keeps its turno whatever its Día');
+		$this->assertNull($this->turnos->findActiveForBox(9));
 	}
 
 	public function testTheLastCalledPreferenteFlagsAreNewestFirstAndAnswerForTodayOnly(): void {

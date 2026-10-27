@@ -47,7 +47,7 @@ class CallService {
 	 */
 	public function callNext(int $boxId): array {
 		$this->boxes->find($boxId);
-		if ($this->turnos->findActiveForBox($boxId, $this->today->day()) !== null) {
+		if ($this->turnos->findActiveForBox($boxId) !== null) {
 			throw new Refused('Termine o marque como ausente el turno actual antes de llamar otro.');
 		}
 		$servicioIds = $this->links->ids(ServicioLinks::BOX, $boxId);
@@ -100,7 +100,7 @@ class CallService {
 	public function state(int $boxId): array {
 		$box = $this->boxes->find($boxId);
 		$servicioIds = $this->links->ids(ServicioLinks::BOX, $boxId);
-		$held = $this->turnos->findActiveForBox($boxId, $this->today->day());
+		$held = $this->turnos->findActiveForBox($boxId);
 
 		$waiting = [];
 		foreach ($servicioIds as $servicioId) {
@@ -187,7 +187,7 @@ class CallService {
 	/** The turno the box holds, if it is in the estado the action needs. */
 	private function held(int $boxId, Estado $needed, string $refusal): Turno {
 		$this->boxes->find($boxId);
-		$turno = $this->turnos->findActiveForBox($boxId, $this->today->day());
+		$turno = $this->turnos->findActiveForBox($boxId);
 		if ($turno === null || $turno->getEstado() !== $needed->value) {
 			throw new Refused($refusal);
 		}
