@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Shared plumbing for the end-to-end tests: log in as the instance's admin, talk to the admin
-// endpoints with the session's request token, and build (and tear down) a small world of one
-// servicio, one box and one pantalla with names that cannot collide with an earlier run.
+// endpoints with the session's request token, build (and tear down) a small world of one
+// servicio, one box and one pantalla with names that cannot collide with an earlier run, and
+// wait out the totem's double-tap window before answering its question.
 
 async function login(page, user = 'admin', password = 'admin') {
 	await page.goto('/login')
@@ -62,4 +63,9 @@ async function world(page, { pantalla = { volume: 0, voice: 'off' }, servicioNam
 	}
 }
 
-module.exports = { call, login, world }
+/** Sí and No ignore taps for 500 ms after the question appears, so a double tap on a servicio bar cannot answer it. */
+async function waitOutDoubleTap(page) {
+	await page.waitForTimeout(500)
+}
+
+module.exports = { call, login, waitOutDoubleTap, world }
