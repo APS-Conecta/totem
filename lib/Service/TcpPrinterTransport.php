@@ -19,6 +19,9 @@ class TcpPrinterTransport implements PrinterTransport {
 	}
 
 	public function send(string $host, int $port, string $bytes): bool {
+		if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false) {
+			return false;
+		}
 		$socket = @stream_socket_client(sprintf('tcp://%s:%d', $host, $port), $errorCode, $error, $this->connectTimeout);
 		if ($socket === false) {
 			return false;

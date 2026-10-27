@@ -21,17 +21,17 @@ function fakeWorker({ initError = null, never = false } = {}) {
 	return worker
 }
 
-/** A WebAudio stand-in that records what was played and ends the sound by itself. */
-function fakeAudio() {
+/** A WebAudio stand-in that records what was played and ends the sound by itself, but only while it runs. */
+function fakeAudio({ state = 'running' } = {}) {
 	const played = []
 	const ctx = {
-		state: 'running',
+		state,
 		destination: {},
 		resume: vi.fn(),
 		createBuffer: (channels, length, rate) => ({ channels, length, rate, getChannelData: () => new Float32Array(length) }),
 		createGain: () => ({ gain: { value: 1 }, connect: vi.fn() }),
 		createBufferSource: () => {
-			const source = { buffer: null, connect: vi.fn(), start: vi.fn(() => { played.push(source); queueMicrotask(() => source.onended?.()) }) }
+			const source = { buffer: null, connect: vi.fn(), start: vi.fn(() => { played.push(source); if (ctx.state === 'running') queueMicrotask(() => source.onended?.()) }) }
 			return source
 		},
 	}
@@ -92,7 +92,7 @@ describe('piperEngine', () => {
 		expect(audio.played[0].buffer.rate).toBe(22050)
 	})
 
-	it('synthesizes a phrase once: the second saying and any repeat of the call reuse it', async () => {
+	it('synthesizes a phrase once: the second saying of a call reuses it', async () => {
 		const worker = fakeWorker()
 		const e = engine('mujer', worker)
 		await e.available()
@@ -101,6 +101,53 @@ describe('piperEngine', () => {
 
 		expect(worker.sent.filter((m) => m.type === 'say')).toHaveLength(1)
 		expect(audio.played).toHaveLength(2)
+	})
+
+	it('synthesizes again a phrase no longer among the last ones said', async () => {
+		const worker = fakeWorker()
+		const e = engine('mujer', worker, { maxPhrases: 2 })
+		await e.available()
+		e.prepare('a')
+		e.prepare('b')
+		e.prepare('c')
+		await e.say('a', 100)
+
+		expect(worker.sent.filter((m) => m.type === 'say' && m.text === 'a')).toHaveLength(2)
+	})
+
+	it('keeps at most 50 phrases by default', async () => {
+		const worker = fakeWorker()
+		const e = engine('mujer', worker)
+		await e.available()
+		for (let i = 0; i <= 50; i++) e.prepare(`p${i}`)
+		await e.say('p0', 100)
+
+		expect(worker.sent.filter((m) => m.type === 'say' && m.text === 'p0')).toHaveLength(2)
+	})
+
+	it('keeps a phrase said again among the most recent, so a re-llamado reuses it', async () => {
+		const worker = fakeWorker()
+		const e = engine('mujer', worker, { maxPhrases: 2 })
+		await e.available()
+		for (const text of ['a', 'b', 'a', 'c', 'a']) await e.say(text, 100)
+
+		expect(worker.sent.filter((m) => m.type === 'say' && m.text === 'a')).toHaveLength(1)
+	})
+
+	it('plays a phrase dropped while it was still being synthesized', async () => {
+		const worker = fakeWorker()
+		const e = engine('mujer', worker, { maxPhrases: 1 })
+		await e.available()
+		const held = []
+		worker.postMessage = (m) => { worker.sent.push(m); held.push(m) }
+		const saying = e.say('a', 100)
+		await vi.waitFor(() => expect(worker.sent.some((m) => m.type === 'say' && m.text === 'a')).toBe(true))
+		e.prepare('b')
+		const { id } = held.find((m) => m.text === 'a')
+		worker.onmessage({ data: { type: 'audio', id, pcm: new Float32Array([0, 0.5]), sampleRate: 22050 } })
+		await saying
+
+		expect(audio.played).toHaveLength(1)
 	})
 
 	it('can synthesize ahead, so the voice is ready when the chime ends', async () => {
@@ -120,6 +167,15 @@ describe('piperEngine', () => {
 		worker.postMessage = (m) => { worker.sent.push(m); queueMicrotask(() => worker.onmessage({ data: { type: 'error', id: m.id, error: 'phonemizer failed' } })) }
 
 		await expect(e.say('hola', 100)).rejects.toThrow('phonemizer failed')
+	})
+
+	it('fails the saying at once and plays nothing while the browser holds the sound back', async () => {
+		audio = fakeAudio({ state: 'suspended' })
+		const e = engine('mujer', fakeWorker())
+		await e.available()
+
+		await expect(e.say('hola', 100)).rejects.toThrow()
+		expect(audio.played).toHaveLength(0)
 	})
 
 	it('forgets a failed phrase so the next call may try again', async () => {
