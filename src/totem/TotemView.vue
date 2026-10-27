@@ -53,15 +53,20 @@ function goHome() {
 	problem.value = ''
 }
 
+// A double tap on a servicio bar (or a touch frame's emulated double-click) lands its second tap where Sí or No now is:
+// taps on them are ignored this long after the question appears.
+const DOUBLE_TAP_MS = 500
+let questionShownAt = 0
 function choose(s) {
 	servicio.value = s
 	problem.value = '' // a refusal that arrived after the last patient left is not for this one
 	step.value = 'question'
+	questionShownAt = Date.now()
 	watchIdle()
 }
 
 async function answer(preferente) {
-	if (issuing.value) return
+	if (issuing.value || Date.now() - questionShownAt < DOUBLE_TAP_MS) return
 	issuing.value = true
 	const chosen = servicio.value // the patient may leave the question before the answer arrives
 	try {
