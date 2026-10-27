@@ -97,10 +97,13 @@ function onData(data) {
 	cursor = data.cursor
 	calls.value = [...calls.value, ...data.llamados].slice(-KEEP)
 	// The first answer is the day so far: show it, never announce it (a reload must not repeat the day).
+	// Sound still locked: show the call, never announce it, or it would play as a backlog after the tap.
 	if (!opened && data.pantalla.volume > 0 && data.pantalla.voice !== 'off') warmUp(data.pantalla.voice)
 	if (opened && data.llamados.length > 0) {
-		for (const call of data.llamados) {
-			announce({ text: call.spoken, volume: data.pantalla.volume, voice: data.pantalla.voice }).catch((e) => warnError('announce', e))
+		if (audioReady()) {
+			for (const call of data.llamados) {
+				announce({ text: call.spoken, volume: data.pantalla.volume, voice: data.pantalla.voice }).catch((e) => warnError('announce', e))
+			}
 		}
 		pulse.value = true
 		clearTimeout(pulseTimer)
