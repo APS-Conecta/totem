@@ -18,9 +18,10 @@ use OCP\AppFramework\Db\DoesNotExistException;
 
 /**
  * What a waiting-room display asks every two seconds: the llamados after the
- * last one it saw, for the servicios it shows. Public and read-only, so it
- * carries labels, servicio and box names and colors, and nothing else: there is
- * no patient data to leak (docs/threat-model.md).
+ * last one it saw, for the servicios it shows, and the Día they belong to.
+ * Public and read-only, so it carries labels, servicio and box names and
+ * colors, and nothing else: there is no patient data to leak
+ * (docs/threat-model.md).
  */
 class DisplayFeed {
 	/** A freshly opened display gets the latest llamados; a polling one gets the few that are new. */
@@ -38,17 +39,18 @@ class DisplayFeed {
 	}
 
 	/**
-	 * @return array{pantalla: array{name: string, volume: int, voice: string}, llamados: list<array<string, mixed>>, cursor: int}
+	 * @return array{pantalla: array{name: string, volume: int, voice: string}, day: string, llamados: list<array<string, mixed>>, cursor: int} day is Y-m-d
 	 * @throws DoesNotExistException the pantalla is unknown
 	 */
 	public function since(string $slug, int $cursor): array {
 		$pantalla = $this->pantallas->findBySlug($slug);
 		$servicioIds = $this->links->ids(ServicioLinks::PANTALLA, (int)$pantalla->getId());
 
+		$day = $this->today->day();
 		$out = [];
 		$last = $cursor;
 		$onlyOneVentanilla = null;
-		foreach ($this->llamados->findSince($servicioIds, $this->today->day(), $cursor, self::LIMIT) as $llamado) {
+		foreach ($this->llamados->findSince($servicioIds, $day, $cursor, self::LIMIT) as $llamado) {
 			$turno = $this->turnos->find($llamado->getTurnoId());
 			$servicio = $this->servicios->find($llamado->getServicioId());
 			$box = $this->boxName($llamado->getBoxId());
@@ -68,6 +70,7 @@ class DisplayFeed {
 
 		return [
 			'pantalla' => ['name' => $pantalla->getName(), 'volume' => $pantalla->getVolume(), 'voice' => $pantalla->getVoice()],
+			'day' => $day,
 			'llamados' => $out,
 			'cursor' => $last,
 		];

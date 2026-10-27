@@ -55,7 +55,7 @@ const ROWS = 6
 const KEEP = 200
 
 const slug = loadState('totem', 'slug', '')
-const calls = ref([]) // every llamado seen today, oldest first
+const calls = ref([]) // every llamado of the Día the feed last named, oldest first
 const pantalla = ref({ name: '', volume: 100, voice: 'mujer' })
 const offline = ref(false)
 const pulse = ref(false)
@@ -63,6 +63,7 @@ const soundReady = ref(audioReady())
 const clock = ref(timeNow())
 
 let cursor = 0
+let day = null
 let opened = false
 let pulseTimer = null
 
@@ -95,7 +96,9 @@ const caption = computed(() => {
 function onData(data) {
 	pantalla.value = data.pantalla
 	cursor = data.cursor
-	calls.value = [...calls.value, ...data.llamados].slice(-KEEP)
+	const held = data.day === day ? calls.value : []
+	day = data.day
+	calls.value = [...held, ...data.llamados].slice(-KEEP)
 	// The first answer is the day so far: show it, never announce it (a reload must not repeat the day).
 	if (!opened && data.pantalla.volume > 0 && data.pantalla.voice !== 'off') warmUp(data.pantalla.voice)
 	if (opened && data.llamados.length > 0) {

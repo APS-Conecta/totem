@@ -13,10 +13,12 @@ import { announce, warmUp } from '../lib/announce.js'
 import { audioReady, unlockAudio } from '../lib/chime.js'
 
 const pantalla = { name: 'Sala Farmacia', volume: 80, voice: 'mujer' }
+const DAY = '2026-10-26'
+const NEXT_DAY = '2026-10-27'
 const llamado = (id, label, box = 'Box 2', extra = {}) => ({
 	id, label, spoken: `Turno ${label}. Diríjase a ${box}.`, servicio: 'Farmacia', color: '#0b6e69', preferente: label.includes('-P-'), box, calledAt: 1000 + id, ...extra,
 })
-const feed = (llamados, cursor = llamados.at(-1)?.id ?? 0) => ({ pantalla, llamados, cursor })
+const feed = (llamados, cursor = llamados.at(-1)?.id ?? 0, day = DAY) => ({ pantalla, day, llamados, cursor })
 
 async function open(first) {
 	readFeed.mockResolvedValueOnce(first)
@@ -159,6 +161,37 @@ describe('DisplayView', () => {
 		await vi.advanceTimersByTimeAsync(4000)
 		await flushPromises()
 		expect(wrapper.text()).not.toContain('Sin conexión')
+	})
+
+	it('starts over when the feed names a new Día: no current call, no earlier calls, nothing announced', async () => {
+		const wrapper = await open(feed([llamado(1, 'SOM-G-086'), llamado(2, 'SOM-G-087')]))
+		await next(feed([], 2, NEXT_DAY))
+
+		expect(wrapper.get('[role="status"]').text()).toBe('Esperando el primer llamado.')
+		expect(wrapper.findAll('.d-row')).toHaveLength(0)
+		expect(wrapper.get('.d-foot .cap').text()).toBe('Sonido y voz activados')
+		expect(announce).not.toHaveBeenCalled()
+	})
+
+	it('after starting over, a call of the new Día shows large and is announced once', async () => {
+		const wrapper = await open(feed([llamado(1, 'SOM-G-086'), llamado(2, 'SOM-G-087')]))
+		await next(feed([], 2, NEXT_DAY))
+		await next(feed([llamado(3, 'SOM-G-001')], 3, NEXT_DAY))
+
+		expect(wrapper.get('[role="status"]').text()).toContain('SOM-G-001')
+		expect(wrapper.findAll('.d-row')).toHaveLength(0)
+		expect(announce).toHaveBeenCalledTimes(1)
+		expect(announce).toHaveBeenCalledWith({ text: 'Turno SOM-G-001. Diríjase a Box 2.', volume: 80, voice: 'mujer' })
+	})
+
+	it('when an answer names a new Día and already carries calls, shows only those and announces them', async () => {
+		const wrapper = await open(feed([llamado(1, 'SOM-G-086'), llamado(2, 'SOM-G-087')]))
+		await next(feed([llamado(3, 'SOM-G-001')], 3, NEXT_DAY))
+
+		expect(wrapper.get('[role="status"]').text()).toContain('SOM-G-001')
+		expect(wrapper.findAll('.d-row')).toHaveLength(0)
+		expect(announce).toHaveBeenCalledTimes(1)
+		expect(announce).toHaveBeenCalledWith({ text: 'Turno SOM-G-001. Diríjase a Box 2.', volume: 80, voice: 'mujer' })
 	})
 
 	it('asks for one touch when the browser is holding the sound back, and unlocks it', async () => {

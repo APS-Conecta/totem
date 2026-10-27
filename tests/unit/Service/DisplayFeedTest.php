@@ -137,6 +137,25 @@ class DisplayFeedTest extends TestCase {
 		$this->assertSame(22, $this->feed->since('sala', 22)['cursor']);
 	}
 
+	public function testTheAnswerNamesItsDayEvenWithNoLlamados(): void {
+		$this->links->method('ids')->willReturn([]);
+		$this->llamados->method('findSince')->willReturn([]);
+
+		$answer = $this->feed->since('sala', 22);
+
+		$this->assertSame('2026-10-18', $answer['day'] ?? null);
+	}
+
+	public function testTheDayItNamesIsTheDayThatFilteredTheLlamados(): void {
+		$today = $this->createMock(Today::class);
+		$today->method('day')->willReturnOnConsecutiveCalls('2026-10-18', '2026-10-19');
+		$feed = new DisplayFeed($this->pantallas, $this->links, $this->llamados, $this->createMock(TurnoMapper::class), $this->createMock(ServicioMapper::class), $this->createMock(BoxMapper::class), $today);
+		$this->links->method('ids')->willReturn([]);
+		$this->llamados->expects($this->once())->method('findSince')->with([], '2026-10-18', 0, 30)->willReturn([]);
+
+		$this->assertSame('2026-10-18', $feed->since('sala', 0)['day']);
+	}
+
 	public function testItCarriesThePantallasNameAndSound(): void {
 		$this->links->method('ids')->willReturn([]);
 		$this->llamados->method('findSince')->willReturn([]);
