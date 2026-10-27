@@ -8,7 +8,7 @@
 // file is about the server path and its guards.
 
 const { test, expect } = require('@playwright/test')
-const { call, login, world } = require('./helpers')
+const { call, login, waitOutDoubleTap, world } = require('./helpers')
 
 const PRINTER = process.env.TOTEM_PRINTER_URL || 'http://127.0.0.1:9191'
 const ESC_POS_CUT = '\x1D\x56\x42\x03'
@@ -190,6 +190,7 @@ async function kiosk(browser, path) {
 
 async function takeTicketOnScreen(screen, unidad, answer) {
 	await screen.getByRole('button', { name: new RegExp(unidad) }).click()
+	await waitOutDoubleTap(screen)
 	await screen.getByRole('button', { name: answer, exact: true }).click()
 }
 
