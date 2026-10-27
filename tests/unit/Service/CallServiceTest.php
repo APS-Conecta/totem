@@ -159,7 +159,7 @@ class CallServiceTest extends TestCase {
 		$this->active(null);
 		$this->waits($this->turno(10, 3, true, 14, 100));
 		$this->turnos->method('claim')->willReturn(true);
-		$this->turnos->expects($this->once())->method('countActiveForBox')->with(1, '2026-10-18')->willReturn(2);
+		$this->turnos->expects($this->once())->method('countActiveForBox')->with(1)->willReturn(2);
 		$this->turnos->expects($this->once())->method('release')->with(10, 1)->willReturn(true);
 		$this->llamados->expects($this->never())->method('insert');
 

@@ -31,7 +31,6 @@ use OCP\Server;
  * once, so the reads that follow (the re-check, the box's state) see the database as it is.
  */
 final class RacingRequestsTest extends IntegrationTestCase {
-	private const DAY = '2026-10-18';
 	private const NOW = 50_000;
 
 	private Today $today;
@@ -52,8 +51,8 @@ final class RacingRequestsTest extends IntegrationTestCase {
 				$this->hooks[$method] = $hook;
 			}
 
-			public function findActiveForBox(int $boxId, string $day): ?Turno {
-				return $this->run(__FUNCTION__, fn () => parent::findActiveForBox($boxId, $day), $boxId, $day);
+			public function findActiveForBox(int $boxId): ?Turno {
+				return $this->run(__FUNCTION__, fn () => parent::findActiveForBox($boxId), $boxId);
 			}
 
 			public function claim(int $id, int $boxId, int $now): bool {
@@ -96,7 +95,7 @@ final class RacingRequestsTest extends IntegrationTestCase {
 		$this->assertNull($given->getBoxId());
 		$this->assertNull($given->getCalledAt());
 		$this->assertSame(0, $this->llamadosOf($y));
-		$this->assertSame($x->getId(), $this->turnos->findActiveForBox($boxId, self::DAY)?->getId());
+		$this->assertSame($x->getId(), $this->turnos->findActiveForBox($boxId)?->getId());
 		$this->assertSame('Termine o marque como ausente el turno actual antes de llamar otro.', $refusal);
 	}
 
@@ -115,13 +114,13 @@ final class RacingRequestsTest extends IntegrationTestCase {
 		$state = $this->calls()->callNext($boxId);
 
 		$this->assertSame($next->getId(), $state['current']['id']);
-		$this->assertSame(1, $this->turnos->countActiveForBox($boxId, self::DAY));
-		$this->assertSame(1, $this->turnos->countActiveForBox($otherId, self::DAY));
+		$this->assertSame(1, $this->turnos->countActiveForBox($boxId));
+		$this->assertSame(1, $this->turnos->countActiveForBox($otherId));
 		$this->assertSame(1, $this->llamadosOf($next));
 	}
 
 	public function testAnIssueThatCollidesOnTheSequencePastTheQuotaIsWithdrawn(): void {
-		$s = $this->servicio(3);
+		$s = $this->servicioWithQuota(3);
 		$this->waiting($s, false, 1);
 		$this->waiting($s, false, 2);
 		$competitor = null;
@@ -141,7 +140,7 @@ final class RacingRequestsTest extends IntegrationTestCase {
 	}
 
 	public function testAnIssueRacingAcrossPreferenteAndGeneralPastTheQuotaIsWithdrawn(): void {
-		$s = $this->servicio(3);
+		$s = $this->servicioWithQuota(3);
 		$this->waiting($s, false, 1);
 		$this->waiting($s, false, 2);
 		$this->turnos->once('countForDay', function (\Closure $parent) use ($s): int {
@@ -190,18 +189,11 @@ final class RacingRequestsTest extends IntegrationTestCase {
 		return null;
 	}
 
-	private function servicio(?int $quota = null): Servicio {
-		$s = new Servicio();
-		$s->setSlug('far');
-		$s->setName('Farmacia');
-		$s->setPrefix('FAR');
-		$s->setColor('#0b6e69');
-		$s->setOpens('00:00');
-		$s->setCloses('23:59');
+	private function servicioWithQuota(int $quota): Servicio {
+		$s = $this->servicio();
 		$s->setDailyQuota($quota);
-		$s->setActive(true);
 
-		return Server::get(ServicioMapper::class)->insert($s);
+		return Server::get(ServicioMapper::class)->update($s);
 	}
 
 	/** A box covering this servicio; its id. */
@@ -214,16 +206,9 @@ final class RacingRequestsTest extends IntegrationTestCase {
 		return $id;
 	}
 
+	/** A waiting turno issued in sequence order. */
 	private function waiting(Servicio $s, bool $preferente, int $seq): Turno {
-		$t = new Turno();
-		$t->setServicioId($s->getId());
-		$t->setDay(self::DAY);
-		$t->setPreferente($preferente);
-		$t->setSeq($seq);
-		$t->setEstado(Estado::Waiting->value);
-		$t->setCreatedAt(1000 + $seq);
-
-		return $this->turnos->insert($t);
+		return $this->turno($s, $preferente, $seq, 1000 + $seq);
 	}
 
 	/** How many llamados were logged for this turno. */

@@ -23,7 +23,6 @@ class BoxService {
 		private ServicioLinks $links,
 		private ServicioMapper $servicios,
 		private TurnoMapper $turnos,
-		private Today $today,
 	) {
 	}
 
@@ -63,7 +62,7 @@ class BoxService {
 	 */
 	public function delete(int $id): void {
 		$box = $this->boxes->find($id);
-		if ($this->turnos->findActiveForBox($id, $this->today->day()) !== null) {
+		if ($this->turnos->findActiveForBox($id) !== null) {
 			throw new Refused('Esta ventanilla tiene un turno en curso.');
 		}
 		$this->boxes->delete($box);

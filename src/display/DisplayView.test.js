@@ -93,6 +93,25 @@ describe('DisplayView', () => {
 		expect(announce).toHaveBeenNthCalledWith(2, { text: 'Turno MUE-G-006. Diríjase a Box 5.', volume: 80, voice: 'mujer' })
 	})
 
+	it.each(['mujer', 'off'])('shows the calls that arrive while the sound is locked without announcing them, then announces the next one at once (voice %s)', async (voice) => {
+		audioReady.mockReturnValue(false)
+		const wrapper = await open({ ...feed([llamado(1, 'FAR-G-001')]), pantalla: { ...pantalla, voice } })
+		await next({ ...feed([llamado(2, 'FAR-G-002'), llamado(3, 'FAR-G-003'), llamado(4, 'FAR-G-004')]), pantalla: { ...pantalla, voice } })
+
+		const card = wrapper.get('[role="status"]')
+		expect(card.text()).toContain('FAR-G-004')
+		expect(wrapper.findAll('.d-row').map((r) => r.text())).toEqual(['FAR-G-003Box 2', 'FAR-G-002Box 2', 'FAR-G-001Box 2'])
+		expect(card.classes()).toContain('pulse')
+		expect(wrapper.get('.d-foot').text()).toContain('Turno FAR-G-004. Diríjase a Box 2.')
+		expect(announce).not.toHaveBeenCalled()
+
+		audioReady.mockReturnValue(true)
+		await next({ ...feed([llamado(5, 'FAR-G-005')]), pantalla: { ...pantalla, voice } })
+
+		expect(announce).toHaveBeenCalledTimes(1)
+		expect(announce).toHaveBeenCalledWith({ text: 'Turno FAR-G-005. Diríjase a Box 2.', volume: 80, voice })
+	})
+
 	it('warms the voice up as soon as it knows the pantalla, so the first call is not slowed by loading the model', async () => {
 		await open(feed([]))
 

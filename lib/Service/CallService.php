@@ -49,8 +49,7 @@ class CallService {
 	 */
 	public function callNext(int $boxId): array {
 		$this->boxes->find($boxId);
-		$day = $this->today->day();
-		if ($this->turnos->findActiveForBox($boxId, $day) !== null) {
+		if ($this->turnos->findActiveForBox($boxId) !== null) {
 			throw new Refused(self::STILL_HOLDS);
 		}
 		$servicioIds = $this->links->ids(ServicioLinks::BOX, $boxId);
@@ -66,7 +65,7 @@ class CallService {
 			$id = $pick['queued']->id;
 			if ($this->turnos->claim($id, $boxId, $this->today->now())) {
 				// The claim has committed before this count (autocommit; a caller's transaction under MySQL's REPEATABLE READ would hide a racing claim).
-				if ($this->turnos->countActiveForBox($boxId, $day) > 1) {
+				if ($this->turnos->countActiveForBox($boxId) > 1) {
 					$this->turnos->release($id, $boxId); // false when a console already moved it on: it keeps that estado, unannounced, and the refusal stands
 					throw new Refused(self::STILL_HOLDS);
 				}
@@ -109,7 +108,7 @@ class CallService {
 	public function state(int $boxId): array {
 		$box = $this->boxes->find($boxId);
 		$servicioIds = $this->links->ids(ServicioLinks::BOX, $boxId);
-		$held = $this->turnos->findActiveForBox($boxId, $this->today->day());
+		$held = $this->turnos->findActiveForBox($boxId);
 
 		$waiting = [];
 		foreach ($servicioIds as $servicioId) {
@@ -196,7 +195,7 @@ class CallService {
 	/** The turno the box holds, if it is in the estado the action needs. */
 	private function held(int $boxId, Estado $needed, string $refusal): Turno {
 		$this->boxes->find($boxId);
-		$turno = $this->turnos->findActiveForBox($boxId, $this->today->day());
+		$turno = $this->turnos->findActiveForBox($boxId);
 		if ($turno === null || $turno->getEstado() !== $needed->value) {
 			throw new Refused($refusal);
 		}
