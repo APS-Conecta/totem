@@ -6,12 +6,10 @@ declare(strict_types=1);
 
 namespace OCA\Totem\Service;
 
-use APS\Common\Text;
 use OCA\Totem\Db\Pantalla;
 use OCA\Totem\Db\PantallaMapper;
 use OCA\Totem\Db\ServicioLinks;
 use OCA\Totem\Db\ServicioMapper;
-use OCA\Totem\Exception\Refused;
 use OCP\AppFramework\Db\DoesNotExistException;
 
 /**
@@ -21,6 +19,7 @@ use OCP\AppFramework\Db\DoesNotExistException;
  */
 class PantallaService {
 	use ChecksServicios;
+	use ChecksNames;
 
 	public function __construct(
 		private PantallaMapper $pantallas,
@@ -38,14 +37,9 @@ class PantallaService {
 	public function create(array $data): array {
 		$pantalla = new Pantalla();
 		$servicioIds = $this->fill($pantalla, $data);
-		$slug = Text::slugFor($pantalla->getName());
-		try {
-			$this->pantallas->findBySlug($slug);
-			throw new Refused('Ya existe una pantalla con ese nombre.');
-		} catch (DoesNotExistException) {
-			// free
-		}
-		$pantalla->setSlug($slug);
+		$all = $this->pantallas->findAll();
+		$this->assertNameFree($pantalla, $all, 'Ya existe una pantalla con ese nombre.');
+		$pantalla->setSlug($this->freeAddress($pantalla->getName(), $all));
 		$pantalla = $this->pantallas->insert($pantalla);
 		$this->links->replace(ServicioLinks::PANTALLA, (int)$pantalla->getId(), $servicioIds);
 
@@ -59,6 +53,7 @@ class PantallaService {
 	public function update(int $id, array $data): array {
 		$pantalla = $this->pantallas->find($id);
 		$servicioIds = $this->fill($pantalla, $data);
+		$this->assertNameFree($pantalla, $this->pantallas->findAll(), 'Ya existe una pantalla con ese nombre.');
 		$pantalla = $this->pantallas->update($pantalla);
 		$this->links->replace(ServicioLinks::PANTALLA, $id, $servicioIds);
 

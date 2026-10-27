@@ -21,7 +21,6 @@ use OCP\Server;
  * index, the atomic claim, the "last two called" read and the display cursor.
  */
 final class TurnoMapperTest extends IntegrationTestCase {
-	private const DAY = '2026-10-18';
 	private ServicioMapper $servicios;
 	private TurnoMapper $turnos;
 	private LlamadoMapper $llamados;
@@ -31,32 +30,6 @@ final class TurnoMapperTest extends IntegrationTestCase {
 		$this->servicios = Server::get(ServicioMapper::class);
 		$this->turnos = Server::get(TurnoMapper::class);
 		$this->llamados = Server::get(LlamadoMapper::class);
-	}
-
-	private function servicio(string $name = 'Farmacia', string $prefix = 'FAR'): Servicio {
-		$s = new Servicio();
-		$s->setSlug(strtolower($prefix));
-		$s->setName($name);
-		$s->setPrefix($prefix);
-		$s->setColor('#0b6e69');
-		$s->setOpens('00:00');
-		$s->setCloses('23:59');
-		$s->setDailyQuota(null);
-		$s->setActive(true);
-
-		return $this->servicios->insert($s);
-	}
-
-	private function turno(Servicio $s, bool $preferente, int $seq, int $createdAt = 1000, string $day = self::DAY): Turno {
-		$t = new Turno();
-		$t->setServicioId($s->getId());
-		$t->setDay($day);
-		$t->setPreferente($preferente);
-		$t->setSeq($seq);
-		$t->setEstado(Estado::Waiting->value);
-		$t->setCreatedAt($createdAt);
-
-		return $this->turnos->insert($t);
 	}
 
 	public function testAServicioRoundTripsWithItsNullableQuota(): void {
@@ -136,9 +109,51 @@ final class TurnoMapperTest extends IntegrationTestCase {
 		$this->turnos->transition($done->getId(), Estado::Called, Estado::InService, 5100);
 		$this->turnos->transition($done->getId(), Estado::InService, Estado::Completed, 5200);
 		$this->turnos->claim($open->getId(), 7, 5300);
+		$yesterdays = $this->turno($s, true, 9, 1000, '2026-10-17');
+		$this->turnos->claim($yesterdays->getId(), 8, 900);
 
-		$this->assertSame($open->getId(), $this->turnos->findActiveForBox(7, self::DAY)->getId());
-		$this->assertNull($this->turnos->findActiveForBox(8, self::DAY));
+		$this->assertSame($open->getId(), $this->turnos->findActiveForBox(7)->getId());
+		$this->assertSame($yesterdays->getId(), $this->turnos->findActiveForBox(8)?->getId(), 'a box keeps its turno whatever its Día');
+		$this->assertNull($this->turnos->findActiveForBox(9));
+	}
+
+	public function testCountActiveForBoxCountsOnlyThatBoxsCalledAndInServiceTurnos(): void {
+		$s = $this->servicio();
+		$called = $this->turno($s, false, 1);
+		$inService = $this->turno($s, false, 2);
+		$completed = $this->turno($s, false, 3);
+		$this->turno($s, false, 4); // still waiting
+		$otherBox = $this->turno($s, false, 5);
+		$yesterdays = $this->turno($s, false, 1, 1000, '2026-10-17');
+		$this->turnos->claim($called->getId(), 7, 5000);
+		$this->turnos->claim($inService->getId(), 7, 5100);
+		$this->turnos->transition($inService->getId(), Estado::Called, Estado::InService, 5200);
+		$this->turnos->claim($completed->getId(), 7, 5300);
+		$this->turnos->transition($completed->getId(), Estado::Called, Estado::InService, 5400);
+		$this->turnos->transition($completed->getId(), Estado::InService, Estado::Completed, 5500);
+		$this->turnos->claim($otherBox->getId(), 8, 5600);
+		$this->turnos->claim($yesterdays->getId(), 7, 100);
+
+		$this->assertSame(3, $this->turnos->countActiveForBox(7), 'a turno the box holds counts whatever its Día');
+	}
+
+	public function testReleaseGivesBackOnlyACalledTurnoOfThatBox(): void {
+		$s = $this->servicio();
+		$called = $this->turno($s, false, 1);
+		$inService = $this->turno($s, false, 2);
+		$this->turnos->claim($called->getId(), 7, 5000);
+		$this->turnos->claim($inService->getId(), 7, 5100);
+		$this->turnos->transition($inService->getId(), Estado::Called, Estado::InService, 5200);
+
+		$this->assertFalse($this->turnos->release($called->getId(), 8), 'another box cannot give it back');
+		$this->assertFalse($this->turnos->release($inService->getId(), 7), 'a turno in service is not given back');
+		$this->assertTrue($this->turnos->release($called->getId(), 7));
+
+		$after = $this->turnos->find($called->getId());
+		$this->assertSame('waiting', $after->getEstado());
+		$this->assertNull($after->getBoxId());
+		$this->assertNull($after->getCalledAt());
+		$this->assertSame('in_service', $this->turnos->find($inService->getId())->getEstado());
 	}
 
 	public function testTheLastCalledPreferenteFlagsAreNewestFirstAndAnswerForTodayOnly(): void {

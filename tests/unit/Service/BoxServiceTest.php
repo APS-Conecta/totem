@@ -14,7 +14,6 @@ use OCA\Totem\Db\Turno;
 use OCA\Totem\Db\TurnoMapper;
 use OCA\Totem\Exception\Refused;
 use OCA\Totem\Service\BoxService;
-use OCA\Totem\Service\Today;
 use OCP\AppFramework\Db\DoesNotExistException;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -31,9 +30,7 @@ class BoxServiceTest extends TestCase {
 		$this->links = $this->createMock(ServicioLinks::class);
 		$this->servicios = $this->createMock(ServicioMapper::class);
 		$this->turnos = $this->createMock(TurnoMapper::class);
-		$today = $this->createMock(Today::class);
-		$today->method('day')->willReturn('2026-10-18');
-		$this->service = new BoxService($this->boxes, $this->links, $this->servicios, $this->turnos, $today);
+		$this->service = new BoxService($this->boxes, $this->links, $this->servicios, $this->turnos);
 	}
 
 	private function box(int $id, string $name): Box {
@@ -98,7 +95,7 @@ class BoxServiceTest extends TestCase {
 
 	public function testABoxHoldingATurnoCannotBeDeleted(): void {
 		$this->boxes->method('find')->willReturn($this->box(4, 'Box 3'));
-		$this->turnos->method('findActiveForBox')->with(4, '2026-10-18')->willReturn(new Turno());
+		$this->turnos->method('findActiveForBox')->with(4)->willReturn(new Turno());
 		$this->boxes->expects($this->never())->method('delete');
 
 		$this->expectException(Refused::class);

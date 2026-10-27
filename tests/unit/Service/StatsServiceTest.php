@@ -68,6 +68,12 @@ class StatsServiceTest extends TestCase {
 		$this->assertNull($this->service->board('day', '2026-10-21')['period']['next']);
 	}
 
+	public function testADayWhosePreviousDayExistsStillLinksBackToIt(): void {
+		$this->turnos->method('countsBetween')->willReturn([]);
+
+		$this->assertSame('0000-01-01', $this->service->board('day', '0000-01-02')['period']['previous']);
+	}
+
 	public function testWithoutADateItIsThePeriodOfToday(): void {
 		$this->turnos->expects($this->once())->method('countsBetween')->with('2026-10-01', '2026-10-31')->willReturn([]);
 
@@ -104,6 +110,10 @@ class StatsServiceTest extends TestCase {
 			'no kind' => ['', '2026-10-21'],
 			'a date that does not exist' => ['day', '2026-02-30'],
 			'text for a date' => ['day', 'ayer'],
+			'a day with no day before it' => ['day', '0000-01-01'],
+			'a week with no week before it' => ['week', '0000-01-05'],
+			'a month with no month before it' => ['month', '0000-01-15'],
+			'a week that starts before year 0000' => ['week', '0000-01-01'],
 		];
 	}
 
@@ -128,6 +138,14 @@ class StatsServiceTest extends TestCase {
 	public function testTheCsvOfAFuturePeriodIsRefusedToo(): void {
 		$this->expectException(Refused::class);
 		$this->service->csv('month', '2026-11-03');
+	}
+
+	public function testTheCsvOfAPeriodWithNoPeriodBeforeItIsRefusedToo(): void {
+		$this->turnos->expects($this->never())->method('countsBetween');
+
+		$this->expectException(Refused::class);
+		$this->expectExceptionMessage('Elija día, semana o mes y una fecha válida.');
+		$this->service->csv('month', '0000-01-15');
 	}
 
 	public function testTheCsvFilenameSaysDayOrMonthInSpanish(): void {
