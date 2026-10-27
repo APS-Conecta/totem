@@ -39,10 +39,10 @@ class TicketPrinter {
 		$port = $totem->getPrinterPort();
 		$sent = false;
 		try {
-			// Checked again here, not only when it was saved: a name can be re-pointed after it was configured.
-			$problem = PrinterAddress::problem($host, $port, $this->resolve);
-			if ($problem === null) {
-				$sent = $this->transport->send($host, $port, EscPosTicket::render($ticket));
+			// Checked at every print, not only when saved, and the connection goes to the address that check approved.
+			[$address, $problem] = PrinterAddress::check($host, $port, $this->resolve);
+			if ($address !== null) {
+				$sent = $this->transport->send($address, $port, EscPosTicket::render($ticket));
 			}
 			if (!$sent) {
 				$this->logger->warning('Totem ticket not printed', ['totem' => $totem->getSlug(), 'host' => $host, 'port' => $port, 'reason' => $problem ?? 'the printer did not answer']);

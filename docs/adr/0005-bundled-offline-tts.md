@@ -13,7 +13,7 @@ The display announces each llamado with chimes and a Spanish voice. The voice is
 
 
 ## How it runs
-A Web Worker (`src/tts/worker.js`) owns the model, `onnxruntime-web` (single thread, so no special response headers) and the espeak-ng phonemizer; the page only sends text and plays the PCM it gets back (`src/tts/piper.js`). The worker needs `worker-src 'self'`, which Nextcloud's default policy lacks, so `PageController` adds it on the display and admin pages. The voice is synthesized **while the chime rings** and every phrase is synthesized once (the second saying and any re-llamado reuse it). The model is loaded when the display opens, not at the first call.
+A Web Worker (`src/tts/worker.js`) owns the model, `onnxruntime-web` (single thread, so no special response headers) and the espeak-ng phonemizer; the page only sends text and plays the PCM it gets back (`src/tts/piper.js`). The worker needs `worker-src 'self'`, which Nextcloud's default policy lacks, so `PageController` adds it on the display and admin pages. The voice is synthesized **while the chime rings** and the engine keeps the audio of the last 50 phrases said (some 20 MB per voice): the second saying and a recent re-llamado reuse it, an older phrase is synthesized again, so an always-on Pantalla's memory stays bounded. The model is loaded when the display opens, not at the first call.
 
 ## Spike results (this repo's dev machine, 4 cores, headless Chromium, single thread)
 | Voice | Load (once) | Synthesis of "Turno Farmacia, preferente 12. Diríjase al Box 2." | Audio |
