@@ -11,10 +11,11 @@ const defaultWorker = () => new Worker(new URL('./worker.js', import.meta.url))
  * The bundled voice: a Piper model run in a Web Worker (so the display never freezes while it
  * synthesizes), offline, from files this app ships (docs/adr/0005). It is an engine in the sense of
  * lib/voice.js: `available()` loads the model once and says whether it could, and `say()` plays a
- * phrase. `prepare()` synthesizes ahead, and a phrase is synthesized once however often it is
- * said (the second saying of a call, and any repeat of it, reuse the audio).
+ * phrase. `prepare()` synthesizes ahead, and the engine keeps the audio of the last `maxPhrases`
+ * phrases said: the second saying of a call and a recent re-llamado reuse it, an older phrase is
+ * synthesized again.
  */
-export function piperEngine(voice, { base, createWorker = defaultWorker, getContext = sharedContext, loadTimeoutMs = 60000 } = {}) {
+export function piperEngine(voice, { base, createWorker = defaultWorker, getContext = sharedContext, loadTimeoutMs = 60000, maxPhrases = 50 } = {}) {
 	let worker = null
 	let ready = null
 	let nextId = 1
@@ -43,19 +44,22 @@ export function piperEngine(voice, { base, createWorker = defaultWorker, getCont
 	}
 
 	function prepare(text) {
-		if (!phrases.has(text)) {
+		let audio = phrases.get(text)
+		if (audio) phrases.delete(text) // said again: now the most recent
+		else {
 			const id = nextId++
-			const audio = engine.available().then((ok) => {
+			audio = engine.available().then((ok) => {
 				if (!ok) throw new Error('la voz incluida no está disponible')
 				return new Promise((resolve, reject) => {
 					pending.set(id, { resolve, reject })
 					worker.postMessage({ type: 'say', id, text })
 				}).finally(() => pending.delete(id))
 			})
-			phrases.set(text, audio)
 			audio.catch(() => phrases.delete(text)) // a failed phrase may be tried again
 		}
-		return phrases.get(text)
+		phrases.set(text, audio)
+		if (phrases.size > maxPhrases) phrases.delete(phrases.keys().next().value)
+		return audio
 	}
 
 	const engine = {
