@@ -286,14 +286,12 @@ describe('piperEngine', () => {
 		it('counts a worker that throws when sent the model as a failed load, and loads again later', async () => {
 			const first = fakeWorker()
 			first.postMessage = (message) => { if (message.type === 'init') throw new Error('DataCloneError') }
-			const { e } = retrying([first, fakeWorker()], { retryIntervalMs })
-			expect(await e.available()).toBe(false)
+			const second = fakeWorker()
+			const subject = retrying([first, second], { retryIntervalMs })
+			expect(await subject.e.available()).toBe(false)
 			expect(first.terminate).toHaveBeenCalled()
 
-			await vi.advanceTimersByTimeAsync(retryIntervalMs)
-			e.available()
-			await flush()
-			expect(await e.available()).toBe(true)
+			await retriesAndSpeaks(subject, first, second)
 		})
 	})
 })

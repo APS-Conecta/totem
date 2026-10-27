@@ -83,7 +83,7 @@ export function piperEngine(voice, { base, createWorker = defaultWorker, getCont
 	const engine = {
 		name: 'piper',
 		available() {
-			if (ready === null) ready = load() // the first load (warmUp) is awaited, as today
+			if (ready === null) ready = load() // the first load, which warmUp starts, is awaited by every caller
 			else if (performance.now() >= retryAt) load() // a retry is not awaited: until it succeeds, llamados fall back
 			return ready
 		},
