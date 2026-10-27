@@ -83,8 +83,8 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 	/** @return array<string, array{string, string, int}> the action, the estado it leaves, the turno's llamados */
 	public static function closings(): array {
 		return [
-			'Llamar de nuevo' => ['recall', 'called', 2],
-			'Iniciar atención' => ['start', 'in_service', 1],
+			'calling it again' => ['recall', 'called', 2],
+			'starting its service' => ['start', 'in_service', 1],
 			'No se presentó' => ['absent', 'no_show', 1],
 		];
 	}
