@@ -47,6 +47,24 @@ class TicketPrinterTest extends TestCase {
 		return new PrintableTicket('CESFAM Ejemplo', 'FAR-P-014', 'Farmacia', true, '19-10-2026 14:30');
 	}
 
+	/** @param callable(string): (list<string>|false) $resolve */
+	private function printerResolving(callable $resolve): TicketPrinter {
+		return new TicketPrinter($this->transport, $this->totems, $this->logger, $this->createMock(Today::class), $resolve);
+	}
+
+	public function testItConnectsToTheAddressItCheckedAndLooksTheNameUpOnce(): void {
+		$lookups = 0;
+		$printer = $this->printerResolving(static function (string $host) use (&$lookups): array {
+			$lookups++;
+
+			return ['192.168.1.50'];
+		});
+		$this->transport->expects($this->once())->method('send')->with('192.168.1.50', 9100, EscPosTicket::render($this->ticket()))->willReturn(true);
+
+		$this->assertTrue($printer->print($this->totem(host: 'printer.clinic.test'), $this->ticket()));
+		$this->assertSame(1, $lookups);
+	}
+
 	public function testItSendsTheTicketBytesToTheTotemsPrinter(): void {
 		$this->transport->expects($this->once())->method('send')->with('192.168.1.50', 9101, EscPosTicket::render($this->ticket()))->willReturn(true);
 
@@ -93,6 +111,14 @@ class TicketPrinterTest extends TestCase {
 		$this->logger->expects($this->once())->method('warning');
 
 		$this->assertFalse($this->printer->print($this->totem(host: '8.8.8.8'), $this->ticket()));
+	}
+
+	public function testANameWithAnyAddressOutsideTheClinicIsNotPrinted(): void {
+		$printer = $this->printerResolving(static fn (string $host): array => ['192.168.1.20', '8.8.8.8']);
+		$this->transport->expects($this->never())->method('send');
+		$this->logger->expects($this->once())->method('warning');
+
+		$this->assertFalse($printer->print($this->totem(host: 'mixed.example'), $this->ticket()));
 	}
 
 	public function testItDoesNotPrintAtAPortThatIsNotAPrintersEither(): void {

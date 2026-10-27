@@ -34,33 +34,44 @@ final class PrinterAddress {
 	 * @param ?callable(string): (list<string>|false) $resolve host name to IPv4 addresses; gethostbynamel by default
 	 */
 	public static function problem(string $host, int $port, ?callable $resolve = null): ?string {
-		$host = trim($host);
-		$problem = self::hostProblem($host, $resolve ?? gethostbynamel(...));
-		if ($problem !== null) {
-			return $problem;
-		}
-
-		return $port >= self::FIRST_PORT && $port <= self::LAST_PORT ? null : self::PORT;
+		return self::check($host, $port, $resolve)[1];
 	}
 
-	private static function hostProblem(string $host, callable $resolve): ?string {
+	/**
+	 * From one lookup, either the IPv4 address the server may connect to or the Spanish sentence saying why not.
+	 *
+	 * @param ?callable(string): (list<string>|false) $resolve host name to IPv4 addresses; gethostbynamel by default
+	 * @return array{0: string, 1: null}|array{0: null, 1: string}
+	 */
+	public static function check(string $host, int $port, ?callable $resolve = null): array {
+		$host = trim($host);
+		[$address, $problem] = self::hostAddress($host, $resolve ?? gethostbynamel(...));
+		if ($problem !== null) {
+			return [null, $problem];
+		}
+
+		return $port >= self::FIRST_PORT && $port <= self::LAST_PORT ? [$address, null] : [null, self::PORT];
+	}
+
+	/** @return array{0: string, 1: null}|array{0: null, 1: string} */
+	private static function hostAddress(string $host, callable $resolve): array {
 		if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
-			return self::isPrivate($host) ? null : self::NETWORK;
+			return self::isPrivate($host) ? [$host, null] : [null, self::NETWORK];
 		}
 		if (strlen($host) > 253 || preg_match('/^[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?$/', $host) !== 1) {
-			return self::NOT_FOUND;
+			return [null, self::NOT_FOUND];
 		}
 		$addresses = $resolve($host);
 		if ($addresses === false || $addresses === []) {
-			return self::NOT_FOUND;
+			return [null, self::NOT_FOUND];
 		}
 		foreach ($addresses as $address) {
 			if (!self::isPrivate($address)) {
-				return self::NETWORK;
+				return [null, self::NETWORK];
 			}
 		}
 
-		return null;
+		return [$addresses[0], null];
 	}
 
 	private static function isPrivate(string $address): bool {
