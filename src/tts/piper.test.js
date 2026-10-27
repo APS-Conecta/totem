@@ -92,7 +92,7 @@ describe('piperEngine', () => {
 		expect(audio.played[0].buffer.rate).toBe(22050)
 	})
 
-	it('synthesizes a phrase once: the second saying and any repeat of the call reuse it', async () => {
+	it('synthesizes a phrase once: the second saying of a call reuses it', async () => {
 		const worker = fakeWorker()
 		const e = engine('mujer', worker)
 		await e.available()
@@ -101,6 +101,53 @@ describe('piperEngine', () => {
 
 		expect(worker.sent.filter((m) => m.type === 'say')).toHaveLength(1)
 		expect(audio.played).toHaveLength(2)
+	})
+
+	it('synthesizes again a phrase no longer among the last ones said', async () => {
+		const worker = fakeWorker()
+		const e = engine('mujer', worker, { maxPhrases: 2 })
+		await e.available()
+		e.prepare('a')
+		e.prepare('b')
+		e.prepare('c')
+		await e.say('a', 100)
+
+		expect(worker.sent.filter((m) => m.type === 'say' && m.text === 'a')).toHaveLength(2)
+	})
+
+	it('keeps at most 50 phrases by default', async () => {
+		const worker = fakeWorker()
+		const e = engine('mujer', worker)
+		await e.available()
+		for (let i = 0; i <= 50; i++) e.prepare(`p${i}`)
+		await e.say('p0', 100)
+
+		expect(worker.sent.filter((m) => m.type === 'say' && m.text === 'p0')).toHaveLength(2)
+	})
+
+	it('keeps a phrase said again among the most recent, so a re-llamado reuses it', async () => {
+		const worker = fakeWorker()
+		const e = engine('mujer', worker, { maxPhrases: 2 })
+		await e.available()
+		for (const text of ['a', 'b', 'a', 'c', 'a']) await e.say(text, 100)
+
+		expect(worker.sent.filter((m) => m.type === 'say' && m.text === 'a')).toHaveLength(1)
+	})
+
+	it('plays a phrase dropped while it was still being synthesized', async () => {
+		const worker = fakeWorker()
+		const e = engine('mujer', worker, { maxPhrases: 1 })
+		await e.available()
+		const held = []
+		worker.postMessage = (m) => { worker.sent.push(m); held.push(m) }
+		const saying = e.say('a', 100)
+		await vi.waitFor(() => expect(worker.sent.some((m) => m.type === 'say' && m.text === 'a')).toBe(true))
+		e.prepare('b')
+		const { id } = held.find((m) => m.text === 'a')
+		worker.onmessage({ data: { type: 'audio', id, pcm: new Float32Array([0, 0.5]), sampleRate: 22050 } })
+		await saying
+
+		expect(audio.played).toHaveLength(1)
 	})
 
 	it('can synthesize ahead, so the voice is ready when the chime ends', async () => {
