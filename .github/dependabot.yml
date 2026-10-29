@@ -1,0 +1,57 @@
+# Keep the toolchain current so the security tabs stay empty (#81).
+#
+# Weekly Monday 06:00 UTC, one grouped PR per ecosystem (npm is split dev/prod
+# because dependabot-auto-merge.yml merges dev groups at any semver level and
+# prod bumps only when every change is a patch). Conventional commit prefixes
+# match the repo's history.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 10
+    groups:
+      npm-development-dependencies:
+        dependency-type: "development"
+      npm-production-dependencies:
+        dependency-type: "production"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+    labels:
+      - dependencies
+
+  - package-ecosystem: composer
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    groups:
+      composer-dependencies:
+        patterns: ["*"]
+    commit-message:
+      prefix: "chore"
+    labels:
+      - dependencies
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    groups:
+      github-actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "chore"
+    labels:
+      - dependencies

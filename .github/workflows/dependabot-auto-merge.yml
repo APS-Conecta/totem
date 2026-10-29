@@ -1,0 +1,127 @@
+# Dependabot auto-merge — the self-merging gate approved in #81.
+#
+# GitHub's "Allow auto-merge" is off at repo level, so this workflow classifies
+# the update and merges it itself once the PR build (the shared release
+# workflow) is green. The rule:
+#   - npm devDependencies changed (any semver level): merge
+#   - package.json untouched (lockfile-only transitive refresh, composer
+#     require-dev): merge
+#   - npm production dependencies changed: merge only if every bump is a patch
+#   - anything touching .github/** (workflows are SHA-pinned on purpose): manual
+#
+# pull_request_target runs with the base repository's token, so PR content is
+# untrusted input: this workflow never checks out or executes anything from the
+# PR. Classification reads base and head package.json through the API and
+# compares them as parsed JSON. The job is additionally restricted to
+# dependabot[bot] as the actor.
+name: Dependabot auto-merge
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  auto-merge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: read
+    env:
+      PR: ${{ github.event.pull_request.number }}
+      REPO: ${{ github.repository }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Classify the update
+        id: classify
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          export PR REPO BASE_SHA HEAD_SHA
+          node <<'EOF'
+          const { execSync } = require('child_process')
+          const gh = (args) => execSync(`gh ${args}`, { encoding: 'utf8' }).trim()
+
+          const files = JSON.parse(gh(`api "repos/${process.env.REPO}/pulls/${process.env.PR}/files?per_page=100"`))
+            .map((f) => f.filename)
+          const packageJson = (sha) =>
+            gh(`api "repos/${process.env.REPO}/contents/package.json?ref=${sha}" --jq .content`)
+          const decode = (b64) => Buffer.from(b64, 'base64').toString('utf8')
+          const clean = (v) => String(v).replace(/^[^0-9]*/, '') // strip ^ ~ >= etc.
+          const patch = (from, to) => {
+            const a = clean(from).split('.').map(Number)
+            const b = clean(to).split('.').map(Number)
+            return a.length === 3 && b.length === 3 &&
+              a[0] === b[0] && a[1] === b[1] // same major.minor → patch bump
+          }
+
+          const outputs = { eligible: 'false', reason: '' }
+          if (files.length >= 100) {
+            outputs.reason = 'PR has 100+ files — too large to classify blindly — manual review'
+          } else if (files.some((f) => f.startsWith('.github/'))) {
+            outputs.reason = 'touches .github/** (workflows are SHA-pinned on purpose) — manual review'
+          } else if (!files.includes('package.json')) {
+            outputs.eligible = 'true'
+            outputs.reason = 'no package.json change (lockfile-only or composer dev update)'
+          } else {
+            const base = JSON.parse(decode(packageJson(process.env.BASE_SHA)))
+            const head = JSON.parse(decode(packageJson(process.env.HEAD_SHA)))
+            const diffOf = (a = {}, b = {}) => {
+              const changed = {}
+              for (const k of new Set([...Object.keys(a), ...Object.keys(b)]))
+                if (a[k] !== b[k]) changed[k] = [a[k], b[k]]
+              return changed
+            }
+            const prod = diffOf(base.dependencies, head.dependencies)
+            const dev = diffOf(base.devDependencies, head.devDependencies)
+            if (Object.keys(prod).length === 0) {
+              outputs.eligible = 'true'
+              outputs.reason = `dev-only update (${Object.keys(dev).join(', ')})`
+            } else if (Object.values(prod).every(([f, t]) => patch(f, t))) {
+              outputs.eligible = 'true'
+              outputs.reason = `prod patch-only update (${Object.keys(prod).join(', ')})`
+            } else {
+              outputs.reason = `prod bump beyond patch (${Object.keys(prod).join(', ')}) — manual review`
+            }
+          }
+
+          console.log(outputs.reason)
+          for (const [k, v] of Object.entries(outputs))
+            execSync(`echo "${k}=${v}" >> "$GITHUB_OUTPUT"`)
+          EOF
+
+      - name: Wait for the PR build and merge
+        if: steps.classify.outputs.eligible == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          echo "Reason: ${{ steps.classify.outputs.reason }}"
+          # Our own check run is named after this job ("auto-merge"); waiting
+          # for it would wait for ourselves, so it is excluded. Skipped and
+          # neutral conclusions count as green; nothing registered yet keeps
+          # polling (the release workflow registers within a minute).
+          green=0
+          for _ in $(seq 1 60); do
+            verdict=$(gh api "repos/$REPO/commits/$HEAD_SHA/check-runs" \
+              --jq '[.check_runs[] | select(.name != "auto-merge")
+                     | if .status == "completed"
+                       then (if .conclusion == "failure" or .conclusion == "cancelled" or .conclusion == "timed_out"
+                             then "failed" else "ok" end)
+                       else "pending" end]
+                    | if length == 0 or any(. == "pending") then "pending"
+                       elif any(. == "failed") then "failed" else "ok" end')
+            case "$verdict" in
+              ok)     green=1; break ;;
+              failed) echo "PR build failed — leaving the PR open for Dependabot to retry."; exit 1 ;;
+            esac
+            sleep 30
+          done
+          if [ "$green" != 1 ]; then echo "Checks never turned green — not merging."; exit 1; fi
+          gh pr merge "$PR" --repo "$REPO" --squash --delete-branch \
+            || echo "Merge skipped (PR state changed) — a human or Dependabot rerun will settle it."
