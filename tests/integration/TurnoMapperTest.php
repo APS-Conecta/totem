@@ -176,9 +176,12 @@ final class TurnoMapperTest extends IntegrationTestCase {
 		$mue = $this->servicio('Toma de Muestras', 'MUE');
 		$t1 = $this->turno($far, true, 1);
 		$t2 = $this->turno($mue, false, 1);
-		$l1 = $this->llamado($t1, 7, 5000);
-		$l2 = $this->llamado($t2, 8, 5100);
-		$this->llamado($t1, 7, 5200); // a re-llamado is another row
+		$l1 = $this->llamado($t1, 7, $this->momentOf(self::DAY, '10:00'));
+		$l2 = $this->llamado($t2, 8, $this->momentOf(self::DAY, '10:01'));
+		$this->llamado($t1, 7, $this->momentOf(self::DAY, '10:02')); // a re-llamado is another row
+		// The feed scopes by when the llamado was made, so a llamado of the same turno made the night
+		// before stays out of this Día's feed even though the turno belongs to it.
+		$this->llamado($t1, 7, $this->momentOf('2026-10-17', '23:00'));
 
 		$all = $this->llamados->findSince([], self::DAY, 0, 50);
 		$this->assertCount(3, $all);

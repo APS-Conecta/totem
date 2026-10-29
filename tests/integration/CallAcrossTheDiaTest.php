@@ -8,6 +8,8 @@ namespace OCA\Totem\Tests\Integration;
 
 use OCA\Totem\Db\BoxMapper;
 use OCA\Totem\Db\LlamadoMapper;
+use OCA\Totem\Db\Pantalla;
+use OCA\Totem\Db\PantallaMapper;
 use OCA\Totem\Db\Servicio;
 use OCA\Totem\Db\ServicioLinks;
 use OCA\Totem\Db\ServicioMapper;
@@ -15,6 +17,7 @@ use OCA\Totem\Db\TurnoMapper;
 use OCA\Totem\Exception\Refused;
 use OCA\Totem\Service\BoxService;
 use OCA\Totem\Service\CallService;
+use OCA\Totem\Service\DisplayFeed;
 use OCA\Totem\Service\StatsService;
 use OCA\Totem\Service\Today;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -33,6 +36,7 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 	private TurnoMapper $turnos;
 	private CallService $calls;
 	private BoxService $boxes;
+	private DisplayFeed $feed;
 	private Servicio $farmacia;
 	private int $boxId;
 
@@ -51,6 +55,14 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 		$this->at(self::DAY, '23:55');
 		$this->farmacia = $this->servicio();
 		$this->boxId = $this->boxes->create(['name' => 'Box 1', 'servicioIds' => [$this->farmacia->getId()]])['id'];
+		$pantalla = new Pantalla();
+		$pantalla->setSlug('sala');
+		$pantalla->setName('Sala');
+		$pantalla->setVolume(70);
+		$pantalla->setVoice('hombre');
+		Server::get(PantallaMapper::class)->insert($pantalla);
+		$links->replace(ServicioLinks::PANTALLA, (int)$pantalla->getId(), [(int)$this->farmacia->getId()]);
+		$this->feed = new DisplayFeed(Server::get(PantallaMapper::class), $links, Server::get(LlamadoMapper::class), $this->turnos, $servicios, $boxes, $today);
 	}
 
 	public function testATurnoStartedBeforeMidnightIsFinishedAfterIt(): void {
@@ -80,17 +92,20 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 		$this->assertSame('waiting', $this->turnos->find($waiting->getId())->getEstado());
 	}
 
-	/** @return array<string, array{string, string, int}> the action, the estado it leaves, the turno's llamados */
+	/**
+	 * @return array<string, array{string, string, int, int}> the action, the estado it leaves, the turno's
+	 * llamados on its own Día and on the next one
+	 */
 	public static function closings(): array {
 		return [
-			'calling it again' => ['recall', 'called', 2],
-			'starting its service' => ['start', 'in_service', 1],
-			'No se presentó' => ['absent', 'no_show', 1],
+			'calling it again' => ['recall', 'called', 1, 1],
+			'starting its service' => ['start', 'in_service', 1, 0],
+			'No se presentó' => ['absent', 'no_show', 1, 0],
 		];
 	}
 
 	#[DataProvider('closings')]
-	public function testACalledTurnoFromTheDayBeforeCanBeClosedOnTheNext(string $action, string $estado, int $llamados): void {
+	public function testACalledTurnoFromTheDayBeforeCanBeClosedOnTheNext(string $action, string $estado, int $llamadosThatDia, int $llamadosTheNextDia): void {
 		$turno = $this->turno($this->farmacia, false, 40, $this->now);
 		$this->calls->callNext($this->boxId);
 
@@ -98,7 +113,34 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 		$this->calls->$action($this->boxId);
 
 		$this->assertSame($estado, $this->turnos->find($turno->getId())->getEstado());
-		$this->assertCount($llamados, Server::get(LlamadoMapper::class)->findSince([], self::DAY, 0, 50));
+		$llamados = Server::get(LlamadoMapper::class);
+		$this->assertCount($llamadosThatDia, $llamados->findSince([], self::DAY, 0, 50));
+		$this->assertCount($llamadosTheNextDia, $llamados->findSince([], self::NEXT_DAY, 0, 50));
+	}
+
+	public function testTheFeedCarriesARecallOfATurnoHeldAcrossTheDia(): void {
+		$this->turno($this->farmacia, false, 40, $this->now);
+		$this->calls->callNext($this->boxId);
+		$first = Server::get(LlamadoMapper::class)->findSince([], self::DAY, 0, 50)[0]->getId();
+
+		$this->at(self::NEXT_DAY, '00:01');
+		$this->calls->recall($this->boxId);
+
+		$answer = $this->feed->since('sala', 0);
+
+		$this->assertSame(self::NEXT_DAY, $answer['day']);
+		$this->assertCount(1, $answer['llamados'], 'the feed carries the recall, not the call made the Día before');
+		$this->assertSame([
+			'id' => $first + 1,
+			'label' => 'FAR-G-040',
+			'spoken' => 'Farmacia, general 40. Diríjase a ventanilla.',
+			'servicio' => 'Farmacia',
+			'color' => '#0b6e69',
+			'preferente' => false,
+			'box' => 'Box 1',
+			'calledAt' => $this->now,
+		], $answer['llamados'][0]);
+		$this->assertSame($first + 1, $answer['cursor']);
 	}
 
 	public function testABoxHoldingATurnoFromAnEarlierDiaCannotBeDeleted(): void {
@@ -123,7 +165,7 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 
 	/** Move the clock to this day and time in the instance's time zone. */
 	private function at(string $day, string $time): void {
-		$this->now = (new \DateTimeImmutable("$day $time", Server::get(IDateTimeZone::class)->getDefaultTimeZone()))->getTimestamp();
+		$this->now = $this->momentOf($day, $time);
 	}
 
 	/** @return array{emitidos: int, atendidos: int, noShow: int, sinAtender: int} the statistics board's totals for the day */
