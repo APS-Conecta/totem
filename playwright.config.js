@@ -1,13 +1,16 @@
-// The walking skeleton runs against the throwaway instance (`make instance-up`):
-// real Nextcloud 34 + PostgreSQL, the app enabled, admin / admin.
+// The suite's browser build, channel, launch flags, instance URL and locale live in
+// e2e/browser.js — the project here, the global setup's warm-up launch and every
+// hand-made context in a spec all use that one source.
 const { defineConfig } = require('@playwright/test')
+const { channel, contextOptions, launchOptions } = require('./e2e/browser')
 
 module.exports = defineConfig({
 	testDir: 'e2e',
 	timeout: 60_000,
-	use: { baseURL: process.env.TOTEM_URL || 'http://localhost:8094', locale: 'es-CL' },
+	// The admin's first web login must happen once, alone, before the workers' parallel
+	// first logins race in Nextcloud core (#31) — e2e/global-setup.js tells the story.
+	globalSetup: './e2e/global-setup.js',
+	use: contextOptions,
 	// Chromium only: the kiosk and the staff laptops run Chrome.
-	// PW_CHANNEL=chrome runs the machine's own Chrome (useful where Playwright has no build for the OS).
-	// The kiosk runs Chrome with --autoplay-policy=no-user-gesture-required: the tests do too.
-	projects: [{ name: 'chromium', use: { browserName: 'chromium', channel: process.env.PW_CHANNEL || undefined, launchOptions: { args: ['--autoplay-policy=no-user-gesture-required'] } } }],
+	projects: [{ name: 'chromium', use: { browserName: 'chromium', channel, launchOptions } }],
 })
