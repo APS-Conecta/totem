@@ -32,6 +32,18 @@ class Today {
 		return $this->local()->format('Y-m-d');
 	}
 
+	/**
+	 * The Día's Unix-second window, [start, end), in the instance's time zone. A calendar day, not
+	 * 86400 seconds: on the night the clocks change, a Día lasts 23 or 25 hours.
+	 *
+	 * @return array{int, int}
+	 */
+	public function dayWindow(string $day): array {
+		$start = new \DateTimeImmutable("$day 00:00:00", $this->zone->getDefaultTimeZone());
+
+		return [$start->getTimestamp(), $start->modify('+1 day')->getTimestamp()];
+	}
+
 	/** The moment as the clinic writes it on a ticket, DD-MM-YYYY HH:MM, in the instance's time zone. */
 	public function stamp(): string {
 		return $this->local()->format('d-m-Y H:i');

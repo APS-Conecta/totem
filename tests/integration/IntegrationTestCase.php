@@ -12,6 +12,7 @@ use OCA\Totem\Db\Turno;
 use OCA\Totem\Db\TurnoMapper;
 use OCA\Totem\Domain\Estado;
 use OCP\IDBConnection;
+use OCP\IDateTimeZone;
 use OCP\Server;
 use PHPUnit\Framework\TestCase;
 
@@ -67,6 +68,11 @@ abstract class IntegrationTestCase extends TestCase {
 		$t->setCreatedAt($createdAt);
 
 		return Server::get(TurnoMapper::class)->insert($t);
+	}
+
+	/** A moment of a Día, as Unix seconds in the instance's time zone. */
+	protected function momentOf(string $day, string $time): int {
+		return (new \DateTimeImmutable("$day $time", Server::get(IDateTimeZone::class)->getDefaultTimeZone()))->getTimestamp();
 	}
 
 	private function emptyTables(): void {

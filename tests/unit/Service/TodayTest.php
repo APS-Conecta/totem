@@ -41,4 +41,17 @@ class TodayTest extends TestCase {
 		$this->assertSame('2026-10-17', $today->day());
 		$this->assertSame('23:30', $today->time());
 	}
+
+	public function testADiasWindowIsItsOwnUnixSecondsInTheInstanceZone(): void {
+		// 2026-10-18 00:00 UTC, and the same wall clock three hours later in Chile's summer time.
+		$this->assertSame([1792281600, 1792368000], $this->today(0, 'UTC')->dayWindow('2026-10-18'));
+		$this->assertSame([1792292400, 1792378800], $this->today(0, 'America/Santiago')->dayWindow('2026-10-18'));
+	}
+
+	public function testADiasWindowIsTheCalendarDayNot86400Seconds(): void {
+		// The night of 2026-04-04 the clocks in Chile go back one hour: that Día lasts 25 hours.
+		$window = $this->today(0, 'America/Santiago')->dayWindow('2026-04-04');
+
+		$this->assertSame(90000, $window[1] - $window[0]);
+	}
 }

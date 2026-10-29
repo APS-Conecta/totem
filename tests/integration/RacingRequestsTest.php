@@ -35,6 +35,7 @@ final class RacingRequestsTest extends IntegrationTestCase {
 
 	private Today $today;
 	private TurnoMapper $turnos;
+	private LlamadoMapper $llamados;
 
 	protected function setUp(): void {
 		parent::setUp();
@@ -42,6 +43,9 @@ final class RacingRequestsTest extends IntegrationTestCase {
 		$this->today->method('day')->willReturn(self::DAY);
 		$this->today->method('now')->willReturn(self::NOW);
 		$this->today->method('time')->willReturn('12:00');
+		// Every moment of this suite fits one window: the Día scoping of the feed is not what races here.
+		$this->today->method('dayWindow')->willReturn([0, PHP_INT_MAX]);
+		$this->llamados = new LlamadoMapper(Server::get(IDBConnection::class), $this->today);
 		$this->turnos = new class(Server::get(IDBConnection::class)) extends TurnoMapper {
 			/** @var array<string, \Closure> the competitor's write, by the mapper method it runs inside */
 			private array $hooks = [];
@@ -162,7 +166,7 @@ final class RacingRequestsTest extends IntegrationTestCase {
 			Server::get(ServicioLinks::class),
 			Server::get(ServicioMapper::class),
 			$this->turnos,
-			Server::get(LlamadoMapper::class),
+			$this->llamados,
 			$this->today,
 		);
 	}
@@ -213,7 +217,7 @@ final class RacingRequestsTest extends IntegrationTestCase {
 
 	/** How many llamados were logged for this turno. */
 	private function llamadosOf(Turno $t): int {
-		$all = Server::get(LlamadoMapper::class)->findSince([], self::DAY, 0, 50);
+		$all = $this->llamados->findSince([], self::DAY, 0, 50);
 
 		return count(array_filter($all, static fn (Llamado $l) => $l->getTurnoId() === $t->getId()));
 	}
