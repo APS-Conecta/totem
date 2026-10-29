@@ -22,7 +22,7 @@
         "vue-material-design-icons": "^5.4.0"
     },
     "devDependencies": {
-        "@babel/core": "^7.22.9",
+        "@babel/core": "^8.0.9",
         "@diffusionstudio/piper-wasm": "^1.0.0",
         "@nextcloud/browserslist-config": "^3.0.0",
         "@nextcloud/webpack-vue-config": "^7.1.0",
@@ -32,18 +32,18 @@
         "babel-loader": "^10.0.0",
         "css-loader": "^7.1.1",
         "eslint": "^10.8.0",
-        "eslint-plugin-vue": "^10.10.0",
+        "eslint-plugin-vue": "^10.12.0",
         "jsdom": "^30.1.1",
-        "node-polyfill-webpack-plugin": "4.0.0",
-        "onnxruntime-web": "^1.18.0",
-        "sass": "^1.64.2",
+        "node-polyfill-webpack-plugin": "4.1.0",
+        "onnxruntime-web": "^1.31.1",
+        "sass": "^1.106.1",
         "sass-loader": "^17.1.0",
         "style-loader": "^4.0.0",
         "terser-webpack-plugin": "^5.3.10",
-        "vitest": "^4.1.10",
+        "vitest": "^5.0.5",
         "vue-loader": "^17.4.2",
-        "webpack": "^5.88.2",
-        "webpack-cli": "^6.0.1"
+        "webpack": "^5.112.2",
+        "webpack-cli": "^7.2.3"
     },
     "browserslist": [
         "extends @nextcloud/browserslist-config"
