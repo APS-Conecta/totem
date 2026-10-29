@@ -14,6 +14,11 @@ updates:
       time: "06:00"
       timezone: Etc/UTC
     open-pull-requests-limit: 10
+    # @nextcloud/webpack-vue-config pins this peer to an exact version
+    # ("4.0.0"), so any Dependabot bump of it fails `npm ci` with ERESOLVE —
+    # seen on #83. It moves when webpack-vue-config moves, by human hands.
+    ignore:
+      - dependency-name: "node-polyfill-webpack-plugin"
     groups:
       npm-development-dependencies:
         dependency-type: "development"
