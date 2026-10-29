@@ -7,6 +7,14 @@ export const VOICES = { mujer: 'es_MX-claude-high', hombre: 'es_ES-davefx-medium
 export const PACE = 1.1
 
 /**
+ * Where the worker loads the voice from: the tts/ directory that sits beside the worker's own
+ * bundle (js/totem-src_tts_worker_js.js and js/tts/ are siblings). Derived from the worker's own
+ * URL — never from a message — so no postMessage value can steer what gets loaded (code-scanning
+ * #2 and #3, docs/adr/0005: everything the voice runs is files this app ships).
+ */
+export const ttsBase = (workerUrl) => new URL('tts/', workerUrl).href
+
+/**
  * What a Piper VITS model takes as input, as plain data (the worker turns each into an ort.Tensor).
  * `config` is the model's .onnx.json; `ids` are the phoneme ids the phonemizer produced.
  */

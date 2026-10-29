@@ -42,20 +42,20 @@ describe('piperEngine', () => {
 	let audio
 	beforeEach(() => { audio = fakeAudio() })
 
-	const engine = (voice, worker, extra = {}) => piperEngine(voice, { base: '/apps/totem/js/tts/', createWorker: () => worker, getContext: () => audio.ctx, ...extra })
+	const engine = (voice, worker, extra = {}) => piperEngine(voice, { createWorker: () => worker, getContext: () => audio.ctx, ...extra })
 
 	it('is available once the worker has loaded the model for the pantalla voice', async () => {
 		const worker = fakeWorker()
 
 		expect(await engine('mujer', worker).available()).toBe(true)
-		expect(worker.sent[0]).toEqual({ type: 'init', base: '/apps/totem/js/tts/', model: 'es_MX-claude-high' })
+		expect(worker.sent[0]).toEqual({ type: 'init', voice: 'mujer' })
 	})
 
 	it('loads the model of the voice it was asked for: Hombre is Davefx', async () => {
 		const worker = fakeWorker()
 		await engine('hombre', worker).available()
 
-		expect(worker.sent[0].model).toBe('es_ES-davefx-medium')
+		expect(worker.sent[0].voice).toBe('hombre')
 	})
 
 	it('loads the model only once however often it is asked', async () => {

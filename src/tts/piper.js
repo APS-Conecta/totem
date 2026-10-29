@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { generateFilePath } from '@nextcloud/router'
 import { audioReady, sharedContext } from '../lib/chime.js'
-import { VOICES } from './feeds.js'
 
-const defaultBase = () => generateFilePath('totem', 'js', 'tts/')
 const defaultWorker = () => new Worker(new URL('./worker.js', import.meta.url))
 
 /**
@@ -15,8 +12,12 @@ const defaultWorker = () => new Worker(new URL('./worker.js', import.meta.url))
  * interval and only when asked, without waiting for that load. `prepare()` synthesizes ahead, and
  * the engine keeps the audio of the last `maxPhrases` phrases said: the second saying of a call and
  * a recent re-llamado reuse it, an older phrase is synthesized again.
+ *
+ * The worker owns its URLs: init carries only the voice key, and the worker derives the model
+ * directory from its own location (code-scanning #2 and #3) — nothing a message carries can
+ * choose what code or model the worker loads.
  */
-export function piperEngine(voice, { base, createWorker = defaultWorker, getContext = sharedContext, loadTimeoutMs = 60000, maxPhrases = 50, retryIntervalMs = 10 * 60000 } = {}) {
+export function piperEngine(voice, { createWorker = defaultWorker, getContext = sharedContext, loadTimeoutMs = 60000, maxPhrases = 50, retryIntervalMs = 10 * 60000 } = {}) {
 	let worker = null
 	let ready = null // the first load, replaced only by a later load that succeeds
 	let retryAt = Infinity // when a failed load may run again: never while one runs, or once one has succeeded
@@ -44,7 +45,7 @@ export function piperEngine(voice, { base, createWorker = defaultWorker, getCont
 					else if (data.type === 'audio') pending.get(data.id)?.resolve({ pcm: data.pcm, sampleRate: data.sampleRate })
 					else if (data.type === 'error') pending.get(data.id)?.reject(new Error(data.error))
 				}
-				worker.postMessage({ type: 'init', base: base ?? defaultBase(), model: VOICES[voice] })
+				worker.postMessage({ type: 'init', voice })
 			} catch {
 				settle(false)
 			}
