@@ -511,7 +511,7 @@ h1 { font-size: 1.75rem; line-height: 1.15; margin: 0; text-wrap: balance; }
     if (T.step === "home") {
       h = '<div class="t-head">Seleccione la unidad a la que acude.</div><div class="t-bars">' +
         SERV.map(function (x) {
-          return '<button class="t-bar" data-act="srv" data-id="' + x.id + '" style="background:' + x.color + ";color:" + readableOn(x.color) + '"><span>' + esc(x.name) + '</span><span class="pre">' + x.pre + "</span></button>";
+          return '<button class="t-bar" data-act="srv" data-id="' + esc(x.id) + '" style="background:' + x.color + ";color:" + readableOn(x.color) + '"><span>' + esc(x.name) + '</span><span class="pre">' + esc(x.pre) + "</span></button>";
         }).join("") + '</div><div class="t-foot"><span>CESFAM Ejemplo</span><span id="clock"></span></div>';
     } else if (T.step === "pref") {
       h = band(s) + '<div class="t-q">¿Tiene 60 años o más, una discapacidad o cuida a una persona con discapacidad?</div><div class="t-choices">' +
@@ -519,7 +519,7 @@ h1 { font-size: 1.75rem; line-height: 1.15; margin: 0; text-wrap: balance; }
         '<button class="t-choice" data-act="pref" data-v="0">No</button></div>';
     } else if (T.step === "ticket") {
       var fg = readableOn(s.color);
-      h = '<div class="t-ticket" style="background:' + s.color + ";color:" + fg + '">' + (T.printFailed ? "" : '<div class="lbl">Su turno</div>') + '<div class="num">' + T.label + '</div><div class="srv">' + esc(s.name) + "</div>" +
+      h = '<div class="t-ticket" style="background:' + s.color + ";color:" + fg + '">' + (T.printFailed ? "" : '<div class="lbl">Su turno</div>') + '<div class="num">' + esc(T.label) + '</div><div class="srv">' + esc(s.name) + "</div>" +
         (T.pref ? '<div class="t-chip">Atención preferente</div>' : "") +
         (T.printFailed ? '<div class="t-chip">No se pudo imprimir</div>' : "") +
         '<div class="inst">' + (T.printFailed ? "Acérquese a SOME." : "Retire su ticket impreso y espere su llamado en la sala de espera.") + '</div><div class="cnt">Volviendo al inicio en <span id="cnt">' + T.left + "</span> s</div></div>";

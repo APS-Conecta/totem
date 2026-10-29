@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PACE, VOICES, feedsFor } from './feeds.js'
+import { PACE, VOICES, feedsFor, ttsBase } from './feeds.js'
 
 const config = {
 	audio: { sample_rate: 22050 },
@@ -34,5 +34,15 @@ describe('feedsFor', () => {
 describe('VOICES', () => {
 	it('maps the two choices of a Pantalla to the models we bundle', () => {
 		expect(VOICES).toEqual({ mujer: 'es_MX-claude-high', hombre: 'es_ES-davefx-medium' })
+	})
+})
+
+describe('ttsBase', () => {
+	it('points at the tts/ directory beside whatever bundle the worker runs from', () => {
+		expect(ttsBase('https://cloud.example/apps/totem/js/totem-src_tts_worker_js.js')).toBe('https://cloud.example/apps/totem/js/tts/')
+	})
+
+	it('survives a Nextcloud installed under a subfolder', () => {
+		expect(ttsBase('https://example.org/nextcloud/apps/totem/js/totem-src_tts_worker_js.js')).toBe('https://example.org/nextcloud/apps/totem/js/tts/')
 	})
 })

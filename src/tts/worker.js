@@ -4,12 +4,16 @@
 // the display page never freezes while a phrase is synthesized. Everything is loaded from the files
 // the app ships under js/tts/ (nothing from the internet; docs/adr/0005). Not unit-tested: it is
 // glue over those libraries, driven for real by e2e/tts.spec.js. The pure parts live in feeds.js.
-import { feedsFor } from './feeds.js'
+import { feedsFor, ttsBase, VOICES } from './feeds.js'
 
 let session = null
 let config = null
 
-async function load({ base, model }) {
+async function load({ voice }) {
+	const model = VOICES[voice]
+	if (!model) throw new Error(`unknown voice: ${voice}`)
+	const base = ttsBase(self.location.href) // from where the worker itself runs, never from a message
+	self.base = base // every later `say` phonemizes from here too
 	self.importScripts(base + 'ort.min.js', base + 'piper_phonemize.js')
 	config = await (await fetch(`${base}models/${model}.onnx.json`)).json()
 	self.ort.env.wasm.wasmPaths = base
@@ -44,7 +48,6 @@ self.onmessage = async ({ data }) => {
 	if (data.type === 'init') {
 		try {
 			await load(data)
-			self.base = data.base
 			self.postMessage({ type: 'ready' })
 		} catch (e) {
 			self.postMessage({ type: 'failed', error: String(e) })
