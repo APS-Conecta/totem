@@ -2,12 +2,11 @@
 #
 # GitHub's "Allow auto-merge" is off at repo level, so this workflow classifies
 # the update and merges it itself once the PR build (the shared release
-# workflow) is green. The rule:
-#   - npm devDependencies changed (any semver level): merge
-#   - package.json untouched (lockfile-only transitive refresh, composer
-#     require-dev): merge
-#   - npm production dependencies changed: merge only if every bump is a patch
-#   - anything touching .github/** (workflows are SHA-pinned on purpose): manual
+# workflow) is green. The rule (revised after #83 and #87):
+#   - package.json untouched (lockfile-only transitive refresh): merge
+#   - every bumped dependency stays in its major lane (minor/patch): merge
+#   - any major bump, anything touching .github/** (workflows are SHA-pinned
+#     on purpose), unparsable ranges, 100+ files: manual review
 #
 # pull_request_target runs with the base repository's token, so PR content is
 # untrusted input: this workflow never checks out or executes anything from the
@@ -53,11 +52,10 @@ jobs:
             gh(`api "repos/${process.env.REPO}/contents/package.json?ref=${sha}" --jq .content`)
           const decode = (b64) => Buffer.from(b64, 'base64').toString('utf8')
           const clean = (v) => String(v).replace(/^[^0-9]*/, '') // strip ^ ~ >= etc.
-          const patch = (from, to) => {
+          const sameMajor = (from, to) => {
             const a = clean(from).split('.').map(Number)
             const b = clean(to).split('.').map(Number)
-            return a.length === 3 && b.length === 3 &&
-              a[0] === b[0] && a[1] === b[1] // same major.minor → patch bump
+            return a.length === 3 && b.length === 3 && a[0] === b[0] // minor/patch bump
           }
 
           const outputs = { eligible: 'false', reason: '' }
@@ -79,14 +77,15 @@ jobs:
             }
             const prod = diffOf(base.dependencies, head.dependencies)
             const dev = diffOf(base.devDependencies, head.devDependencies)
-            if (Object.keys(prod).length === 0) {
+            const all = { ...prod, ...dev }
+            if (Object.keys(all).length === 0) {
               outputs.eligible = 'true'
-              outputs.reason = `dev-only update (${Object.keys(dev).join(', ')})`
-            } else if (Object.values(prod).every(([f, t]) => patch(f, t))) {
+              outputs.reason = 'no dependency range changed (lockfile-only update)'
+            } else if (Object.values(all).every(([f, t]) => sameMajor(f, t))) {
               outputs.eligible = 'true'
-              outputs.reason = `prod patch-only update (${Object.keys(prod).join(', ')})`
+              outputs.reason = `non-major update (${Object.keys(all).join(', ')})`
             } else {
-              outputs.reason = `prod bump beyond patch (${Object.keys(prod).join(', ')}) — manual review`
+              outputs.reason = `a major bump is in it (${Object.keys(all).join(', ')}) — manual review`
             }
           }
 
