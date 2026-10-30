@@ -19,6 +19,9 @@ updates:
     # seen on #83. It moves when webpack-vue-config moves, by human hands.
     ignore:
       - dependency-name: "node-polyfill-webpack-plugin"
+      # The offline voice asset copier needs ONNX Runtime 1.18's WASM files
+      # (docs/adr/0005). Upgrade the runtime and its packaging together.
+      - dependency-name: "onnxruntime-web"
     groups:
       npm-development-dependencies:
         dependency-type: "development"
