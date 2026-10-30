@@ -1,9 +1,10 @@
 # Keep the toolchain current so the security tabs stay empty (#81).
 #
-# Weekly Monday 06:00 UTC, one grouped PR per ecosystem (npm is split dev/prod
-# because dependabot-auto-merge.yml merges dev groups at any semver level and
-# prod bumps only when every change is a patch). Conventional commit prefixes
-# match the repo's history.
+# Weekly Monday 06:00 UTC, one grouped PR per ecosystem, npm split dev/prod.
+# Groups carry minor and patch bumps only; every major becomes its own PR —
+# the auto-merge gate never merges a major, and @nextcloud/webpack-vue-config
+# pins its peers' major lanes, so grouped majors only ever red-build (#83, #87).
+# Conventional commit prefixes match the repo's history.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -22,8 +23,14 @@ updates:
     groups:
       npm-development-dependencies:
         dependency-type: "development"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
       npm-production-dependencies:
         dependency-type: "production"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
     commit-message:
       prefix: "chore"
       prefix-development: "chore"
@@ -41,6 +48,9 @@ updates:
     groups:
       composer-dependencies:
         patterns: ["*"]
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
     commit-message:
       prefix: "chore"
     labels:
@@ -56,6 +66,9 @@ updates:
     groups:
       github-actions:
         patterns: ["*"]
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
     commit-message:
       prefix: "chore"
     labels:
