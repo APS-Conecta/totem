@@ -1,0 +1,92 @@
+# totem's CI: the AGENTS.md gate, one job per suite, on every pull request with no path
+# filter. The release workflow builds and packs the tarball beside it (release.yml).
+# The job names are required status checks: renaming one is a ruleset change.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  php:
+    name: PHP tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      # aps-common as a path sibling, exactly as a dev machine resolves it (public repo).
+      - name: aps-common sibling
+        run: git clone --depth 1 https://github.com/APS-Conecta/aps-common.git ../aps-common
+      # Drift BEFORE the tests: `make test` runs in a root container whose composer install
+      # copies aps-common into vendor/aps/common root-owned, and aps-sync's rm -rf then
+      # dies with "Permission denied" (farmacia 773d0bf).
+      - run: make aps-drift
+      - run: make test
+
+  js:
+    name: Frontend tests, lint and bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: npm
+      - run: npm ci
+      - run: npm run lint-js
+      - run: npm test
+      # js/ is built, not committed (the release packs it): a build that produces no
+      # bundle or no licence notice for a page is the tree pack-app would refuse.
+      - name: The build produces the bundles
+        run: |
+          npm run build
+          for page in totem display staff; do
+            for file in "js/totem-$page.js" "js/totem-$page.js.LICENSE.txt"; do
+              test -s "$file" || { echo "::error::npm run build produced no $file"; exit 1; }
+            done
+          done
+
+  integration:
+    name: Integration tests (compose instance)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: aps-common sibling
+        run: git clone --depth 1 https://github.com/APS-Conecta/aps-common.git ../aps-common
+      # vendor/ (phpunit and the aps-common path package) for the suite the instance runs
+      - run: make deps
+      - name: The throwaway instance (Nextcloud 34 + PostgreSQL 18, compose.dev.yaml)
+        run: make instance-up
+      - name: Mappers, migration and seed against the real PostgreSQL
+        run: make test-integration
+      - name: Tear down
+        if: always()
+        run: make instance-clean
+
+  e2e:
+    name: E2E tests (compose instance)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: npm
+      - run: npm ci
+      # the bundles the throwaway instance serves: js/ is built, not committed
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: The throwaway instance and the stand-in printer (compose.dev.yaml)
+        run: make instance-up
+      - name: Playwright against the instance
+        run: make e2e
+      - name: Tear down
+        if: always()
+        run: make instance-clean
