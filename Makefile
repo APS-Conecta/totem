@@ -8,7 +8,7 @@
 
 IMG := totem-test
 APS ?= $(CURDIR)/../aps-common
-DOCKER := docker run --rm -v "$(CURDIR)":/app -v "$(APS)":/aps-common -w /app $(IMG)
+DOCKER := docker run --rm --memory 1g -v "$(CURDIR)":/app -v "$(APS)":/aps-common -w /app $(IMG)
 COMPOSE := docker compose -f compose.dev.yaml
 OCC := $(COMPOSE) exec --user www-data nextcloud php occ
 
@@ -95,8 +95,8 @@ aps-sync:
 # ignored now; the release workflow packs them — js/tts stays tracked).
 # `git status --porcelain` (not
 # diff --exit-code) so a rename that deletes one file and adds another is
-# seen — the same lesson territorio's js/ CI arm records. totem has no CI
-# tree yet — this target IS the gate until the canon phase gives it one.
+# seen — the same lesson territorio's js/ CI arm records. CI's PHP job runs
+# it before `make test` (.github/workflows/ci.yml).
 aps-drift: aps-sync
 	@drift="$$(git status --porcelain -- vendor/aps/common/src src/aps tests/stubs/OC/Hooks/Emitter.php)"; \
 	if [ -n "$$drift" ]; then \

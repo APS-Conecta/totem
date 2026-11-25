@@ -24,6 +24,8 @@ npm ci && npm test && npm run build
 make tts-assets                 # the bundled voice (re-creates the committed runtime + 2 Piper models in js/tts/, ~160 MB; only needed to upgrade them)
 ```
 
+CI (`.github/workflows/ci.yml`) runs the suites above (all but `make tts-assets`), plus `npm run lint-js` and the aps-common drift check, on every pull request.
+
 `aps-common` is consumed, never edited: `make aps-sync` copies it beside this repo into `vendor/aps/common/src` and `src/aps`.
 
 ## Release
