@@ -148,14 +148,12 @@ class TurnoServiceTest extends TestCase {
 		$this->assertSame('FAR-P-001', $this->service->issue(3, true)['label']);
 	}
 
-	public function testAnIssueThatEndsPastTheQuotaIsDeletedAndRefusedBeforePrinting(): void {
+	public function testAnIssueThatEndsPastTheQuotaIsWithdrawnAndRefusedBeforePrinting(): void {
 		$this->servicio(['quota' => 80]);
 		$this->turnos->method('countForDay')->with(3, '2026-10-18')->willReturnOnConsecutiveCalls(79, 81);
 		$this->storing();
 		$this->totem();
-		$this->turnos->expects($this->once())->method('delete')->with($this->callback(
-			static fn (Turno $t) => $t->getId() === 77,
-		))->willReturnArgument(0);
+		$this->turnos->expects($this->once())->method('withdraw')->with(77)->willReturn(true);
 		$this->printing->expects($this->never())->method('printTurno');
 
 		$this->expectException(Refused::class);
@@ -163,11 +161,24 @@ class TurnoServiceTest extends TestCase {
 		$this->service->issue(3, true, 'sala');
 	}
 
+	public function testAnIssuePastTheQuotaThatABoxHasAlreadyCalledIsIssuedAndPrinted(): void {
+		$this->servicio(['quota' => 80]);
+		$this->turnos->method('countForDay')->willReturnOnConsecutiveCalls(79, 81);
+		$this->storing();
+		$totem = $this->totem();
+		$this->turnos->method('withdraw')->with(77)->willReturn(false);
+		$this->printing->expects($this->once())->method('printTurno')->with($totem, 'FAR-P-014', 'Farmacia', true)->willReturn(true);
+
+		$issued = $this->service->issue(3, true, 'sala');
+
+		$this->assertSame(['id' => 77, 'label' => 'FAR-P-014', 'servicio' => 'Farmacia', 'preferente' => true, 'printed' => true], $issued);
+	}
+
 	public function testTheTurnoThatFillsTheQuotaIsIssued(): void {
 		$this->servicio(['quota' => 80]);
 		$this->turnos->method('countForDay')->willReturnOnConsecutiveCalls(79, 80);
 		$this->storing();
-		$this->turnos->expects($this->never())->method('delete');
+		$this->turnos->expects($this->never())->method('withdraw');
 
 		$this->assertSame(77, $this->service->issue(3, true)['id']);
 	}

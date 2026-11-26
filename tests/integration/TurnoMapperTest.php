@@ -8,7 +8,6 @@ namespace OCA\Totem\Tests\Integration;
 
 use OCA\Totem\Db\Llamado;
 use OCA\Totem\Db\LlamadoMapper;
-use OCA\Totem\Db\Servicio;
 use OCA\Totem\Db\ServicioMapper;
 use OCA\Totem\Db\Turno;
 use OCA\Totem\Db\TurnoMapper;
@@ -224,13 +223,6 @@ final class TurnoMapperTest extends IntegrationTestCase {
 
 		$this->assertTrue($this->servicios->find($azul->getId())->getIsSector());
 		$this->assertFalse($this->servicios->find($this->servicio('Farmacia', 'FAR')->getId())->getIsSector());
-	}
-
-	private function turnoEnded(Servicio $s, bool $preferente, int $seq, Estado $estado, string $day): Turno {
-		$t = $this->turno($s, $preferente, $seq, 1000, $day);
-		$t->setEstado($estado->value);
-
-		return $this->turnos->update($t);
 	}
 
 	private function llamado(Turno $t, int $boxId, int $at): Llamado {

@@ -22,6 +22,7 @@ use OCA\Totem\Service\CallService;
 use OCA\Totem\Service\TicketPrinting;
 use OCA\Totem\Service\Today;
 use OCA\Totem\Service\TurnoService;
+use OCP\AppFramework\Db\Entity;
 use OCP\IDBConnection;
 use OCP\Server;
 
@@ -69,6 +70,10 @@ final class RacingRequestsTest extends IntegrationTestCase {
 
 			public function countForDay(int $servicioId, string $day): int {
 				return $this->run(__FUNCTION__, fn () => parent::countForDay($servicioId, $day), $servicioId, $day);
+			}
+
+			public function insert(Entity $entity): Entity {
+				return $this->run(__FUNCTION__, fn () => parent::insert($entity), $entity);
 			}
 
 			private function run(string $method, \Closure $parent, mixed ...$args): mixed {
@@ -158,6 +163,29 @@ final class RacingRequestsTest extends IntegrationTestCase {
 
 		$this->assertSame(3, $this->turnos->countForDay($s->getId(), self::DAY));
 		$this->assertSame('Farmacia ya entregó todos los turnos de hoy.', $refusal);
+	}
+
+	public function testAnIssuePastTheQuotaThatABoxHasAlreadyCalledStands(): void {
+		$s = $this->servicioWithQuota(3);
+		$this->turnoEnded($s, false, 1, Estado::Completed, self::DAY);
+		$this->turnoEnded($s, false, 2, Estado::Completed, self::DAY);
+		$boxId = $this->box('Box 1', $s);
+		$this->turnos->once('insert', function (\Closure $parent) use ($s, $boxId): Turno {
+			$stored = $parent();
+			$this->calls()->callNext($boxId); // a box with an empty queue calls the new turno at once
+			$this->waiting($s, true, 1); // and a preferente turno is issued before this issue counts again
+
+			return $stored;
+		});
+
+		$issued = $this->issuing()->issue($s->getId(), false);
+
+		$this->assertSame('FAR-G-003', $issued['label'], 'the Tótem issues the turno as usual');
+		$held = $this->turnos->findActiveForBox($boxId);
+		$this->assertSame($issued['id'], $held?->getId(), 'the box keeps the turno it called');
+		$this->assertSame(Estado::Called->value, $held->getEstado());
+		$this->assertSame(1, $this->llamadosOf($held), 'its llamado still has its turno');
+		$this->assertSame(4, $this->turnos->countForDay($s->getId(), self::DAY), 'the servicio ends one over its quota');
 	}
 
 	private function calls(): CallService {

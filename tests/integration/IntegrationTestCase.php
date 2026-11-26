@@ -70,6 +70,14 @@ abstract class IntegrationTestCase extends TestCase {
 		return Server::get(TurnoMapper::class)->insert($t);
 	}
 
+	/** A turno of the servicio that has already left the queue in this estado. */
+	protected function turnoEnded(Servicio $s, bool $preferente, int $seq, Estado $estado, string $day): Turno {
+		$t = $this->turno($s, $preferente, $seq, 1000, $day);
+		$t->setEstado($estado->value);
+
+		return Server::get(TurnoMapper::class)->update($t);
+	}
+
 	/** A moment of a Día, as Unix seconds in the instance's time zone. */
 	protected function momentOf(string $day, string $time): int {
 		return (new \DateTimeImmutable("$day $time", Server::get(IDateTimeZone::class)->getDefaultTimeZone()))->getTimestamp();
