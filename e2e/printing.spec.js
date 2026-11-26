@@ -8,7 +8,7 @@
 // file is about the server path and its guards.
 
 const { test, expect } = require('@playwright/test')
-const { call, login, waitOutDoubleTap, world } = require('./helpers')
+const { call, kiosk, login, waitOutDoubleTap, world } = require('./helpers')
 
 const PRINTER = process.env.TOTEM_PRINTER_URL || 'http://127.0.0.1:9191'
 const ESC_POS_CUT = '\x1D\x56\x42\x03'
@@ -175,18 +175,6 @@ test('a kiosk lists only the unidades its totem offers, and the default one list
 		await patient.close()
 	}
 })
-
-/** A patient at a kiosk page, with the browser's print counted instead of opening a dialog. */
-async function kiosk(browser, path) {
-	const patient = await browser.newContext({ locale: 'es-CL', viewport: { width: 1080, height: 1920 } })
-	await patient.addInitScript(() => {
-		window.__prints = 0
-		window.print = () => { window.__prints += 1 }
-	})
-	const screen = await patient.newPage()
-	await screen.goto(path)
-	return { patient, screen }
-}
 
 async function takeTicketOnScreen(screen, unidad, answer) {
 	await screen.getByRole('button', { name: new RegExp(unidad) }).click()
