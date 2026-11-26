@@ -6,7 +6,6 @@ declare(strict_types=1);
 
 namespace OCA\Totem\Tests\Integration;
 
-use OCA\Totem\Db\Pantalla;
 use OCA\Totem\Db\PantallaMapper;
 use OCA\Totem\Db\TotemMapper;
 use OCA\Totem\Exception\Refused;
@@ -19,16 +18,6 @@ use OCP\Server;
  * an update that keeps the name is never refused because of it, while a rename onto a taken name still is.
  */
 final class SharedNameTest extends IntegrationTestCase {
-	private function pantalla(string $slug, string $name): Pantalla {
-		$pantalla = new Pantalla();
-		$pantalla->setSlug($slug);
-		$pantalla->setName($name);
-		$pantalla->setVolume(100);
-		$pantalla->setVoice('mujer');
-
-		return Server::get(PantallaMapper::class)->insert($pantalla);
-	}
-
 	public function testEitherTotemSharingANameTakesANewPrinter(): void {
 		$first = $this->totem('sala_1', 'Sala 1');
 		$second = $this->totem('sala_2', 'Sala 1');

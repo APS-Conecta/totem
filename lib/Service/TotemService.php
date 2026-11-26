@@ -22,6 +22,8 @@ class TotemService {
 	use ChecksServicios;
 	use ChecksNames;
 
+	private const NAME_TAKEN = 'Ya existe un tótem con ese nombre.';
+
 	public function __construct(
 		private TotemMapper $totems,
 		private ServicioLinks $links,
@@ -40,9 +42,9 @@ class TotemService {
 		$totem = new Totem();
 		$servicioIds = $this->fill($totem, $data);
 		$all = $this->totems->findAll();
-		$this->assertNameFree($totem, $all, 'Ya existe un tótem con ese nombre.');
+		$this->assertNameFree($totem, $all, self::NAME_TAKEN);
 		$totem->setSlug($this->freeAddress($totem->getName(), $all));
-		$totem = $this->totems->insert($totem);
+		$totem = $this->insertNamed($this->totems, $totem, self::NAME_TAKEN);
 		$this->links->replace(ServicioLinks::TOTEM, (int)$totem->getId(), $servicioIds);
 
 		return $this->present($totem);
@@ -57,7 +59,7 @@ class TotemService {
 		$storedName = $totem->getName();
 		$before = [$totem->getPrinterHost(), $totem->getPrinterPort()];
 		$servicioIds = $this->fill($totem, $data);
-		$this->assertRenameFree($storedName, $totem, $this->totems->findAll(), 'Ya existe un tótem con ese nombre.');
+		$this->assertRenameFree($storedName, $totem, $this->totems->findAll(), self::NAME_TAKEN);
 		if ($before !== [$totem->getPrinterHost(), $totem->getPrinterPort()]) {
 			// The last result was about another printer.
 			$totem->setPrinterOk(null);
