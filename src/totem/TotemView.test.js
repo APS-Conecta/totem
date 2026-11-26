@@ -242,6 +242,7 @@ describe('a double tap on a servicio bar', () => {
 		await button(wrapper, 'FarmaciaFAR').trigger('click')
 		await pastDoubleTap()
 		await button(wrapper, '‹ Volver').trigger('click')
+		await pastDoubleTap()
 		await button(wrapper, 'VacunatorioVAC').trigger('click')
 		await button(wrapper, 'Sí').trigger('click')
 		await flushPromises()
@@ -252,6 +253,57 @@ describe('a double tap on a servicio bar', () => {
 		await flushPromises()
 
 		expect(issueTurno).toHaveBeenCalledWith(2, true, null)
+	})
+})
+
+describe('a double tap on a way home', () => {
+	const home = 'Seleccione la unidad a la que acude.'
+
+	async function refusedFarmacia() {
+		issueTurno.mockRejectedValue(Object.assign(new Error('Request failed'), { response: { status: 422, data: { message: 'Esta unidad no está disponible.' } } }))
+		const wrapper = await mountTotem()
+		await button(wrapper, 'FarmaciaFAR').trigger('click')
+		await pastDoubleTap()
+		await button(wrapper, 'No').trigger('click')
+		await flushPromises()
+		return wrapper
+	}
+
+	async function backFromFarmacia() {
+		const wrapper = await mountTotem()
+		await button(wrapper, 'FarmaciaFAR').trigger('click')
+		await pastDoubleTap()
+		return wrapper
+	}
+
+	it.each([
+		['Volver al inicio', refusedFarmacia],
+		['‹ Volver', backFromFarmacia],
+	])('ignores a servicio bar tapped at once after "%s"', async (way, reach) => {
+		const wrapper = await reach()
+		await button(wrapper, way).trigger('click')
+		expect(wrapper.text()).toContain(home) // the way home acts on its first tap
+
+		await button(wrapper, 'VacunatorioVAC').trigger('click')
+
+		expect(wrapper.text()).toContain(home)
+		expect(wrapper.text()).not.toContain('¿Tiene 60 años o más')
+		expect(wrapper.find('header').exists()).toBe(false)
+	})
+
+	it.each([
+		['Volver al inicio', refusedFarmacia],
+		['‹ Volver', backFromFarmacia],
+	])('opens the question for a servicio bar tapped after the window that follows "%s"', async (way, reach) => {
+		const wrapper = await reach()
+		await button(wrapper, way).trigger('click')
+		await button(wrapper, 'VacunatorioVAC').trigger('click')
+
+		await pastDoubleTap()
+		await button(wrapper, 'VacunatorioVAC').trigger('click')
+
+		expect(wrapper.text()).toContain('¿Tiene 60 años o más')
+		expect(wrapper.find('header').text()).toContain('Vacunatorio')
 	})
 })
 
@@ -492,14 +544,17 @@ describe('when the server refuses the turno', () => {
 		await button(wrapper, '‹ Volver').trigger('click')
 		fail(refusal(422, 'Hoy ya no quedan turnos para Farmacia.'))
 		await flushPromises()
+		await pastDoubleTap()
 		await button(wrapper, 'VacunatorioVAC').trigger('click')
 
+		expect(wrapper.text()).toContain('¿Tiene 60 años o más')
 		expect(wrapper.find('[role="alert"]').exists()).toBe(false)
 	})
 
 	it('does not carry the error into the next patient', async () => {
 		const wrapper = await refused(refusal(422, 'Hoy ya no quedan turnos para Farmacia.'))
 		await button(wrapper, 'Volver al inicio').trigger('click')
+		await pastDoubleTap()
 		await button(wrapper, 'FarmaciaFAR').trigger('click')
 
 		expect(wrapper.find('[role="alert"]').exists()).toBe(false)
@@ -608,9 +663,10 @@ describe('a patient who walks away', () => {
 		const wrapper = await openFarmacia()
 		await vi.advanceTimersByTimeAsync(25000)
 		await button(wrapper, '‹ Volver').trigger('click')
+		await pastDoubleTap()
 		await button(wrapper, 'VacunatorioVAC').trigger('click')
 
-		await vi.advanceTimersByTimeAsync(10000) // 35 s after the first patient arrived, 10 s after this one
+		await vi.advanceTimersByTimeAsync(10000) // 35.5 s after the first patient arrived, 10 s after this one
 		expect(wrapper.text()).toContain('¿Tiene 60 años o más')
 	})
 })

@@ -45,28 +45,33 @@ function watchIdle() {
 	if (step.value === 'question') idle = setTimeout(goHome, 30000)
 }
 
+// A double tap (or a touch frame's emulated double-click) lands its second tap on the screen the first one opened:
+// on Sí or No after a servicio bar, on a servicio bar after a way home. Taps on them are ignored this long after
+// their screen appears.
+const DOUBLE_TAP_MS = 500
+let screenShownAt = 0
+const tooSoon = () => Date.now() - screenShownAt < DOUBLE_TAP_MS
+
 function goHome() {
 	clearInterval(countdown)
 	step.value = 'home'
 	servicio.value = null
 	ticket.value = null
 	problem.value = ''
+	screenShownAt = Date.now()
 }
 
-// A double tap on a servicio bar (or a touch frame's emulated double-click) lands its second tap where Sí or No now is:
-// taps on them are ignored this long after the question appears.
-const DOUBLE_TAP_MS = 500
-let questionShownAt = 0
 function choose(s) {
+	if (tooSoon()) return
 	servicio.value = s
 	problem.value = '' // a refusal that arrived after the last patient left is not for this one
 	step.value = 'question'
-	questionShownAt = Date.now()
+	screenShownAt = Date.now()
 	watchIdle()
 }
 
 async function answer(preferente) {
-	if (issuing.value || Date.now() - questionShownAt < DOUBLE_TAP_MS) return
+	if (issuing.value || tooSoon()) return
 	issuing.value = true
 	const chosen = servicio.value // the patient may leave the question before the answer arrives
 	try {
