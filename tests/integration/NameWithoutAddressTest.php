@@ -64,6 +64,13 @@ final class NameWithoutAddressTest extends IntegrationTestCase {
 		$this->assertSame(self::SENTENCE, $this->refusal(fn () => Server::get(TotemService::class)->create(['name' => '日本'])));
 	}
 
+	public function testATotemRenamedToSuchANameBeforeTheRuleCannotBeRenamedToAnotherAndKeepsItsName(): void {
+		$hall = $this->totem('hall', 'Зал');
+
+		$this->assertSame(self::SENTENCE, $this->refusal(fn () => Server::get(TotemService::class)->update($hall->getId(), ['name' => '日本'])));
+		$this->assertSame('Зал', Server::get(TotemMapper::class)->find($hall->getId())->getName());
+	}
+
 	public function testAnAccentedSpanishNameStillMakesItsAddress(): void {
 		$saved = Server::get(TotemService::class)->create(['name' => 'Ñuñoa']);
 
