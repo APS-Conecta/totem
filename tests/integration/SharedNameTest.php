@@ -8,7 +8,6 @@ namespace OCA\Totem\Tests\Integration;
 
 use OCA\Totem\Db\Pantalla;
 use OCA\Totem\Db\PantallaMapper;
-use OCA\Totem\Db\Totem;
 use OCA\Totem\Db\TotemMapper;
 use OCA\Totem\Exception\Refused;
 use OCA\Totem\Service\PantallaService;
@@ -20,14 +19,6 @@ use OCP\Server;
  * an update that keeps the name is never refused because of it, while a rename onto a taken name still is.
  */
 final class SharedNameTest extends IntegrationTestCase {
-	private function totem(string $slug, string $name): Totem {
-		$totem = new Totem();
-		$totem->setSlug($slug);
-		$totem->setName($name);
-
-		return Server::get(TotemMapper::class)->insert($totem);
-	}
-
 	private function pantalla(string $slug, string $name): Pantalla {
 		$pantalla = new Pantalla();
 		$pantalla->setSlug($slug);
