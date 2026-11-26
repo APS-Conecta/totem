@@ -3,7 +3,9 @@
 // The screens must adapt (docs/adr/0006): nobody knows what screen a clinic will have. For each
 // screen size and each state of the totem and the display, no text may leave the screen, no text
 // may be wider than its box, and no list row may overflow. Includes a stress case at the layouts'
-// design limits: a 4-letter prefix, a 28-character servicio and a 13-character box.
+// design limits: a 4-letter prefix of the widest letter, a 28-character servicio and a 13-character box.
+// Each ticket and current turno is audited both general (WWWW-G-nnn, the widest label) and preferente
+// (with its chip).
 
 const { test, expect } = require('@playwright/test')
 const { call, login, waitOutDoubleTap, world } = require('./helpers')
@@ -54,46 +56,64 @@ test.describe('screens adapt to any size', () => {
 	test.beforeAll(async ({ browser }) => {
 		page = await (await browser.newContext({ locale: 'es-CL' })).newPage()
 		await login(page)
-		// 28 characters, the longest a servicio name may be; the box name is 13 of its 14.
-		w = await world(page, { servicioName: (run) => ('Atención Odontológica ' + run).slice(0, 28), boxName: 'Ventanilla 12' })
-		// A few calls so the display has a current card and a list.
+		// 28 characters, the longest a servicio name may be; the box name is 13 of its 14; W is the widest letter.
+		w = await world(page, { servicioName: (run) => ('Atención Odontológica ' + run).slice(0, 28), boxName: 'Ventanilla 12', prefix: 'WWWW' })
+		// A few calls so the display has a list; each display test calls its own current turno.
 		for (let i = 0; i < 4; i++) {
 			await call(page, 'POST', '/apps/totem/turnos', { servicioId: w.servicio.id, preferente: i % 2 === 0 })
 			await call(page, 'POST', `/apps/totem/console/${w.box.id}/call`)
 			await call(page, 'POST', `/apps/totem/console/${w.box.id}/start`)
 			await call(page, 'POST', `/apps/totem/console/${w.box.id}/finish`)
 		}
-		await call(page, 'POST', '/apps/totem/turnos', { servicioId: w.servicio.id, preferente: true })
-		await call(page, 'POST', `/apps/totem/console/${w.box.id}/call`)
 	})
 	test.afterAll(async () => { await w?.cleanup() })
+
+	/** Issues a turno of the given kind and serves the box until one of that kind is its called turno; returns its label. */
+	async function callKind(preferente) {
+		await call(page, 'POST', '/apps/totem/turnos', { servicioId: w.servicio.id, preferente })
+		const boxUrl = `/apps/totem/console/${w.box.id}`
+		for (;;) {
+			// The totem tests leave turnos of both kinds waiting, and the 2:1 rule picks among them.
+			const { current } = await call(page, 'GET', `${boxUrl}/state`)
+			if (current?.estado === 'called' && current.preferente === preferente) return current.label
+			if (current?.estado === 'called') await call(page, 'POST', `${boxUrl}/start`)
+			if (current) await call(page, 'POST', `${boxUrl}/finish`)
+			await call(page, 'POST', `${boxUrl}/call`)
+		}
+	}
 
 	for (const [width, height] of TOTEM_SIZES) {
 		test(`totem at ${width}x${height}: home, question and ticket`, async ({ browser }) => {
 			const patient = await (await browser.newContext({ locale: 'es-CL', viewport: { width, height } })).newPage()
 			await patient.addInitScript(() => { window.print = () => {} })
-			await patient.goto('/apps/totem/totem')
 			const bar = patient.getByRole('button', { name: new RegExp(w.servicio.name) })
-			await expect(bar).toBeVisible()
-			expect(await patient.evaluate(audit), 'home').toEqual([])
+			// No gives a general ticket (the widest number), Sí a preferente one (with its chip).
+			for (const answer of ['No', 'Sí']) {
+				await patient.goto('/apps/totem/totem')
+				await expect(bar).toBeVisible()
+				expect(await patient.evaluate(audit), 'home').toEqual([])
 
-			await bar.click()
-			await expect(patient.getByRole('button', { name: 'Sí', exact: true })).toBeVisible()
-			expect(await patient.evaluate(audit), 'question').toEqual([])
+				await bar.click()
+				await expect(patient.getByRole('button', { name: answer, exact: true })).toBeVisible()
+				expect(await patient.evaluate(audit), 'question').toEqual([])
 
-			await waitOutDoubleTap(patient)
-			await patient.getByRole('button', { name: 'Sí', exact: true }).click()
-			await expect(patient.getByText('Su turno')).toBeVisible()
-			expect(await patient.evaluate(audit), 'ticket').toEqual([])
+				await waitOutDoubleTap(patient)
+				await patient.getByRole('button', { name: answer, exact: true }).click()
+				await expect(patient.getByText('Su turno')).toBeVisible()
+				expect(await patient.evaluate(audit), `ticket after ${answer}`).toEqual([])
+			}
 		})
 	}
 
 	for (const [width, height] of DISPLAY_SIZES) {
 		test(`display at ${width}x${height}`, async ({ browser }) => {
 			const room = await (await browser.newContext({ locale: 'es-CL', viewport: { width, height } })).newPage()
-			await room.goto('/apps/totem/display/' + w.screen.slug)
-			await expect(room.getByRole('status')).toContainText(w.prefix)
-			expect(await room.evaluate(audit)).toEqual([])
+			for (const [preferente, kind] of [[false, 'general'], [true, 'preferente']]) {
+				const label = await callKind(preferente)
+				await room.goto('/apps/totem/display/' + w.screen.slug)
+				await expect(room.getByRole('status')).toContainText(label)
+				expect(await room.evaluate(audit), kind).toEqual([])
+			}
 		})
 	}
 })
