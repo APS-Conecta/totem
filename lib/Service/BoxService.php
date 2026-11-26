@@ -16,7 +16,10 @@ use OCP\AppFramework\Db\DoesNotExistException;
 
 /** The admin's boxes: a desk and the servicios it covers. */
 class BoxService {
+	use ChecksNames;
 	use ChecksServicios;
+
+	private const NAME_TAKEN = 'Ya existe una ventanilla con ese nombre.';
 
 	public function __construct(
 		private BoxMapper $boxes,
@@ -36,6 +39,7 @@ class BoxService {
 		[$name, $servicioIds] = $this->clean($data);
 		$box = new Box();
 		$box->setName($name);
+		$this->assertNameFree($box, $this->boxes->findAll(), self::NAME_TAKEN);
 		$box = $this->boxes->insert($box);
 		$this->links->replace(ServicioLinks::BOX, (int)$box->getId(), $servicioIds);
 
@@ -48,8 +52,10 @@ class BoxService {
 	 */
 	public function update(int $id, array $data): array {
 		$box = $this->boxes->find($id);
+		$storedName = $box->getName();
 		[$name, $servicioIds] = $this->clean($data);
 		$box->setName($name);
+		$this->assertRenameFree($storedName, $box, $this->boxes->findAll(), self::NAME_TAKEN);
 		$box = $this->boxes->update($box);
 		$this->links->replace(ServicioLinks::BOX, $id, $servicioIds);
 
