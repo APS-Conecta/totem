@@ -288,7 +288,7 @@ html, body { margin: 0; }
 }
 .t-page .t-ticket { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: calc(72 * var(--k)); gap: calc(28 * var(--k)); }
 .t-page .t-ticket .lbl { font-size: calc(64 * var(--k)); }
-.t-page .t-ticket .num { font-size: calc(146 * var(--k)); font-weight: 700; line-height: 1; letter-spacing: .01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.t-page .t-ticket .num { font-size: calc(130 * var(--k)); font-weight: 700; line-height: 1; letter-spacing: .01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .t-page .t-ticket .srv { font-size: calc(80 * var(--k)); font-weight: 700; }
 .t-page .t-chip { align-self: flex-start; background: var(--gold); color: var(--ink); font-size: calc(52 * var(--k)); font-weight: 700; padding: calc(10 * var(--k)) calc(28 * var(--k)); }
 .t-page .t-ticket .inst { font-size: calc(56 * var(--k)); line-height: 1.25; max-width: 24ch; }
@@ -317,7 +317,7 @@ html, body { margin: 0; }
 	.t-page .t-error .t-choice { min-height: calc(120 * var(--k)); }
 	.t-page .t-ticket { padding: calc(40 * var(--k)) calc(96 * var(--k)); gap: calc(14 * var(--k)); }
 	.t-page .t-ticket .lbl { font-size: calc(48 * var(--k)); }
-	.t-page .t-ticket .num { font-size: calc(270 * var(--k)); }
+	.t-page .t-ticket .num { font-size: calc(240 * var(--k)); }
 	.t-page .t-ticket .srv { font-size: calc(64 * var(--k)); }
 	.t-page .t-chip { font-size: calc(42 * var(--k)); }
 	.t-page .t-ticket .inst { font-size: calc(44 * var(--k)); max-width: 40ch; }
