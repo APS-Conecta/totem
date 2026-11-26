@@ -122,6 +122,19 @@ class TurnoMapper extends QBMapper {
 		return $qb->executeStatement() === 1;
 	}
 
+	/**
+	 * Take back a turno this request has just issued. One conditional DELETE, like claim(): false when a box has
+	 * already called it, and then the turno stands.
+	 */
+	public function withdraw(int $id): bool {
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete($this->getTableName())
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('estado', $qb->createNamedParameter(Estado::Waiting->value)));
+
+		return $qb->executeStatement() === 1;
+	}
+
 	/** Move a turno from the estado the caller saw to the next one; false when it was not in that estado. */
 	public function transition(int $id, Estado $from, Estado $to, int $now): bool {
 		$qb = $this->db->getQueryBuilder();

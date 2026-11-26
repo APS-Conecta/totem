@@ -87,8 +87,8 @@ class TurnoService {
 				continue; // another totem took this sequence a moment ago
 			}
 			// The insert has committed before this count (autocommit; a caller's transaction under MySQL's REPEATABLE READ would hide a racing issue).
-			if ($quota !== null && $this->turnos->countForDay($servicioId, $day) > $quota) {
-				$this->turnos->delete($turno);
+			// A box may call the turno in that moment: then it is not withdrawn and stands, one over the quota, since it is already announced.
+			if ($quota !== null && $this->turnos->countForDay($servicioId, $day) > $quota && $this->turnos->withdraw((int)$turno->getId())) {
 				throw new Refused(sprintf(self::QUOTA_REACHED, $name));
 			}
 

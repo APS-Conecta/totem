@@ -22,6 +22,7 @@ use OCA\Totem\Service\CallService;
 use OCA\Totem\Service\TicketPrinting;
 use OCA\Totem\Service\Today;
 use OCA\Totem\Service\TurnoService;
+use OCP\AppFramework\Db\Entity;
 use OCP\IDBConnection;
 use OCP\Server;
 
@@ -69,6 +70,10 @@ final class RacingRequestsTest extends IntegrationTestCase {
 
 			public function countForDay(int $servicioId, string $day): int {
 				return $this->run(__FUNCTION__, fn () => parent::countForDay($servicioId, $day), $servicioId, $day);
+			}
+
+			public function insert(Entity $entity): Entity {
+				return $this->run(__FUNCTION__, fn () => parent::insert($entity), $entity);
 			}
 
 			private function run(string $method, \Closure $parent, mixed ...$args): mixed {
@@ -160,6 +165,29 @@ final class RacingRequestsTest extends IntegrationTestCase {
 		$this->assertSame('Farmacia ya entregó todos los turnos de hoy.', $refusal);
 	}
 
+	public function testAnIssuePastTheQuotaThatABoxHasAlreadyCalledStands(): void {
+		$s = $this->servicioWithQuota(3);
+		$this->completed($s, 1);
+		$this->completed($s, 2);
+		$boxId = $this->box('Box 1', $s);
+		$this->turnos->once('insert', function (\Closure $parent) use ($s, $boxId): Turno {
+			$stored = $parent();
+			$this->calls()->callNext($boxId); // a box with an empty queue calls the new turno at once
+			$this->waiting($s, true, 1); // and a preferente turno is issued before this issue counts again
+
+			return $stored;
+		});
+
+		$issued = $this->issuing()->issue($s->getId(), false);
+
+		$this->assertSame('FAR-G-003', $issued['label'], 'the Tótem issues the turno as usual');
+		$held = $this->turnos->findActiveForBox($boxId);
+		$this->assertSame($issued['id'], $held?->getId(), 'the box keeps the turno it called');
+		$this->assertSame(Estado::Called->value, $held->getEstado());
+		$this->assertSame(1, $this->llamadosOf($held), 'its llamado still has its turno');
+		$this->assertSame(4, $this->turnos->countForDay($s->getId(), self::DAY), 'the servicio ends one over its quota');
+	}
+
 	private function calls(): CallService {
 		return new CallService(
 			Server::get(BoxMapper::class),
@@ -213,6 +241,13 @@ final class RacingRequestsTest extends IntegrationTestCase {
 	/** A waiting turno issued in sequence order. */
 	private function waiting(Servicio $s, bool $preferente, int $seq): Turno {
 		return $this->turno($s, $preferente, $seq, 1000 + $seq);
+	}
+
+	/** A turno issued and attended earlier in the Día: the quota counts it, no box calls it. */
+	private function completed(Servicio $s, int $seq): void {
+		$t = $this->waiting($s, false, $seq);
+		$t->setEstado(Estado::Completed->value);
+		Server::get(TurnoMapper::class)->update($t);
 	}
 
 	/** How many llamados were logged for this turno. */
