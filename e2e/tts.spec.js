@@ -5,8 +5,8 @@
 // operating system's voice. The proof is the audio itself: a buffer a few seconds long played
 // through WebAudio after the chime. Needs `make tts-assets`; the model's first load takes a while.
 //
-// The length bound holds for one phrase only, so the room must hear the same words on every run
-// (#108): the servicio and the box get names of their own, not the run id the world puts in its names.
+// The length bound holds for one phrase only, so the run id the world puts in its names stays out of it
+// (#108): the phrase is fixed per Playwright worker, servicio «Farmacia N» after the worker and box «Ventanilla».
 
 const { test, expect } = require('@playwright/test')
 const { call, login, world } = require('./helpers')
