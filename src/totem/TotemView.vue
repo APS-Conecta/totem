@@ -39,15 +39,16 @@ function startPolling() {
 }
 startPolling()
 
-// A patient may walk away mid-question: the next one must not find their servicio.
+// A patient may walk away mid-question or on a later page: the next one must not find their servicio or page.
 function watchIdle() {
 	clearTimeout(idle)
-	if (step.value === 'question') idle = setTimeout(goHome, 30000)
+	if (step.value === 'question' || (step.value === 'home' && currentPage.value > 0)) idle = setTimeout(goHome, 30000)
 }
 
 function goHome() {
 	clearInterval(countdown)
 	step.value = 'home'
+	page.value = 0
 	servicio.value = null
 	ticket.value = null
 	problem.value = ''
@@ -110,6 +111,11 @@ const pageCount = computed(() => Math.max(1, Math.ceil(servicios.value.length / 
 // A shrinking list must never leave the patient on a page that no longer exists.
 const currentPage = computed(() => Math.min(page.value, pageCount.value - 1))
 const shown = computed(() => servicios.value.slice(currentPage.value * PAGE_SIZE, (currentPage.value + 1) * PAGE_SIZE))
+// The root's pointerdown runs before the pager's click, so a page turn arms the idle return itself.
+function turnPage(to) {
+	page.value = to
+	watchIdle()
+}
 
 const now = ref(new Date())
 const pad = (n) => String(n).padStart(2, '0')
@@ -150,10 +156,10 @@ onBeforeUnmount(() => {
 						</button>
 					</div>
 					<div v-if="pageCount > 1" class="t-pager">
-						<button type="button" class="t-pagebtn" :disabled="currentPage === 0" @click="page = currentPage - 1">
+						<button type="button" class="t-pagebtn" :disabled="currentPage === 0" @click="turnPage(currentPage - 1)">
 							Anterior
 						</button>
-						<button type="button" class="t-pagebtn" :disabled="currentPage >= pageCount - 1" @click="page = currentPage + 1">
+						<button type="button" class="t-pagebtn" :disabled="currentPage >= pageCount - 1" @click="turnPage(currentPage + 1)">
 							Siguiente
 						</button>
 					</div>

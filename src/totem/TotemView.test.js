@@ -167,6 +167,59 @@ describe('paging many servicios', () => {
 
 		expect(names(wrapper)).toHaveLength(3)
 	})
+
+	it('starts the next patient on the first page once the ticket countdown ends', async () => {
+		publicServicios.mockResolvedValue(many(9))
+		issueTurno.mockResolvedValue({ id: 41, label: 'S08-G-001', servicio: 'Servicio 8', preferente: false })
+		const wrapper = await mountTotem()
+		await button(wrapper, 'Siguiente').trigger('click')
+		await button(wrapper, 'Servicio 8S08').trigger('click')
+		await pastDoubleTap()
+		await button(wrapper, 'No').trigger('click')
+		await flushPromises()
+		await vi.advanceTimersByTimeAsync(8000)
+
+		expect(names(wrapper)[0]).toBe('Servicio 1S01')
+		expect(button(wrapper, 'Anterior').attributes('disabled')).toBeDefined()
+	})
+
+	it('shows the first page again after "‹ Volver" from a servicio chosen on a later page', async () => {
+		publicServicios.mockResolvedValue(many(9))
+		const wrapper = await mountTotem()
+		await button(wrapper, 'Siguiente').trigger('click')
+		await button(wrapper, 'Servicio 9S09').trigger('click')
+		await button(wrapper, '‹ Volver').trigger('click')
+
+		expect(names(wrapper)[0]).toBe('Servicio 1S01')
+	})
+
+	it('goes back to the first page after 30 seconds without a tap on a later page', async () => {
+		publicServicios.mockResolvedValue(many(9))
+		const wrapper = await mountTotem()
+		await button(wrapper, 'Siguiente').trigger('pointerdown')
+		await button(wrapper, 'Siguiente').trigger('click')
+
+		await vi.advanceTimersByTimeAsync(29999)
+		expect(names(wrapper)[0]).toBe('Servicio 8S08')
+		await vi.advanceTimersByTimeAsync(1)
+
+		expect(names(wrapper)[0]).toBe('Servicio 1S01')
+	})
+
+	it('waits another 30 seconds after each tap on a later page', async () => {
+		publicServicios.mockResolvedValue(many(9))
+		const wrapper = await mountTotem()
+		await button(wrapper, 'Siguiente').trigger('pointerdown')
+		await button(wrapper, 'Siguiente').trigger('click')
+		await vi.advanceTimersByTimeAsync(20000)
+		await wrapper.find('h1').trigger('pointerdown')
+
+		await vi.advanceTimersByTimeAsync(29999)
+		expect(names(wrapper)[0]).toBe('Servicio 8S08')
+		await vi.advanceTimersByTimeAsync(1)
+
+		expect(names(wrapper)[0]).toBe('Servicio 1S01')
+	})
 })
 
 describe('question screen', () => {
