@@ -2,8 +2,8 @@
 //
 // Shared plumbing for the end-to-end tests: log in as the instance's admin, talk to the admin
 // endpoints with the session's request token, build (and tear down) a small world of one
-// servicio, one box and one pantalla with names that cannot collide with an earlier run, and
-// wait out the totem's double-tap window before answering its question.
+// servicio, one box and one pantalla with names that cannot collide with an earlier run, open a
+// kiosk page as a patient, and wait out the totem's double-tap window before answering its question.
 
 async function login(page, user = 'admin', password = 'admin') {
 	await page.goto('/login')
@@ -63,9 +63,21 @@ async function world(page, { pantalla = { volume: 0, voice: 'off' }, servicioNam
 	}
 }
 
+/** A patient at a kiosk page, with the browser's print counted instead of opening a dialog. */
+async function kiosk(browser, path) {
+	const patient = await browser.newContext({ locale: 'es-CL', viewport: { width: 1080, height: 1920 } })
+	await patient.addInitScript(() => {
+		window.__prints = 0
+		window.print = () => { window.__prints += 1 }
+	})
+	const screen = await patient.newPage()
+	await screen.goto(path)
+	return { patient, screen }
+}
+
 /** Sí and No ignore taps for 500 ms after the question appears, so a double tap on a servicio bar cannot answer it. */
 async function waitOutDoubleTap(page) {
 	await page.waitForTimeout(500)
 }
 
-module.exports = { call, login, waitOutDoubleTap, world }
+module.exports = { call, kiosk, login, waitOutDoubleTap, world }
