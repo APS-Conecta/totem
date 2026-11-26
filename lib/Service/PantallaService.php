@@ -21,6 +21,8 @@ class PantallaService {
 	use ChecksServicios;
 	use ChecksNames;
 
+	private const NAME_TAKEN = 'Ya existe una pantalla con ese nombre.';
+
 	public function __construct(
 		private PantallaMapper $pantallas,
 		private ServicioLinks $links,
@@ -38,9 +40,9 @@ class PantallaService {
 		$pantalla = new Pantalla();
 		$servicioIds = $this->fill($pantalla, $data);
 		$all = $this->pantallas->findAll();
-		$this->assertNameFree($pantalla, $all, 'Ya existe una pantalla con ese nombre.');
+		$this->assertNameFree($pantalla, $all, self::NAME_TAKEN);
 		$pantalla->setSlug($this->freeAddress($pantalla->getName(), $all));
-		$pantalla = $this->pantallas->insert($pantalla);
+		$pantalla = $this->insertNamed($this->pantallas, $pantalla, self::NAME_TAKEN);
 		$this->links->replace(ServicioLinks::PANTALLA, (int)$pantalla->getId(), $servicioIds);
 
 		return $this->present($pantalla);
@@ -54,7 +56,7 @@ class PantallaService {
 		$pantalla = $this->pantallas->find($id);
 		$storedName = $pantalla->getName();
 		$servicioIds = $this->fill($pantalla, $data);
-		$this->assertRenameFree($storedName, $pantalla, $this->pantallas->findAll(), 'Ya existe una pantalla con ese nombre.');
+		$this->assertRenameFree($storedName, $pantalla, $this->pantallas->findAll(), self::NAME_TAKEN);
 		$pantalla = $this->pantallas->update($pantalla);
 		$this->links->replace(ServicioLinks::PANTALLA, $id, $servicioIds);
 

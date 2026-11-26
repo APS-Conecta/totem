@@ -6,6 +6,8 @@ declare(strict_types=1);
 
 namespace OCA\Totem\Tests\Integration;
 
+use OCA\Totem\Db\Pantalla;
+use OCA\Totem\Db\PantallaMapper;
 use OCA\Totem\Db\Servicio;
 use OCA\Totem\Db\ServicioMapper;
 use OCA\Totem\Db\Totem;
@@ -67,6 +69,17 @@ abstract class IntegrationTestCase extends TestCase {
 		$totem->setPrinterHost($host);
 
 		return Server::get(TotemMapper::class)->insert($totem);
+	}
+
+	/** A pantalla (a waiting-room display) at full volume with the woman's voice. */
+	protected function pantalla(string $slug, string $name): Pantalla {
+		$pantalla = new Pantalla();
+		$pantalla->setSlug($slug);
+		$pantalla->setName($name);
+		$pantalla->setVolume(100);
+		$pantalla->setVoice('mujer');
+
+		return Server::get(PantallaMapper::class)->insert($pantalla);
 	}
 
 	/** A waiting turno of the servicio. */
