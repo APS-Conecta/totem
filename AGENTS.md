@@ -4,6 +4,8 @@ Turnos de atención para CESFAM, CECOSF y SAPU, a Nextcloud app: the patient tak
 
 ## Working rules
 
+- **Standards:** the org's code rules are the docs site's [«Estándares de código»](https://aps-conecta.github.io/documentation/desarrollo/estandares-de-codigo.html) page.
+- **Seams:** server behaviour is tested in the integration suite (`tests/integration/`, `make test-integration`) against the throwaway instance's real PostgreSQL; UI behaviour in the Playwright e2e suite (`e2e/`, `make e2e`) against the instance. A PR names the seam its test lives at; a test at any other seam is a review finding.
 - **TDD, no exceptions:** no production code without a failing test first. Watch each test fail for the right reason, write the minimum, run the whole suite.
 - **Names:** code is English, but a domain term keeps the spelling `CONTEXT.md` gives it (`Servicio`, `Turno`, `Llamado`, `Pantalla`, `Box`, `Estado`). Rename an existing name only inside code a change already touches, and never a table, column, route or controller action. **On screen a Servicio is a _Unidad_ and a Box is a _Ventanilla_** (feminine: "Nueva unidad", "Esta ventanilla"); the code keeps Servicio and Box.
 - **Threat model:** read `docs/threat-model.md` before any security work.
