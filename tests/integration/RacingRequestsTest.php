@@ -17,7 +17,6 @@ use OCA\Totem\Db\TotemMapper;
 use OCA\Totem\Db\Turno;
 use OCA\Totem\Db\TurnoMapper;
 use OCA\Totem\Domain\Estado;
-use OCA\Totem\Exception\Refused;
 use OCA\Totem\Service\BoxService;
 use OCA\Totem\Service\CallService;
 use OCA\Totem\Service\TicketPrinting;
@@ -291,17 +290,6 @@ final class RacingRequestsTest extends IntegrationTestCase {
 			Server::get(ServicioLinks::class),
 			Server::get(TicketPrinting::class),
 		);
-	}
-
-	/** The sentence the request was refused with; null when it went through. */
-	private function refusal(\Closure $request): ?string {
-		try {
-			$request();
-		} catch (Refused $e) {
-			return $e->getMessage();
-		}
-
-		return null;
 	}
 
 	private function servicioWithQuota(int $quota): Servicio {

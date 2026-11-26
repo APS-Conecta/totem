@@ -15,6 +15,7 @@ use OCA\Totem\Db\TotemMapper;
 use OCA\Totem\Db\Turno;
 use OCA\Totem\Db\TurnoMapper;
 use OCA\Totem\Domain\Estado;
+use OCA\Totem\Exception\Refused;
 use OCP\IDBConnection;
 use OCP\IDateTimeZone;
 use OCP\Server;
@@ -106,6 +107,17 @@ abstract class IntegrationTestCase extends TestCase {
 	/** A moment of a Día, as Unix seconds in the instance's time zone. */
 	protected function momentOf(string $day, string $time): int {
 		return (new \DateTimeImmutable("$day $time", Server::get(IDateTimeZone::class)->getDefaultTimeZone()))->getTimestamp();
+	}
+
+	/** The sentence the request was refused with; null when it went through. */
+	protected function refusal(\Closure $request): ?string {
+		try {
+			$request();
+		} catch (Refused $e) {
+			return $e->getMessage();
+		}
+
+		return null;
 	}
 
 	private function emptyTables(): void {

@@ -14,7 +14,6 @@ use OCA\Totem\Db\Servicio;
 use OCA\Totem\Db\ServicioLinks;
 use OCA\Totem\Db\ServicioMapper;
 use OCA\Totem\Db\TurnoMapper;
-use OCA\Totem\Exception\Refused;
 use OCA\Totem\Service\BoxService;
 use OCA\Totem\Service\CallService;
 use OCA\Totem\Service\DisplayFeed;
@@ -171,14 +170,5 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 	/** @return array{emitidos: int, atendidos: int, noShow: int, sinAtender: int} the statistics board's totals for the day */
 	private function totals(string $day): array {
 		return Server::get(StatsService::class)->board('day', $day)['total']['total'];
-	}
-
-	private function refusal(callable $action): string {
-		try {
-			$action();
-		} catch (Refused $e) {
-			return $e->getMessage();
-		}
-		$this->fail('the action was not refused');
 	}
 }

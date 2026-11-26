@@ -12,7 +12,6 @@ use OCA\Totem\Db\ServicioLinks;
 use OCA\Totem\Db\ServicioMapper;
 use OCA\Totem\Db\Totem;
 use OCA\Totem\Db\TotemMapper;
-use OCA\Totem\Exception\Refused;
 use OCA\Totem\Service\PantallaService;
 use OCA\Totem\Service\TicketPrinting;
 use OCA\Totem\Service\TotemService;
@@ -31,7 +30,7 @@ final class OverlappingCreatesTest extends IntegrationTestCase {
 		$servicio = $this->servicio();
 		$service = new TotemService($this->totemsRacedBy(fn () => $this->totem('sala', 'Sala')), Server::get(ServicioLinks::class), Server::get(ServicioMapper::class), Server::get(TicketPrinting::class));
 
-		$this->assertRefused('Ya existe un tótem con ese nombre.', fn () => $service->create(['name' => 'Sala', 'servicioIds' => [$servicio->getId()]]));
+		$this->assertSame('Ya existe un tótem con ese nombre.', $this->refusal(fn () => $service->create(['name' => 'Sala', 'servicioIds' => [$servicio->getId()]])));
 
 		$stored = array_map(static fn (Totem $t): array => [$t->getSlug(), $t->getName()], Server::get(TotemMapper::class)->findAll());
 		$this->assertSame([['sala', 'Sala']], $stored);
@@ -42,7 +41,7 @@ final class OverlappingCreatesTest extends IntegrationTestCase {
 		$servicio = $this->servicio();
 		$service = new PantallaService($this->pantallasRacedBy(fn () => $this->pantalla('sala', 'Sala')), Server::get(ServicioLinks::class), Server::get(ServicioMapper::class));
 
-		$this->assertRefused('Ya existe una pantalla con ese nombre.', fn () => $service->create(['name' => 'Sala', 'servicioIds' => [$servicio->getId()]]));
+		$this->assertSame('Ya existe una pantalla con ese nombre.', $this->refusal(fn () => $service->create(['name' => 'Sala', 'servicioIds' => [$servicio->getId()]])));
 
 		$stored = array_map(static fn (Pantalla $p): array => [$p->getSlug(), $p->getName()], Server::get(PantallaMapper::class)->findAll());
 		$this->assertSame([['sala', 'Sala']], $stored);
@@ -108,15 +107,6 @@ final class OverlappingCreatesTest extends IntegrationTestCase {
 		$pantallas->competitor = $competitor;
 
 		return $pantallas;
-	}
-
-	private function assertRefused(string $sentence, \Closure $save): void {
-		try {
-			$save();
-			$this->fail("The save was expected to be refused with \"$sentence\".");
-		} catch (Refused $e) {
-			$this->assertSame($sentence, $e->getMessage());
-		}
 	}
 
 	/** @param array{string, string} $link one of ServicioLinks' constants */
