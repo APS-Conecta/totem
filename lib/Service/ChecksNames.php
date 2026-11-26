@@ -16,11 +16,13 @@ use OCA\Totem\Exception\Refused;
 use OCP\DB\Exception as DbException;
 
 /**
- * The name rule tótems, pantallas and boxes share. A name is taken when another record's current name gives the same
- * Text::slugFor (accents, case, spacing and punctuation ignored); the record itself never counts. An update checks
- * the name only when it changes, so records that shared a name before the rule existed stay editable. A tótem's or
- * pantalla's address is made from the name at creation, with -2, -3… when a renamed record still holds it, and never
- * changes afterwards. slugFor never makes "-", so a derived address is never another name's own address.
+ * The name rule tótems, pantallas and boxes share. A name needs an ASCII letter or digit once accents are dropped:
+ * otherwise Text::slugFor makes nothing, which is no address and would compare equal to every other such name (#39).
+ * A name is taken when another record's current name gives the same Text::slugFor (accents, case, spacing and
+ * punctuation ignored); the record itself never counts. An update checks the name only when it changes, so records
+ * that shared a name before the rule existed stay editable. A tótem's or pantalla's address is made from the name at
+ * creation, with -2, -3… when a renamed record still holds it, and never changes afterwards. slugFor never makes "-",
+ * so a derived address is never another name's own address.
  *
  * The rule is checked in code, not enforced by the database: nothing makes the read and the write atomic. Two creates
  * of one name that overlap derive the same address, and the unique slug index refuses the later insert, which gets the
@@ -32,6 +34,9 @@ trait ChecksNames {
 	/** @param list<Totem|Pantalla|Box> $all */
 	private function assertNameFree(Totem|Pantalla|Box $record, array $all, string $sentence): void {
 		$slug = Text::slugFor($record->getName());
+		if ($slug === '') {
+			throw new Refused('El nombre debe tener al menos una letra o un número.');
+		}
 		foreach ($all as $other) {
 			if ($other->getId() !== $record->getId() && Text::slugFor($other->getName()) === $slug) {
 				throw new Refused($sentence);
