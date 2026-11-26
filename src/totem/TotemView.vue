@@ -45,7 +45,11 @@ function watchIdle() {
 	if (step.value === 'question' || (step.value === 'home' && currentPage.value > 0)) idle = setTimeout(goHome, 30000)
 }
 
+// Counts the patients who left the question: a refusal is shown only to a patient still on the question that asked.
+let departures = 0
+
 function goHome() {
+	departures += 1
 	clearInterval(countdown)
 	step.value = 'home'
 	page.value = 0
@@ -60,7 +64,6 @@ const DOUBLE_TAP_MS = 500
 let questionShownAt = 0
 function choose(s) {
 	servicio.value = s
-	problem.value = '' // a refusal that arrived after the last patient left is not for this one
 	step.value = 'question'
 	questionShownAt = Date.now()
 	watchIdle()
@@ -70,6 +73,7 @@ async function answer(preferente) {
 	if (issuing.value || Date.now() - questionShownAt < DOUBLE_TAP_MS) return
 	issuing.value = true
 	const chosen = servicio.value // the patient may leave the question before the answer arrives
+	const asked = departures
 	try {
 		ticket.value = await issueTurno(chosen.id, preferente, slug)
 	} catch (e) {
@@ -80,7 +84,8 @@ async function answer(preferente) {
 			startPolling() // look again now rather than in a minute
 			return
 		}
-		problem.value = await messageFrom(e, 'No pudimos entregar su turno. Intente de nuevo.')
+		const message = await messageFrom(e, 'No pudimos entregar su turno. Intente de nuevo.')
+		if (asked === departures) problem.value = message // a patient who left never sees it; it is logged above
 		return
 	} finally {
 		issuing.value = false
