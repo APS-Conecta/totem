@@ -43,6 +43,24 @@ const buttons = (wrapper) => wrapper.findAll('button').map((b) => b.text())
 const button = (wrapper, text) => wrapper.findAll('button').find((b) => b.text() === text)
 const pastDoubleTap = () => vi.advanceTimersByTimeAsync(500)
 
+async function openFarmacia() {
+	const wrapper = await mountTotem()
+	await button(wrapper, 'FarmaciaFAR').trigger('click')
+	return wrapper
+}
+
+const refusal = (status, message) => Object.assign(new Error('Request failed'), { response: { status, data: message ? { message } : {} } })
+
+async function refused(error) {
+	issueTurno.mockRejectedValue(error)
+	const wrapper = await mountTotem()
+	await button(wrapper, 'FarmaciaFAR').trigger('click')
+	await pastDoubleTap()
+	await button(wrapper, 'No').trigger('click')
+	await flushPromises()
+	return wrapper
+}
+
 beforeEach(() => {
 	vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
 	vi.setSystemTime(new Date(2026, 9, 18, 14, 30, 0))
@@ -170,12 +188,6 @@ describe('paging many servicios', () => {
 })
 
 describe('question screen', () => {
-	async function openFarmacia() {
-		const wrapper = await mountTotem()
-		await button(wrapper, 'FarmaciaFAR').trigger('click')
-		return wrapper
-	}
-
 	it('asks the one preferente question under the servicio band', async () => {
 		const wrapper = await openFarmacia()
 
@@ -259,19 +271,10 @@ describe('a double tap on a servicio bar', () => {
 describe('a double tap on a way home', () => {
 	const home = 'Seleccione la unidad a la que acude.'
 
-	async function refusedFarmacia() {
-		issueTurno.mockRejectedValue(Object.assign(new Error('Request failed'), { response: { status: 422, data: { message: 'Esta unidad no está disponible.' } } }))
-		const wrapper = await mountTotem()
-		await button(wrapper, 'FarmaciaFAR').trigger('click')
-		await pastDoubleTap()
-		await button(wrapper, 'No').trigger('click')
-		await flushPromises()
-		return wrapper
-	}
+	const refusedFarmacia = () => refused(refusal(422, 'Esta unidad no está disponible.'))
 
 	async function backFromFarmacia() {
-		const wrapper = await mountTotem()
-		await button(wrapper, 'FarmaciaFAR').trigger('click')
+		const wrapper = await openFarmacia()
 		await pastDoubleTap()
 		return wrapper
 	}
@@ -496,18 +499,6 @@ describe('printing the ticket', () => {
 })
 
 describe('when the server refuses the turno', () => {
-	const refusal = (status, message) => Object.assign(new Error('Request failed'), { response: { status, data: message ? { message } : {} } })
-
-	async function refused(error) {
-		issueTurno.mockRejectedValue(error)
-		const wrapper = await mountTotem()
-		await button(wrapper, 'FarmaciaFAR').trigger('click')
-		await pastDoubleTap()
-		await button(wrapper, 'No').trigger('click')
-		await flushPromises()
-		return wrapper
-	}
-
 	it('shows the server sentence in an alert on the question screen, with a way home', async () => {
 		const wrapper = await refused(refusal(422, 'Hoy ya no quedan turnos para Farmacia.'))
 		const alert = wrapper.find('[role="alert"]')
@@ -615,12 +606,6 @@ describe('when the network is down', () => {
 })
 
 describe('a patient who walks away', () => {
-	async function openFarmacia() {
-		const wrapper = await mountTotem()
-		await button(wrapper, 'FarmaciaFAR').trigger('click')
-		return wrapper
-	}
-
 	it('returns to the home screen after 30 seconds without a tap on the question', async () => {
 		const wrapper = await openFarmacia()
 
