@@ -72,6 +72,13 @@ class CallService {
 					}
 					continue; // the racing call gave its turno back too: the box holds nothing, so choose again
 				}
+				// Re-read the box after the claim, as the count above: a racing delete either sees this claim or is seen here.
+				try {
+					$this->boxes->find($boxId);
+				} catch (DoesNotExistException $e) {
+					$this->turnos->release($id, $boxId);
+					throw $e;
+				}
 				$this->log($id, $pick['queued']->servicioId, $boxId);
 
 				return $this->state($boxId);
