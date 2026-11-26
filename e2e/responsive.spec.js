@@ -3,7 +3,7 @@
 // The screens must adapt (docs/adr/0006): nobody knows what screen a clinic will have. For each
 // screen size and each state of the totem and the display, no text may leave the screen, no text
 // may be wider than its box, and no list row may overflow. Includes a stress case at the layouts'
-// design limits: a 4-letter prefix, a 28-character servicio and a 13-character box.
+// design limits: a 4-letter prefix of the widest letter, a 28-character servicio and a 13-character box.
 
 const { test, expect } = require('@playwright/test')
 const { call, login, waitOutDoubleTap, world } = require('./helpers')
@@ -54,8 +54,8 @@ test.describe('screens adapt to any size', () => {
 	test.beforeAll(async ({ browser }) => {
 		page = await (await browser.newContext({ locale: 'es-CL' })).newPage()
 		await login(page)
-		// 28 characters, the longest a servicio name may be; the box name is 13 of its 14.
-		w = await world(page, { servicioName: (run) => ('Atención Odontológica ' + run).slice(0, 28), boxName: 'Ventanilla 12' })
+		// 28 characters, the longest a servicio name may be; the box name is 13 of its 14; W is the widest letter.
+		w = await world(page, { servicioName: (run) => ('Atención Odontológica ' + run).slice(0, 28), boxName: 'Ventanilla 12', prefix: 'WWWW' })
 		// A few calls so the display has a current card and a list.
 		for (let i = 0; i < 4; i++) {
 			await call(page, 'POST', '/apps/totem/turnos', { servicioId: w.servicio.id, preferente: i % 2 === 0 })

@@ -36,13 +36,14 @@ async function call(page, method, url, body) {
 }
 
 /**
- * `servicioName(run)` and `boxName` override the names (the servicio's must stay unique: it gets the run id).
+ * `servicioName(run)` and `boxName` override the names (the servicio's must stay unique: it gets the run id);
+ * `prefix` overrides the servicio's prefix, which cleanup hands back so the next run can take it again.
  * A servicio open all day, a box that covers it and a pantalla that shows it. `pantalla` sets the
  * pantalla's sound; the default is silent so a test run makes no noise.
  */
-async function world(page, { pantalla = { volume: 0, voice: 'off' }, servicioName, boxName } = {}) {
+async function world(page, { pantalla = { volume: 0, voice: 'off' }, servicioName, boxName, prefix } = {}) {
 	const run = Date.now().toString(36).toUpperCase()
-	const prefix = run.slice(-4)
+	prefix ??= run.slice(-4)
 	const servicio = await call(page, 'POST', '/apps/totem/servicios', {
 		name: servicioName ? servicioName(run) : `Farmacia ${run}`, prefix, color: '#0b6e69', opens: '00:00', closes: '23:59', dailyQuota: null,
 	})
@@ -58,7 +59,7 @@ async function world(page, { pantalla = { volume: 0, voice: 'off' }, servicioNam
 			if (state?.current?.estado === 'in_service') await call(page, 'POST', `/apps/totem/console/${box.id}/finish`)
 			await call(page, 'DELETE', `/apps/totem/boxes/${box.id}`).catch(() => {})
 			await call(page, 'DELETE', `/apps/totem/pantallas/${screen.id}`).catch(() => {})
-			await call(page, 'PUT', `/apps/totem/servicios/${servicio.id}`, { ...servicio, active: false }).catch(() => {})
+			await call(page, 'PUT', `/apps/totem/servicios/${servicio.id}`, { ...servicio, active: false, prefix: run.slice(-4) }).catch(() => {})
 		},
 	}
 }
