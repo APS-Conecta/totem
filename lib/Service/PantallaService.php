@@ -52,8 +52,9 @@ class PantallaService {
 	 */
 	public function update(int $id, array $data): array {
 		$pantalla = $this->pantallas->find($id);
+		$storedName = $pantalla->getName();
 		$servicioIds = $this->fill($pantalla, $data);
-		$this->assertNameFree($pantalla, $this->pantallas->findAll(), 'Ya existe una pantalla con ese nombre.');
+		$this->assertRenameFree($storedName, $pantalla, $this->pantallas->findAll(), 'Ya existe una pantalla con ese nombre.');
 		$pantalla = $this->pantallas->update($pantalla);
 		$this->links->replace(ServicioLinks::PANTALLA, $id, $servicioIds);
 
