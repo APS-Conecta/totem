@@ -13,7 +13,8 @@ use OCA\Totem\Exception\Refused;
 
 /**
  * The name rule tótems and pantallas share. A name is taken when another record's current name gives the same
- * Text::slugFor (accents, case, spacing and punctuation ignored); the record itself never counts. The address is
+ * Text::slugFor (accents, case, spacing and punctuation ignored); the record itself never counts. An update checks
+ * the name only when it changes, so records that shared a name before the rule existed stay editable. The address is
  * made from the name at creation, with -2, -3… when a renamed record still holds it, and never changes afterwards.
  * slugFor never makes "-", so a derived address is never another name's own address.
  */
@@ -25,6 +26,17 @@ trait ChecksNames {
 			if ($other->getId() !== $record->getId() && Text::slugFor($other->getName()) === $slug) {
 				throw new Refused($sentence);
 			}
+		}
+	}
+
+	/**
+	 * The update's check: a kept name (same Text::slugFor as the stored one) is never refused.
+	 *
+	 * @param list<Totem|Pantalla> $all
+	 */
+	private function assertRenameFree(string $storedName, Totem|Pantalla $record, array $all, string $sentence): void {
+		if (Text::slugFor($storedName) !== Text::slugFor($record->getName())) {
+			$this->assertNameFree($record, $all, $sentence);
 		}
 	}
 

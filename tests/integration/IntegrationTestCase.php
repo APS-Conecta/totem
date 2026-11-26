@@ -8,6 +8,8 @@ namespace OCA\Totem\Tests\Integration;
 
 use OCA\Totem\Db\Servicio;
 use OCA\Totem\Db\ServicioMapper;
+use OCA\Totem\Db\Totem;
+use OCA\Totem\Db\TotemMapper;
 use OCA\Totem\Db\Turno;
 use OCA\Totem\Db\TurnoMapper;
 use OCA\Totem\Domain\Estado;
@@ -55,6 +57,16 @@ abstract class IntegrationTestCase extends TestCase {
 		$s->setActive(true);
 
 		return Server::get(ServicioMapper::class)->insert($s);
+	}
+
+	/** A totem (a kiosk), with a printer at the host when one is given. */
+	protected function totem(string $slug, string $name, ?string $host = null): Totem {
+		$totem = new Totem();
+		$totem->setSlug($slug);
+		$totem->setName($name);
+		$totem->setPrinterHost($host);
+
+		return Server::get(TotemMapper::class)->insert($totem);
 	}
 
 	/** A waiting turno of the servicio. */

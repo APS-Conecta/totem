@@ -39,21 +39,18 @@ final class IssueAndPrintTest extends IntegrationTestCase {
 		$this->assertNotFalse($this->printer, "could not play the printer: $error");
 	}
 
-	private function totem(?string $host, int $port): Totem {
-		$totem = new Totem();
-		$totem->setSlug('sala');
-		$totem->setName('Sala');
-		$totem->setPrinterHost($host);
+	private function totemWithPrinter(?string $host, int $port): Totem {
+		$totem = $this->totem('sala', 'Sala', $host);
 		$totem->setPrinterPort($port);
 
-		return Server::get(TotemMapper::class)->insert($totem);
+		return Server::get(TotemMapper::class)->update($totem);
 	}
 
 	public function testTheTicketReachesThePrinterAndTheStatusSaysSo(): void {
 		$this->assertStringStartsNotWith('127.', $this->address, 'the container has no private address of its own');
 		$this->listen(9105);
 		$servicio = $this->servicio();
-		$totem = $this->totem($this->address, 9105);
+		$totem = $this->totemWithPrinter($this->address, 9105);
 
 		$issued = Server::get(TurnoService::class)->issue($servicio->getId(), true, 'sala');
 
@@ -72,7 +69,7 @@ final class IssueAndPrintTest extends IntegrationTestCase {
 
 	public function testAPrinterThatIsOffNeverStopsTheTurnoAndTheStatusSaysSo(): void {
 		$servicio = $this->servicio();
-		$totem = $this->totem($this->address, 9106);
+		$totem = $this->totemWithPrinter($this->address, 9106);
 
 		$issued = Server::get(TurnoService::class)->issue($servicio->getId(), false, 'sala');
 
@@ -86,7 +83,7 @@ final class IssueAndPrintTest extends IntegrationTestCase {
 	public function testALoopbackPrinterIsNeverConnectedTo(): void {
 		$this->listen(9107);
 		$servicio = $this->servicio();
-		$this->totem('127.0.0.1', 9107);
+		$this->totemWithPrinter('127.0.0.1', 9107);
 
 		$issued = Server::get(TurnoService::class)->issue($servicio->getId(), false, 'sala');
 

@@ -21,15 +21,6 @@ final class TotemMapperTest extends IntegrationTestCase {
 		$this->totems = Server::get(TotemMapper::class);
 	}
 
-	private function totem(string $slug, string $name, ?string $host = null): Totem {
-		$totem = new Totem();
-		$totem->setSlug($slug);
-		$totem->setName($name);
-		$totem->setPrinterHost($host);
-
-		return $this->totems->insert($totem);
-	}
-
 	public function testATotemWithoutAPrinterRoundTripsWithTheDefaultPort(): void {
 		$this->totem('entrada', 'Entrada');
 

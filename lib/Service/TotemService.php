@@ -54,9 +54,10 @@ class TotemService {
 	 */
 	public function update(int $id, array $data): array {
 		$totem = $this->totems->find($id);
+		$storedName = $totem->getName();
 		$before = [$totem->getPrinterHost(), $totem->getPrinterPort()];
 		$servicioIds = $this->fill($totem, $data);
-		$this->assertNameFree($totem, $this->totems->findAll(), 'Ya existe un tótem con ese nombre.');
+		$this->assertRenameFree($storedName, $totem, $this->totems->findAll(), 'Ya existe un tótem con ese nombre.');
 		if ($before !== [$totem->getPrinterHost(), $totem->getPrinterPort()]) {
 			// The last result was about another printer.
 			$totem->setPrinterOk(null);
