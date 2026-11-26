@@ -167,8 +167,8 @@ final class RacingRequestsTest extends IntegrationTestCase {
 
 	public function testAnIssuePastTheQuotaThatABoxHasAlreadyCalledStands(): void {
 		$s = $this->servicioWithQuota(3);
-		$this->completed($s, 1);
-		$this->completed($s, 2);
+		$this->turnoEnded($s, false, 1, Estado::Completed, self::DAY);
+		$this->turnoEnded($s, false, 2, Estado::Completed, self::DAY);
 		$boxId = $this->box('Box 1', $s);
 		$this->turnos->once('insert', function (\Closure $parent) use ($s, $boxId): Turno {
 			$stored = $parent();
@@ -241,13 +241,6 @@ final class RacingRequestsTest extends IntegrationTestCase {
 	/** A waiting turno issued in sequence order. */
 	private function waiting(Servicio $s, bool $preferente, int $seq): Turno {
 		return $this->turno($s, $preferente, $seq, 1000 + $seq);
-	}
-
-	/** A turno issued and attended earlier in the Día: the quota counts it, no box calls it. */
-	private function completed(Servicio $s, int $seq): void {
-		$t = $this->waiting($s, false, $seq);
-		$t->setEstado(Estado::Completed->value);
-		Server::get(TurnoMapper::class)->update($t);
 	}
 
 	/** How many llamados were logged for this turno. */
