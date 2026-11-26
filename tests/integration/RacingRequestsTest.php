@@ -64,6 +64,10 @@ final class RacingRequestsTest extends IntegrationTestCase {
 				return $this->run(__FUNCTION__, fn () => parent::claim($id, $boxId, $now), $id, $boxId, $now);
 			}
 
+			public function countActiveForBox(int $boxId): int {
+				return $this->run(__FUNCTION__, fn () => parent::countActiveForBox($boxId), $boxId);
+			}
+
 			public function maxSeq(int $servicioId, string $day, bool $preferente): int {
 				return $this->run(__FUNCTION__, fn () => parent::maxSeq($servicioId, $day, $preferente), $servicioId, $day, $preferente);
 			}
@@ -106,6 +110,28 @@ final class RacingRequestsTest extends IntegrationTestCase {
 		$this->assertSame(0, $this->llamadosOf($y));
 		$this->assertSame($x->getId(), $this->turnos->findActiveForBox($boxId)?->getId());
 		$this->assertSame('Termine o marque como ausente el turno actual antes de llamar otro.', $refusal);
+	}
+
+	public function testTwoCallsOnTheSameBoxThatBothGiveTheirTurnoBackChooseAgain(): void {
+		$s = $this->servicio();
+		$boxId = $this->box('Box 1', $s);
+		$x = $this->waiting($s, false, 1);
+		$y = $this->waiting($s, false, 2);
+		$this->turnos->once('countActiveForBox', function (\Closure $parent) use ($y, $boxId): int {
+			$this->turnos->claim($y->getId(), $boxId, self::NOW); // the box's other console has claimed Y before this count
+			$held = $parent();
+			$this->turnos->release($y->getId(), $boxId); // and, counting two as well, gives Y back
+
+			return $held;
+		});
+
+		$state = $this->calls()->callNext($boxId);
+
+		$this->assertSame($x->getId(), $state['current']['id']);
+		$this->assertSame(1, $this->turnos->countActiveForBox($boxId));
+		$this->assertSame(1, $this->llamadosOf($x));
+		$this->assertSame(0, $this->llamadosOf($y));
+		$this->assertSame(Estado::Waiting->value, $this->turnos->find($y->getId())->getEstado());
 	}
 
 	public function testAnotherBoxWinningTheTurnoStillLetsThisBoxCallTheNext(): void {
