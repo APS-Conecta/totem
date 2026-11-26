@@ -27,7 +27,7 @@ use OCP\AppFramework\Db\DoesNotExistException;
  * state, which is what the box console renders.
  */
 class CallService {
-	/** Another box may win the turno this one chose; choose again this many times. */
+	/** Another box may win the turno this one chose, or a racing call on this box may give it back; choose again this many times. */
 	private const ATTEMPTS = 3;
 
 	private const STILL_HOLDS = 'Termine o marque como ausente el turno actual antes de llamar otro.';
@@ -66,8 +66,11 @@ class CallService {
 			if ($this->turnos->claim($id, $boxId, $this->today->now())) {
 				// The claim has committed before this count (autocommit; a caller's transaction under MySQL's REPEATABLE READ would hide a racing claim).
 				if ($this->turnos->countActiveForBox($boxId) > 1) {
-					$this->turnos->release($id, $boxId); // false when a console already moved it on: it keeps that estado, unannounced, and the refusal stands
-					throw new Refused(self::STILL_HOLDS);
+					$this->turnos->release($id, $boxId); // false when a console already moved it on: it keeps that estado, unannounced
+					if ($this->turnos->findActiveForBox($boxId) !== null) {
+						throw new Refused(self::STILL_HOLDS);
+					}
+					continue; // the racing call gave its turno back too: the box holds nothing, so choose again
 				}
 				$this->log($id, $pick['queued']->servicioId, $boxId);
 

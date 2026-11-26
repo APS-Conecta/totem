@@ -156,7 +156,7 @@ class CallServiceTest extends TestCase {
 	}
 
 	public function testAClaimThatLeavesTheBoxHoldingTwoIsReleasedAndRefused(): void {
-		$this->active(null);
+		$this->active(null, $this->turno(9, 3, true, 12, 100, 'called'));
 		$this->waits($this->turno(10, 3, true, 14, 100));
 		$this->turnos->method('claim')->willReturn(true);
 		$this->turnos->expects($this->once())->method('countActiveForBox')->with(1)->willReturn(2);
@@ -166,6 +166,17 @@ class CallServiceTest extends TestCase {
 		$this->expectException(Refused::class);
 		$this->expectExceptionMessage('Termine o marque como ausente el turno actual antes de llamar otro.');
 		$this->service->callNext(1);
+	}
+
+	public function testAClaimGivenBackWhileTheBoxHoldsNothingChoosesAgain(): void {
+		$this->active(null, null, $this->turno(10, 3, true, 14, 100, 'called'));
+		$this->waits($this->turno(10, 3, true, 14, 100));
+		$this->turnos->expects($this->exactly(2))->method('claim')->with(10, 1, 10_000)->willReturn(true);
+		$this->turnos->method('countActiveForBox')->willReturnOnConsecutiveCalls(2, 1);
+		$this->turnos->expects($this->once())->method('release')->with(10, 1)->willReturn(true);
+		$this->llamados->expects($this->once())->method('insert')->willReturnArgument(0);
+
+		$this->assertSame('FAR-P-014', $this->service->callNext(1)['current']['label']);
 	}
 
 	public function testThreeLostRacesRefuse(): void {
