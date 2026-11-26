@@ -152,8 +152,9 @@ class TurnoMapper extends QBMapper {
 	}
 
 	/**
-	 * Undo this request's own claim: the called turno is waiting again, with no box and no first call. Not an
-	 * Estado transition (nothing goes back); false when the turno is not called at this box any more.
+	 * Undo a claim that lost a race (a second call on the box, or the box's delete): the called turno is waiting
+	 * again, with no box and no first call. Not an Estado transition (nothing goes back); false when the turno is
+	 * not called at this box any more.
 	 */
 	public function release(int $id, int $boxId): bool {
 		$qb = $this->db->getQueryBuilder();

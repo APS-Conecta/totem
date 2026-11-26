@@ -18,10 +18,12 @@ use OCA\Totem\Db\Turno;
 use OCA\Totem\Db\TurnoMapper;
 use OCA\Totem\Domain\Estado;
 use OCA\Totem\Exception\Refused;
+use OCA\Totem\Service\BoxService;
 use OCA\Totem\Service\CallService;
 use OCA\Totem\Service\TicketPrinting;
 use OCA\Totem\Service\Today;
 use OCA\Totem\Service\TurnoService;
+use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Db\Entity;
 use OCP\IDBConnection;
 use OCP\Server;
@@ -214,6 +216,52 @@ final class RacingRequestsTest extends IntegrationTestCase {
 		$this->assertSame(4, $this->turnos->countForDay($s->getId(), self::DAY), 'the servicio ends one over its quota');
 	}
 
+	public function testACallOnABoxDeletedBeforeItsClaimGivesTheTurnoBackAndIsNotFound(): void {
+		$s = $this->servicio();
+		$boxId = $this->box('Box 1', $s);
+		$t = $this->waiting($s, false, 1);
+		$this->turnos->once('claim', function (\Closure $parent) use ($boxId): bool {
+			$this->boxes()->delete($boxId); // the admin deletes the ventanilla a moment earlier
+
+			return $parent();
+		});
+
+		$notFound = false;
+		try {
+			$this->calls()->callNext($boxId);
+		} catch (DoesNotExistException) {
+			$notFound = true;
+		}
+
+		$this->assertTrue($notFound, 'the console that pressed the button is told its ventanilla is gone');
+		$given = $this->turnos->find($t->getId());
+		$this->assertSame(Estado::Waiting->value, $given->getEstado(), 'the turno is waiting again for another ventanilla');
+		$this->assertNull($given->getBoxId());
+		$this->assertNull($given->getCalledAt());
+		$this->assertSame(0, $this->llamadosOf($t));
+		$this->assertNull($this->turnos->findActiveForBox($boxId));
+	}
+
+	public function testDeletingABoxWhoseRacingCallClaimedAfterTheGuardGivesTheTurnoBack(): void {
+		$s = $this->servicio();
+		$boxId = $this->box('Box 1', $s);
+		$t = $this->waiting($s, false, 1);
+		$this->turnos->once('findActiveForBox', function (\Closure $parent) use ($boxId): ?Turno {
+			$held = $parent();
+			$this->calls()->callNext($boxId); // the box's console calls the next turno once the guard has read it idle
+
+			return $held;
+		});
+
+		$this->boxes()->delete($boxId);
+
+		$given = $this->turnos->find($t->getId());
+		$this->assertSame(Estado::Waiting->value, $given->getEstado(), 'the turno is waiting again for another ventanilla');
+		$this->assertNull($given->getBoxId());
+		$this->assertNull($given->getCalledAt());
+		$this->assertNull($this->turnos->findActiveForBox($boxId));
+	}
+
 	private function calls(): CallService {
 		return new CallService(
 			Server::get(BoxMapper::class),
@@ -222,6 +270,15 @@ final class RacingRequestsTest extends IntegrationTestCase {
 			$this->turnos,
 			$this->llamados,
 			$this->today,
+		);
+	}
+
+	private function boxes(): BoxService {
+		return new BoxService(
+			Server::get(BoxMapper::class),
+			Server::get(ServicioLinks::class),
+			Server::get(ServicioMapper::class),
+			$this->turnos,
 		);
 	}
 

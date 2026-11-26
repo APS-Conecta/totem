@@ -67,6 +67,11 @@ class BoxService {
 		}
 		$this->boxes->delete($box);
 		$this->links->replace(ServicioLinks::BOX, $id, []);
+		// A call racing this delete may have claimed after the guard above: give its turno back (CallService::callNext re-reads the box the same way).
+		$claimed = $this->turnos->findActiveForBox($id);
+		if ($claimed !== null) {
+			$this->turnos->release((int)$claimed->getId(), $id);
+		}
 	}
 
 	/**
