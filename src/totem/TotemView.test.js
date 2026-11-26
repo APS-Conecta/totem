@@ -550,6 +550,37 @@ describe('when the server refuses the turno', () => {
 		expect(wrapper.find('[role="alert"]').exists()).toBe(false)
 	})
 
+	// The first patient taps "No", leaves (`leave`) before the server answers, and the next one chooses `next`;
+	// only then is the first request refused.
+	async function refusedAfterNextChoice(leave, next) {
+		let fail
+		issueTurno.mockReturnValue(new Promise((resolve, reject) => (fail = reject)))
+		const wrapper = await mountTotem()
+		await button(wrapper, 'FarmaciaFAR').trigger('click')
+		await pastDoubleTap()
+		await button(wrapper, 'No').trigger('click')
+		await leave(wrapper)
+		await button(wrapper, next).trigger('click')
+		fail(refusal(422, 'Hoy ya no quedan turnos para Farmacia.'))
+		await flushPromises()
+		return wrapper
+	}
+	const byVolver = (wrapper) => button(wrapper, '‹ Volver').trigger('click')
+	const byIdleTimeout = () => vi.advanceTimersByTimeAsync(30000)
+
+	it.each([
+		['leaves by "‹ Volver" and the next patient chooses another unidad', byVolver, 'VacunatorioVAC', 'Vacunatorio'],
+		['leaves by "‹ Volver" and the next patient chooses the same unidad', byVolver, 'FarmaciaFAR', 'Farmacia'],
+		['walks away and the next patient chooses another unidad', byIdleTimeout, 'VacunatorioVAC', 'Vacunatorio'],
+	])('does not show a refusal that arrives after the patient %s', async (_, leave, next, band) => {
+		const wrapper = await refusedAfterNextChoice(leave, next)
+
+		expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+		expect(wrapper.find('.t-band').text()).toContain(band)
+		expect(button(wrapper, 'Sí').exists()).toBe(true)
+		expect(button(wrapper, 'No').exists()).toBe(true)
+	})
+
 	it('does not carry the error into the next patient', async () => {
 		const wrapper = await refused(refusal(422, 'Hoy ya no quedan turnos para Farmacia.'))
 		await button(wrapper, 'Volver al inicio').trigger('click')
