@@ -50,12 +50,14 @@ let departures = 0
 
 // A double tap (or a touch frame's emulated double-click) lands its second tap on the screen the first one opened:
 // on Sí or No after a servicio bar, on a servicio bar after a way home. Taps on them are ignored this long after
-// their screen appears.
+// the tap that opened their screen. Both ends are click events' own time stamps: the time each tap happened on the
+// page's monotonic performance timeline, however late its handler runs and whatever the wall clock does.
 const DOUBLE_TAP_MS = 500
-let screenShownAt = 0
-const tooSoon = () => Date.now() - screenShownAt < DOUBLE_TAP_MS
+let screenShownAt = -Infinity
+const tooSoon = (event) => event.timeStamp - screenShownAt < DOUBLE_TAP_MS
 
-function goHome() {
+// A way home is a tap, or a timer that nobody tapped: then its window starts now, on the same timeline.
+function goHome(event) {
 	departures += 1
 	clearInterval(countdown)
 	step.value = 'home'
@@ -63,19 +65,19 @@ function goHome() {
 	servicio.value = null
 	ticket.value = null
 	problem.value = ''
-	screenShownAt = Date.now()
+	screenShownAt = event?.timeStamp ?? performance.now()
 }
 
-function choose(s) {
-	if (tooSoon()) return
+function choose(s, event) {
+	if (tooSoon(event)) return
 	servicio.value = s
 	step.value = 'question'
-	screenShownAt = Date.now()
+	screenShownAt = event.timeStamp
 	watchIdle()
 }
 
-async function answer(preferente) {
-	if (issuing.value || tooSoon()) return
+async function answer(preferente, event) {
+	if (issuing.value || tooSoon(event)) return
 	issuing.value = true
 	const chosen = servicio.value // the patient may leave the question before the answer arrives
 	const asked = departures
@@ -161,7 +163,7 @@ onBeforeUnmount(() => {
 							type="button"
 							class="t-bar"
 							:style="{ background: s.color, color: readableOn(s.color) }"
-							@click="choose(s)">
+							@click="choose(s, $event)">
 							<span>{{ s.name }}</span><span class="pre">{{ s.prefix }}</span>
 						</button>
 					</div>
@@ -194,10 +196,10 @@ onBeforeUnmount(() => {
 						¿Tiene 60 años o más, una discapacidad o cuida a una persona con discapacidad?
 					</div>
 					<div v-if="!problem" class="t-choices">
-						<button type="button" class="t-choice yes" :disabled="issuing" @click="answer(true)">
+						<button type="button" class="t-choice yes" :disabled="issuing" @click="answer(true, $event)">
 							Sí
 						</button>
-						<button type="button" class="t-choice" :disabled="issuing" @click="answer(false)">
+						<button type="button" class="t-choice" :disabled="issuing" @click="answer(false, $event)">
 							No
 						</button>
 					</div>

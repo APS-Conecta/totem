@@ -76,7 +76,7 @@ async function kiosk(browser, path) {
 	return { patient, screen }
 }
 
-/** Sí and No ignore taps for 500 ms after the question appears, and servicio bars for 500 ms after a return home. */
+/** Sí and No ignore a tap within 500 ms of the servicio bar tap, and servicio bars one within 500 ms of a return home. */
 async function waitOutDoubleTap(page) {
 	await page.waitForTimeout(500)
 }
