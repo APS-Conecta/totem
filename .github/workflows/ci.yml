@@ -51,6 +51,13 @@ jobs:
             done
           done
 
+  # The org's shared style check over the whole app, kiosk and display included: no literal colour,
+  # no font size in px, no plain <button>. Pinned by commit SHA, as its header asks.
+  style:
+    uses: APS-Conecta/.github/.github/workflows/style-check.yml@5d3e0c9c180e5204c978e48b92dd3e4908955a0b # 2026-11-26
+    permissions:
+      contents: read
+
   integration:
     name: Integration tests (compose instance)
     runs-on: ubuntu-latest
