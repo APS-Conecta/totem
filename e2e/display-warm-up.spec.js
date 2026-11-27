@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // The Pantalla loads its bundled voice ahead of the first llamado (#41): on every feed answer that
-// names a voice it will speak, not only on the first one, so a voice or volume changed after the
-// page opened is loaded before its first Aviso. The proof is the browser asking for that voice's
-// model, with no llamado made. The model requests are refused, so no test waits for a full model
-// load: a refused load fails at once, and the bundled voice may then load again only after its retry
-// interval (src/tts/piper.js), which the last test passes with page.clock.
+// names a voice it will speak, so a voice or volume changed after the page opened is loaded before
+// its first Aviso. The proof is the browser asking for that voice's model, with no llamado made.
+// The model requests are refused, so no test waits for a full model load: a refused load fails at
+// once, and the bundled voice may then load again only after its retry interval (src/tts/piper.js),
+// which the last test passes with page.clock.
 
 const { test, expect } = require('@playwright/test')
-const { call, login, openDisplay, world } = require('./helpers')
+const { FEED, call, login, openDisplay, world } = require('./helpers')
 
 const MODELS = { mujer: 'es_MX-claude-high.onnx.json', hombre: 'es_ES-davefx-medium.onnx.json' }
-const FEED = /\/apps\/totem\/display\/[^/]+\/feed/
 // The display polls its feed every 2 s: a change of the Pantalla shows on the next answer.
 const NEXT_ANSWER = { timeout: 6_000 }
 

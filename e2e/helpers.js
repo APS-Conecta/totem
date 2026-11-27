@@ -84,6 +84,9 @@ async function waitOutDoubleTap(page) {
 	await page.waitForTimeout(500)
 }
 
+/** Any Pantalla's feed request, the one the display polls. */
+const FEED = /\/apps\/totem\/display\/[^/]+\/feed/
+
 /**
  * The display of `w`'s Pantalla, its AudioContext kept on window.__audio; `locked` suspends it as it is made.
  * Every chime the page rings builds one compressor, so window.__chimes counts the chimes without playing them.
@@ -124,4 +127,4 @@ async function callNew(page, w) {
 	return turno.label
 }
 
-module.exports = { call, callNew, chimes, kiosk, login, openDisplay, waitOutDoubleTap, world }
+module.exports = { FEED, call, callNew, chimes, kiosk, login, openDisplay, waitOutDoubleTap, world }
