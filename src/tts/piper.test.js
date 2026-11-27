@@ -191,6 +191,32 @@ describe('piperEngine', () => {
 		expect(audio.played).toHaveLength(1)
 	})
 
+	it('keeps the newer audio of a phrase when an older synthesis of it, dropped while running, fails', async () => {
+		const worker = fakeWorker()
+		const e = engine('mujer', worker, { maxPhrases: 1 })
+		await e.available()
+		worker.postMessage = (m) => { worker.sent.push(m) } // answered by hand below
+		const says = (text) => worker.sent.filter((m) => m.type === 'say' && m.text === text)
+		const answer = (m) => worker.onmessage({ data: { type: 'audio', id: m.id, pcm: new Float32Array([0, 0.5]), sampleRate: 22050 } })
+
+		const older = e.prepare('a')
+		await vi.waitFor(() => expect(says('a')).toHaveLength(1))
+		e.prepare('b')
+		await vi.waitFor(() => expect(says('b')).toHaveLength(1))
+		answer(says('b')[0])
+		const newer = e.prepare('a')
+		await vi.waitFor(() => expect(says('a')).toHaveLength(2))
+		worker.onmessage({ data: { type: 'error', id: says('a')[0].id, error: 'boom' } })
+		await expect(older).rejects.toThrow()
+		answer(says('a')[1])
+		await newer
+		worker.postMessage = (m) => { worker.sent.push(m); queueMicrotask(() => answer(m)) } // a further say would be answered
+
+		await e.say('a', 100)
+		expect(says('a')).toHaveLength(2)
+		expect(audio.played).toHaveLength(1)
+	})
+
 	describe('disposed, as when the Pantalla changes its voice', () => {
 		it('ends its worker, fails a phrase still being synthesized, drops the phrases it kept, and stays unavailable', async () => {
 			const worker = fakeWorker()
