@@ -14,6 +14,8 @@ const defaultWorker = () => new Worker(new URL('./worker.js', import.meta.url))
  * a recent re-llamado reuse it, an older phrase is synthesized again. A phrase the worker does not
  * answer within `sayTimeoutMs` of being sent fails, and that worker counts as lost: it is ended and
  * the voice is unavailable until a later load succeeds, under the same retry rule as a failed load.
+ * `dispose()` releases the voice for good: its worker is ended, a load still running and every
+ * phrase not yet answered fail, the kept phrases are dropped, and `available()` answers false.
  *
  * The worker owns its URLs: init carries only the voice key, and the worker derives the model
  * directory from its own location (code-scanning #2 and #3) — nothing a message carries can
@@ -24,6 +26,8 @@ export function piperEngine(voice, { createWorker = defaultWorker, getContext = 
 	let ready = null // the first load, replaced by a later load that succeeds or by a lost worker's false
 	let retryAt = Infinity // when a failed load may run again: never while one runs, or once one has succeeded
 	let nextId = 1
+	let disposed = false
+	let abandon = () => {} // fails the load that runs, if any
 	const pending = new Map()
 	const phrases = new Map()
 
@@ -37,6 +41,7 @@ export function piperEngine(voice, { createWorker = defaultWorker, getContext = 
 				clearTimeout(timer)
 				resolve(ok)
 			}
+			abandon = () => settle(false)
 			try {
 				worker = createWorker()
 				worker.onerror = () => settle(false)
@@ -63,6 +68,7 @@ export function piperEngine(voice, { createWorker = defaultWorker, getContext = 
 	function load() {
 		retryAt = Infinity
 		const attempt = start().then((ok) => {
+			if (disposed) return false
 			if (ok) ready = attempt
 			else lose()
 			return ok
@@ -105,6 +111,15 @@ export function piperEngine(voice, { createWorker = defaultWorker, getContext = 
 			return ready
 		},
 		prepare,
+		dispose() {
+			disposed = true
+			abandon()
+			worker?.terminate()
+			ready = Promise.resolve(false)
+			retryAt = Infinity
+			for (const { reject } of pending.values()) reject(new Error('the bundled voice was released'))
+			phrases.clear()
+		},
 		async say(text, volume) {
 			const { pcm, sampleRate } = await prepare(text)
 			if (!audioReady(getContext)) throw new Error('sound is locked')

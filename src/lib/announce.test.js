@@ -144,5 +144,24 @@ describe('enginesFor', () => {
 		expect(enginesFor('hombre')[0]).toBe(enginesFor('hombre')[0])
 		expect(enginesFor('hombre')[0]).not.toBe(enginesFor('mujer')[0])
 	})
+
+	it('keeps only the model of the voice asked for last: a voice change ends the previous one\'s worker', async () => {
+		const workers = []
+		vi.stubGlobal('Worker', class {
+			constructor() { this.terminated = false; workers.push(this) }
+			postMessage(message) { if (message.type === 'init') { this.voice = message.voice; queueMicrotask(() => this.onmessage({ data: { type: 'ready' } })) } }
+			terminate() { this.terminated = true }
+		})
+		try {
+			expect(await enginesFor('mujer')[0].available()).toBe(true)
+			expect(await enginesFor('hombre')[0].available()).toBe(true)
+			expect(await enginesFor('hombre')[0].available()).toBe(true)
+
+			expect(workers.filter((w) => !w.terminated).map((w) => w.voice)).toEqual(['hombre'])
+			expect(workers.filter((w) => w.voice === 'hombre')).toHaveLength(1)
+		} finally {
+			vi.unstubAllGlobals()
+		}
+	})
 })
 

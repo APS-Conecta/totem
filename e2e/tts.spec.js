@@ -84,3 +84,53 @@ test('a phrase the bundled voice never answers leaves the next llamado its Aviso
 		await w.cleanup()
 	}
 })
+
+test('a Pantalla whose voice changes keeps only the new voice loaded, and speaks with it', async ({ browser, page }) => {
+	test.setTimeout(180_000)
+	await login(page)
+	const w = await world(page, { pantalla: { volume: 100, voice: 'mujer' } })
+	try {
+		const room = await openDisplay(browser, w)
+		// Record every bundled-voice worker the page starts: its voice, whether it loaded, what it was asked to say, whether it was ended.
+		await room.addInitScript(() => {
+			window.__voiceWorkers = []
+			const Native = window.Worker
+			window.Worker = class extends Native {
+				constructor(...args) {
+					super(...args)
+					this.record = { voice: null, ready: false, said: 0, terminated: false }
+					window.__voiceWorkers.push(this.record)
+					this.addEventListener('message', ({ data }) => { if (data?.type === 'ready') this.record.ready = true })
+				}
+
+				postMessage(message, ...rest) {
+					if (message?.type === 'init') this.record.voice = message.voice
+					if (message?.type === 'say') this.record.said += 1
+					return super.postMessage(message, ...rest)
+				}
+
+				terminate() {
+					this.record.terminated = true
+					return super.terminate()
+				}
+			}
+		})
+		await room.reload()
+		const workers = () => room.evaluate(() => window.__voiceWorkers.map(({ voice, ready, said, terminated }) => ({ voice, ready, said: said > 0, terminated })))
+		await expect.poll(workers, { timeout: 90_000, intervals: [1000] }).toEqual([{ voice: 'mujer', ready: true, said: false, terminated: false }])
+
+		await call(page, 'PUT', `/apps/totem/pantallas/${w.screen.id}`, { ...w.screen, voice: 'hombre' })
+		await expect.poll(workers, { timeout: 90_000, intervals: [1000] }).toEqual([
+			{ voice: 'mujer', ready: true, said: false, terminated: true },
+			{ voice: 'hombre', ready: true, said: false, terminated: false },
+		])
+
+		await callNew(page, w)
+		await expect.poll(workers, { timeout: 60_000, intervals: [1000] }).toEqual([
+			{ voice: 'mujer', ready: true, said: false, terminated: true },
+			{ voice: 'hombre', ready: true, said: true, terminated: false },
+		])
+	} finally {
+		await w.cleanup()
+	}
+})
