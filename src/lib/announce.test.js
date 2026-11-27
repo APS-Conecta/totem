@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
+import { piperEngine } from '../tts/piper.js'
 import { createAnnouncer, enginesFor } from './announce.js'
+import { speak } from './voice.js'
 
 function setup({ chimeMs = 2200 } = {}) {
 	const log = []
@@ -108,6 +110,28 @@ describe('synthesis overlaps the chime', () => {
 		await announcer.announce({ text: 'x', volume: 100, voice: 'off' })
 
 		expect(engine.prepare).not.toHaveBeenCalled()
+	})
+})
+
+describe('a bundled voice that stops answering', () => {
+	it('hands the llamado to the browser voice, and the next llamado still rings', async () => {
+		vi.useFakeTimers()
+		// Loads, then never answers a phrase, as when the phonemizer's data fails to download (#35).
+		const worker = { terminate: vi.fn(), postMessage: (m) => { if (m.type === 'init') queueMicrotask(() => worker.onmessage({ data: { type: 'ready' } })) } }
+		const piper = piperEngine('mujer', { createWorker: () => worker, sayTimeoutMs: 20000 })
+		const browser = { name: 'browser', available: async () => true, say: vi.fn(async () => {}) }
+		const chime = vi.fn(() => 1)
+		const announcer = createAnnouncer({ chime, speak, wait: async () => {}, engines: () => [piper, browser] })
+
+		const first = announcer.announce({ text: 'Farmacia, 1. Diríjase a ventanilla 2.', volume: 100, voice: 'mujer' })
+		const second = announcer.announce({ text: 'Farmacia, 2. Diríjase a ventanilla 2.', volume: 100, voice: 'mujer' })
+		await vi.advanceTimersByTimeAsync(30000)
+		vi.useRealTimers()
+
+		await first
+		await second
+		expect(browser.say.mock.calls.map(([text]) => text)).toEqual(['Farmacia, 1. Diríjase a ventanilla 2.', 'Farmacia, 1. Diríjase a ventanilla 2.', 'Farmacia, 2. Diríjase a ventanilla 2.', 'Farmacia, 2. Diríjase a ventanilla 2.'])
+		expect(chime).toHaveBeenCalledTimes(2)
 	})
 })
 
