@@ -39,11 +39,14 @@ function startPolling() {
 }
 startPolling()
 
-// A patient may walk away mid-question: the next one must not find their servicio.
+// A patient may walk away mid-question or on a later page: the next one must not find their servicio or page.
 function watchIdle() {
 	clearTimeout(idle)
-	if (step.value === 'question') idle = setTimeout(goHome, 30000)
+	if (step.value === 'question' || (step.value === 'home' && currentPage.value > 0)) idle = setTimeout(goHome, 30000)
 }
+
+// Counts the patients who left the question: a refusal is shown only to a patient still on the question that asked.
+let departures = 0
 
 // A double tap (or a touch frame's emulated double-click) lands its second tap on the screen the first one opened:
 // on Sí or No after a servicio bar, on a servicio bar after a way home. Taps on them are ignored this long after
@@ -53,8 +56,10 @@ let screenShownAt = 0
 const tooSoon = () => Date.now() - screenShownAt < DOUBLE_TAP_MS
 
 function goHome() {
+	departures += 1
 	clearInterval(countdown)
 	step.value = 'home'
+	page.value = 0
 	servicio.value = null
 	ticket.value = null
 	problem.value = ''
@@ -64,7 +69,6 @@ function goHome() {
 function choose(s) {
 	if (tooSoon()) return
 	servicio.value = s
-	problem.value = '' // a refusal that arrived after the last patient left is not for this one
 	step.value = 'question'
 	screenShownAt = Date.now()
 	watchIdle()
@@ -74,6 +78,7 @@ async function answer(preferente) {
 	if (issuing.value || tooSoon()) return
 	issuing.value = true
 	const chosen = servicio.value // the patient may leave the question before the answer arrives
+	const asked = departures
 	try {
 		ticket.value = await issueTurno(chosen.id, preferente, slug)
 	} catch (e) {
@@ -84,7 +89,8 @@ async function answer(preferente) {
 			startPolling() // look again now rather than in a minute
 			return
 		}
-		problem.value = await messageFrom(e, 'No pudimos entregar su turno. Intente de nuevo.')
+		const message = await messageFrom(e, 'No pudimos entregar su turno. Intente de nuevo.')
+		if (asked === departures) problem.value = message // a patient who left never sees it; it is logged above
 		return
 	} finally {
 		issuing.value = false
@@ -115,6 +121,11 @@ const pageCount = computed(() => Math.max(1, Math.ceil(servicios.value.length / 
 // A shrinking list must never leave the patient on a page that no longer exists.
 const currentPage = computed(() => Math.min(page.value, pageCount.value - 1))
 const shown = computed(() => servicios.value.slice(currentPage.value * PAGE_SIZE, (currentPage.value + 1) * PAGE_SIZE))
+// The root's pointerdown runs before the pager's click, so a page turn arms the idle return itself.
+function turnPage(to) {
+	page.value = to
+	watchIdle()
+}
 
 const now = ref(new Date())
 const pad = (n) => String(n).padStart(2, '0')
@@ -155,10 +166,10 @@ onBeforeUnmount(() => {
 						</button>
 					</div>
 					<div v-if="pageCount > 1" class="t-pager">
-						<button type="button" class="t-pagebtn" :disabled="currentPage === 0" @click="page = currentPage - 1">
+						<button type="button" class="t-pagebtn" :disabled="currentPage === 0" @click="turnPage(currentPage - 1)">
 							Anterior
 						</button>
-						<button type="button" class="t-pagebtn" :disabled="currentPage >= pageCount - 1" @click="page = currentPage + 1">
+						<button type="button" class="t-pagebtn" :disabled="currentPage >= pageCount - 1" @click="turnPage(currentPage + 1)">
 							Siguiente
 						</button>
 					</div>

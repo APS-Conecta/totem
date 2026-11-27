@@ -185,6 +185,59 @@ describe('paging many servicios', () => {
 
 		expect(names(wrapper)).toHaveLength(3)
 	})
+
+	it('starts the next patient on the first page once the ticket countdown ends', async () => {
+		publicServicios.mockResolvedValue(many(9))
+		issueTurno.mockResolvedValue({ id: 41, label: 'S08-G-001', servicio: 'Servicio 8', preferente: false })
+		const wrapper = await mountTotem()
+		await button(wrapper, 'Siguiente').trigger('click')
+		await button(wrapper, 'Servicio 8S08').trigger('click')
+		await pastDoubleTap()
+		await button(wrapper, 'No').trigger('click')
+		await flushPromises()
+		await vi.advanceTimersByTimeAsync(8000)
+
+		expect(names(wrapper)[0]).toBe('Servicio 1S01')
+		expect(button(wrapper, 'Anterior').attributes('disabled')).toBeDefined()
+	})
+
+	it('shows the first page again after "‹ Volver" from a servicio chosen on a later page', async () => {
+		publicServicios.mockResolvedValue(many(9))
+		const wrapper = await mountTotem()
+		await button(wrapper, 'Siguiente').trigger('click')
+		await button(wrapper, 'Servicio 9S09').trigger('click')
+		await button(wrapper, '‹ Volver').trigger('click')
+
+		expect(names(wrapper)[0]).toBe('Servicio 1S01')
+	})
+
+	it('goes back to the first page after 30 seconds without a tap on a later page', async () => {
+		publicServicios.mockResolvedValue(many(9))
+		const wrapper = await mountTotem()
+		await button(wrapper, 'Siguiente').trigger('pointerdown')
+		await button(wrapper, 'Siguiente').trigger('click')
+
+		await vi.advanceTimersByTimeAsync(29999)
+		expect(names(wrapper)[0]).toBe('Servicio 8S08')
+		await vi.advanceTimersByTimeAsync(1)
+
+		expect(names(wrapper)[0]).toBe('Servicio 1S01')
+	})
+
+	it('waits another 30 seconds after each tap on a later page', async () => {
+		publicServicios.mockResolvedValue(many(9))
+		const wrapper = await mountTotem()
+		await button(wrapper, 'Siguiente').trigger('pointerdown')
+		await button(wrapper, 'Siguiente').trigger('click')
+		await vi.advanceTimersByTimeAsync(20000)
+		await wrapper.find('h1').trigger('pointerdown')
+
+		await vi.advanceTimersByTimeAsync(29999)
+		expect(names(wrapper)[0]).toBe('Servicio 8S08')
+		await vi.advanceTimersByTimeAsync(1)
+
+		expect(names(wrapper)[0]).toBe('Servicio 1S01')
+	})
 })
 
 describe('question screen', () => {
@@ -540,6 +593,40 @@ describe('when the server refuses the turno', () => {
 
 		expect(wrapper.text()).toContain('¿Tiene 60 años o más')
 		expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+	})
+
+	// The first patient taps "No", leaves (`leave`) before the server answers, and the next one chooses `next`;
+	// only then is the first request refused.
+	async function refusedAfterNextChoice(leave, next) {
+		let fail
+		issueTurno.mockReturnValue(new Promise((resolve, reject) => (fail = reject)))
+		const wrapper = await mountTotem()
+		await button(wrapper, 'FarmaciaFAR').trigger('click')
+		await pastDoubleTap()
+		await button(wrapper, 'No').trigger('click')
+		await leave(wrapper)
+		await button(wrapper, next).trigger('click')
+		fail(refusal(422, 'Hoy ya no quedan turnos para Farmacia.'))
+		await flushPromises()
+		return wrapper
+	}
+	async function byVolver(wrapper) {
+		await button(wrapper, '‹ Volver').trigger('click')
+		await pastDoubleTap()
+	}
+	const byIdleTimeout = () => vi.advanceTimersByTimeAsync(30000)
+
+	it.each([
+		['leaves by "‹ Volver" and the next patient chooses another unidad', byVolver, 'VacunatorioVAC', 'Vacunatorio'],
+		['leaves by "‹ Volver" and the next patient chooses the same unidad', byVolver, 'FarmaciaFAR', 'Farmacia'],
+		['walks away and the next patient chooses another unidad', byIdleTimeout, 'VacunatorioVAC', 'Vacunatorio'],
+	])('does not show a refusal that arrives after the patient %s', async (_, leave, next, band) => {
+		const wrapper = await refusedAfterNextChoice(leave, next)
+
+		expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+		expect(wrapper.find('.t-band').text()).toContain(band)
+		expect(button(wrapper, 'Sí').exists()).toBe(true)
+		expect(button(wrapper, 'No').exists()).toBe(true)
 	})
 
 	it('does not carry the error into the next patient', async () => {
