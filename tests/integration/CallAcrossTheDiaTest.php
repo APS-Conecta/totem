@@ -18,9 +18,6 @@ use OCA\Totem\Service\BoxService;
 use OCA\Totem\Service\CallService;
 use OCA\Totem\Service\DisplayFeed;
 use OCA\Totem\Service\StatsService;
-use OCA\Totem\Service\Today;
-use OCP\AppFramework\Utility\ITimeFactory;
-use OCP\IDateTimeZone;
 use OCP\Server;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -31,7 +28,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
  */
 final class CallAcrossTheDiaTest extends IntegrationTestCase {
 	private const NEXT_DAY = '2026-10-19';
-	private int $now;
 	private TurnoMapper $turnos;
 	private CallService $calls;
 	private BoxService $boxes;
@@ -41,9 +37,7 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 
 	protected function setUp(): void {
 		parent::setUp();
-		$clock = $this->createStub(ITimeFactory::class);
-		$clock->method('getTime')->willReturnCallback(fn (): int => $this->now);
-		$today = new Today($clock, Server::get(IDateTimeZone::class));
+		$today = $this->today();
 		$this->turnos = Server::get(TurnoMapper::class);
 		$boxes = Server::get(BoxMapper::class);
 		$links = Server::get(ServicioLinks::class);
