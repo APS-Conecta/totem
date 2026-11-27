@@ -30,7 +30,7 @@ class CallService {
 	/** Another box may win the turno this one chose, or a racing call on this box may give it back; choose again this many times. */
 	private const ATTEMPTS = 3;
 
-	private const STILL_HOLDS = 'Termine o marque como ausente el turno actual antes de llamar otro.';
+	private const STILL_HOLDS = 'Finalice la atención del turno actual o marque “No se presentó” antes de llamar otro.';
 
 	public function __construct(
 		private BoxMapper $boxes,
@@ -105,7 +105,7 @@ class CallService {
 	}
 
 	public function absent(int $boxId): array {
-		return $this->move($boxId, Estado::Called, Estado::NoShow, 'No hay un turno llamado para marcar como ausente.');
+		return $this->move($boxId, Estado::Called, Estado::NoShow, 'No hay un turno llamado para marcar “No se presentó”.');
 	}
 
 	/**

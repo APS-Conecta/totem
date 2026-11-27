@@ -134,7 +134,7 @@ class CallServiceTest extends TestCase {
 		$this->active($this->turno(9, 3, true, 12, 100, 'called'));
 
 		$this->expectException(Refused::class);
-		$this->expectExceptionMessage('Termine o marque como ausente el turno actual antes de llamar otro.');
+		$this->expectExceptionMessage('Finalice la atención del turno actual o marque “No se presentó” antes de llamar otro.');
 		$this->service->callNext(1);
 	}
 
@@ -164,7 +164,7 @@ class CallServiceTest extends TestCase {
 		$this->llamados->expects($this->never())->method('insert');
 
 		$this->expectException(Refused::class);
-		$this->expectExceptionMessage('Termine o marque como ausente el turno actual antes de llamar otro.');
+		$this->expectExceptionMessage('Finalice la atención del turno actual o marque “No se presentó” antes de llamar otro.');
 		$this->service->callNext(1);
 	}
 

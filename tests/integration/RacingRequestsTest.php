@@ -110,7 +110,7 @@ final class RacingRequestsTest extends IntegrationTestCase {
 		$this->assertNull($given->getCalledAt());
 		$this->assertSame(0, $this->llamadosOf($y));
 		$this->assertSame($x->getId(), $this->turnos->findActiveForBox($boxId)?->getId());
-		$this->assertSame('Termine o marque como ausente el turno actual antes de llamar otro.', $refusal);
+		$this->assertSame('Finalice la atención del turno actual o marque “No se presentó” antes de llamar otro.', $refusal);
 	}
 
 	public function testTwoCallsOnTheSameBoxThatBothGiveTheirTurnoBackChooseAgain(): void {
