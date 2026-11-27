@@ -46,7 +46,7 @@ class TcpPrinterTransportTest extends TestCase {
 		$port = $this->listen();
 		$ticket = "\x1B\x40FAR-P-014\n" . str_repeat("\xA2", 20_000) . "\x1D\x56\x42\x03";
 
-		$sent = (new TcpPrinterTransport())->send('127.0.0.1', $port, $ticket);
+		$sent = (new TcpPrinterTransport())->send(address: '127.0.0.1', port: $port, bytes: $ticket);
 
 		$this->assertTrue($sent);
 		$this->assertSame($ticket, $this->received());
