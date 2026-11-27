@@ -22,11 +22,11 @@ final class TurnoIndexTest extends IntegrationTestCase {
 		self::assertNotContains(['box_id', 'day', 'estado'], $indexes);
 	}
 
-	public function testRunningTheLatestMigrationStepAgainChangesNoIndex(): void {
+	public function testRunningTheBoxEstadoIndexStepAgainChangesNoIndex(): void {
 		$before = $this->turnoIndexColumns();
 		$migrations = new MigrationService('totem', Server::get(Connection::class));
 
-		$migrations->executeStep($migrations->getMigration('latest'), true);
+		$migrations->executeStep('000401Date20261127000000', true);
 
 		self::assertSame($before, $this->turnoIndexColumns());
 	}
