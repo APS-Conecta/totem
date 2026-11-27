@@ -13,6 +13,7 @@ use OCA\Totem\Domain\PrintableTicket;
 use OCA\Totem\Service\PrinterTransport;
 use OCA\Totem\Service\TicketPrinter;
 use OCA\Totem\Service\Today;
+use OCP\ICacheFactory;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -29,7 +30,7 @@ class TicketPrinterTest extends TestCase {
 		$this->logger = $this->createMock(LoggerInterface::class);
 		$today = $this->createMock(Today::class);
 		$today->method('now')->willReturn(1_792_400_000);
-		$this->printer = new TicketPrinter($this->transport, $this->totems, $this->logger, $today);
+		$this->printer = new TicketPrinter($this->transport, $this->totems, $this->logger, $today, $this->createMock(ICacheFactory::class));
 	}
 
 	private function totem(string $host = '192.168.1.50', int $port = 9100): Totem {
@@ -49,7 +50,7 @@ class TicketPrinterTest extends TestCase {
 
 	/** @param callable(string): (list<string>|false) $resolve */
 	private function printerResolving(callable $resolve): TicketPrinter {
-		return new TicketPrinter($this->transport, $this->totems, $this->logger, $this->createMock(Today::class), $resolve);
+		return new TicketPrinter($this->transport, $this->totems, $this->logger, $this->createMock(Today::class), $this->createMock(ICacheFactory::class), $resolve);
 	}
 
 	public function testItConnectsToTheAddressItCheckedAndLooksTheNameUpOnce(): void {
