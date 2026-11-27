@@ -6,16 +6,20 @@ import { browserEngine, speak } from './voice.js'
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const bundled = new Map()
+let bundled = null // { voice, engine }: the one bundled voice the page keeps loaded
 let browser = null
 
 /**
- * The voices to try for a Pantalla's choice, best first: the bundled model (the same engine every
- * time, so its model loads once), then the browser's own voice (docs/adr/0005).
+ * The voices to try for a Pantalla's choice, best first: the bundled model, then the browser's own
+ * voice (docs/adr/0005). The page keeps one bundled model, the voice asked for last: the same voice
+ * gets the same engine, so its model loads once, and another voice disposes of the previous one.
  */
 export function enginesFor(voice) {
-	if (!bundled.has(voice)) bundled.set(voice, piperEngine(voice))
-	return [bundled.get(voice), (browser ??= browserEngine())]
+	if (bundled?.voice !== voice) {
+		bundled?.engine.dispose()
+		bundled = { voice, engine: piperEngine(voice) }
+	}
+	return [bundled.engine, (browser ??= browserEngine())]
 }
 
 /**

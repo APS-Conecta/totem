@@ -191,6 +191,40 @@ describe('piperEngine', () => {
 		expect(audio.played).toHaveLength(1)
 	})
 
+	describe('disposed, as when the Pantalla changes its voice', () => {
+		it('ends its worker, fails a phrase still being synthesized, drops the phrases it kept, and stays unavailable', async () => {
+			const worker = fakeWorker()
+			const e = engine('mujer', worker)
+			await e.say('hola', 100)
+			const answer = worker.postMessage.bind(worker)
+			worker.postMessage = (m) => { if (m.type !== 'say') answer(m) } // never answers a phrase from here on
+			const synthesizing = e.prepare('adiós')
+			await Promise.resolve() // the phrase reaches the worker
+
+			e.dispose()
+
+			await expect(synthesizing).rejects.toThrow()
+			expect(worker.terminate).toHaveBeenCalledTimes(1)
+			await expect(e.say('hola', 100)).rejects.toThrow()
+			expect(audio.played).toHaveLength(1)
+			expect(await e.available()).toBe(false)
+		})
+
+		it('while its model loads: a phrase waiting for the load fails at once and nothing loads again', async () => {
+			let created = 0
+			const worker = fakeWorker({ never: true })
+			const e = piperEngine('mujer', { createWorker: () => { created += 1; return worker }, getContext: () => audio.ctx, retryIntervalMs: 0 })
+			const waiting = e.prepare('hola')
+
+			e.dispose()
+
+			await expect(waiting).rejects.toThrow()
+			expect(worker.terminate).toHaveBeenCalled()
+			expect(await e.available()).toBe(false)
+			expect(created).toBe(1)
+		})
+	})
+
 	describe('a phrase the worker never answers', () => {
 		beforeEach(() => vi.useFakeTimers())
 		afterEach(() => vi.useRealTimers())
