@@ -21,6 +21,50 @@ async function freeServicioName(page, name) {
 	}
 }
 
+/** Record the duration of every audio buffer the room plays in window.__voiceBuffers: the chime is oscillators, the voice is a buffer. */
+async function recordVoiceBuffers(room) {
+	await room.addInitScript(() => {
+		window.__voiceBuffers = []
+		const create = AudioContext.prototype.createBufferSource
+		AudioContext.prototype.createBufferSource = function () {
+			const source = create.call(this)
+			const start = source.start.bind(source)
+			source.start = (...args) => { window.__voiceBuffers.push(source.buffer.duration); return start(...args) }
+			return source
+		}
+	})
+}
+
+/** Record every bundled-voice worker the room starts in window.__voiceWorkers: its voice, whether it loaded, what it was asked to say, whether it answered with audio, whether it was ended. */
+async function recordVoiceWorkers(room) {
+	await room.addInitScript(() => {
+		window.__voiceWorkers = []
+		const Native = window.Worker
+		window.Worker = class extends Native {
+			constructor(...args) {
+				super(...args)
+				this.record = { voice: null, ready: false, said: 0, spoke: false, terminated: false }
+				window.__voiceWorkers.push(this.record)
+				this.addEventListener('message', ({ data }) => {
+					if (data?.type === 'ready') this.record.ready = true
+					if (data?.type === 'audio') this.record.spoke = true
+				})
+			}
+
+			postMessage(message, ...rest) {
+				if (message?.type === 'init') this.record.voice = message.voice
+				if (message?.type === 'say') this.record.said += 1
+				return super.postMessage(message, ...rest)
+			}
+
+			terminate() {
+				this.record.terminated = true
+				return super.terminate()
+			}
+		}
+	})
+}
+
 for (const voice of ['hombre', 'mujer']) {
 	test(`a call is spoken aloud by the bundled ${voice} voice`, async ({ browser, page }, testInfo) => {
 		test.setTimeout(120_000)
@@ -31,17 +75,7 @@ for (const voice of ['hombre', 'mujer']) {
 		const w = await world(page, { pantalla: { volume: 100, voice }, servicioName: () => servicioName, boxName: BOX })
 		try {
 			const room = await (await browser.newContext({ locale: 'es-CL' })).newPage()
-			// Record every audio buffer the page plays: the chime is oscillators, the voice is a buffer.
-			await room.addInitScript(() => {
-				window.__voiceBuffers = []
-				const create = AudioContext.prototype.createBufferSource
-				AudioContext.prototype.createBufferSource = function () {
-					const source = create.call(this)
-					const start = source.start.bind(source)
-					source.start = (...args) => { window.__voiceBuffers.push(source.buffer.duration); return start(...args) }
-					return source
-				}
-			})
+			await recordVoiceBuffers(room)
 			await room.goto('/apps/totem/display/' + w.screen.slug)
 
 			const turno = await call(page, 'POST', '/apps/totem/turnos', { servicioId: w.servicio.id, preferente: true })
@@ -91,33 +125,7 @@ test('a Pantalla whose voice changes keeps only the new voice loaded, and speaks
 	const w = await world(page, { pantalla: { volume: 100, voice: 'mujer' } })
 	try {
 		const room = await openDisplay(browser, w)
-		// Record every bundled-voice worker the page starts: its voice, whether it loaded, what it was asked to say, whether it answered with audio, whether it was ended.
-		await room.addInitScript(() => {
-			window.__voiceWorkers = []
-			const Native = window.Worker
-			window.Worker = class extends Native {
-				constructor(...args) {
-					super(...args)
-					this.record = { voice: null, ready: false, said: 0, spoke: false, terminated: false }
-					window.__voiceWorkers.push(this.record)
-					this.addEventListener('message', ({ data }) => {
-						if (data?.type === 'ready') this.record.ready = true
-						if (data?.type === 'audio') this.record.spoke = true
-					})
-				}
-
-				postMessage(message, ...rest) {
-					if (message?.type === 'init') this.record.voice = message.voice
-					if (message?.type === 'say') this.record.said += 1
-					return super.postMessage(message, ...rest)
-				}
-
-				terminate() {
-					this.record.terminated = true
-					return super.terminate()
-				}
-			}
-		})
+		await recordVoiceWorkers(room)
 		await room.reload()
 		const workers = () => room.evaluate(() => window.__voiceWorkers.map(({ voice, ready, said, spoke, terminated }) => ({ voice, ready, said: said > 0, spoke, terminated })))
 		await expect.poll(workers, { timeout: 90_000, intervals: [1000] }).toEqual([{ voice: 'mujer', ready: true, said: false, spoke: false, terminated: false }])
@@ -133,6 +141,50 @@ test('a Pantalla whose voice changes keeps only the new voice loaded, and speaks
 			{ voice: 'mujer', ready: true, said: false, spoke: false, terminated: true },
 			{ voice: 'hombre', ready: true, said: true, spoke: true, terminated: false },
 		])
+	} finally {
+		await w.cleanup()
+	}
+})
+
+test('a model that downloads for longer than the load time limit still loads, and a later llamado is spoken by it', async ({ browser, page }) => {
+	test.setTimeout(240_000)
+	await login(page)
+	const w = await world(page, { pantalla: { volume: 100, voice: 'mujer' } })
+	try {
+		const room = await openDisplay(browser, w)
+		// A slow link: the model's download is held past the 60 s a llamado waits for the load (#65), then let through.
+		let release
+		const held = new Promise((resolve) => { release = resolve })
+		let requested = 0
+		await room.context().route('**/*.onnx', async (route) => {
+			requested += 1
+			await held
+			await route.continue().catch(() => {}) // the request is gone if its worker was ended
+		})
+		await recordVoiceWorkers(room)
+		await recordVoiceBuffers(room)
+		await room.reload()
+		await expect(room.locator('.d-foot .cap')).toHaveText(/^Sonido y voz activados/)
+		await expect.poll(() => requested, { timeout: 30_000, intervals: [500] }).toBe(1)
+		const card = room.getByRole('status')
+		const buffers = () => room.evaluate(() => window.__voiceBuffers)
+
+		// Past the time limit, with the model still downloading: the llamado rings and falls back.
+		await room.waitForTimeout(62_000)
+		const meanwhile = await callNew(page, w)
+		await expect(card).toContainText(meanwhile, { timeout: 8_000 })
+		await expect.poll(() => chimes(room), { timeout: 10_000, intervals: [500] }).toBe(1)
+		expect(await buffers()).toEqual([])
+
+		release()
+		const workers = () => room.evaluate(() => window.__voiceWorkers.map(({ ready, terminated }) => ({ ready, terminated })))
+		await expect.poll(workers, { timeout: 90_000, intervals: [1000] }).toEqual([{ ready: true, terminated: false }])
+
+		const later = await callNew(page, w)
+		await expect(card).toContainText(later, { timeout: 8_000 })
+		await expect.poll(async () => (await buffers()).length, { timeout: 60_000, intervals: [1000] }).toBeGreaterThanOrEqual(2)
+		expect((await buffers())[0]).toBeGreaterThan(2)
+		expect(await workers()).toEqual([{ ready: true, terminated: false }])
 	} finally {
 		await w.cleanup()
 	}

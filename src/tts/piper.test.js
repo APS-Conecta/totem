@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { piperEngine } from './piper.js'
 
-/** A worker that answers the way tts/worker.js does: ready after init, one PCM buffer per say. */
-function fakeWorker({ initError = null, never = false } = {}) {
+/** A worker that answers the way tts/worker.js does: ready after init (`initAfterMs` later, if given), one PCM buffer per say. */
+function fakeWorker({ initError = null, initAfterMs = null, never = false } = {}) {
 	const sent = []
 	const worker = {
 		sent,
@@ -12,8 +12,10 @@ function fakeWorker({ initError = null, never = false } = {}) {
 		postMessage(message) {
 			sent.push(message)
 			if (never) return
+			const initAnswer = () => worker.onmessage({ data: initError ? { type: 'failed', error: initError } : { type: 'ready' } })
+			if (message.type === 'init' && initAfterMs !== null) return void setTimeout(initAnswer, initAfterMs)
 			queueMicrotask(() => {
-				if (message.type === 'init') worker.onmessage({ data: initError ? { type: 'failed', error: initError } : { type: 'ready' } })
+				if (message.type === 'init') initAnswer()
 				if (message.type === 'say') worker.onmessage({ data: { type: 'audio', id: message.id, pcm: new Float32Array([0, 0.5, -0.5, 0]), sampleRate: 22050 } })
 			})
 		},
@@ -372,13 +374,55 @@ describe('piperEngine', () => {
 			await retriesAndSpeaks(subject, first, second)
 		})
 
-		it('loads again the same way when the first load took too long', async () => {
+		it('keeps a load past its time limit running, and ends it only once the retry interval has passed, for a fresh worker', async () => {
 			const first = fakeWorker({ never: true })
 			const second = fakeWorker()
 			const subject = retrying([first, second], { retryIntervalMs, loadTimeoutMs: 20000 })
 			const result = subject.e.available()
 			await vi.advanceTimersByTimeAsync(20000)
 			expect(await result).toBe(false)
+			expect(first.terminate).not.toHaveBeenCalled()
+
+			await vi.advanceTimersByTimeAsync(retryIntervalMs - 1)
+			expect(await subject.e.available()).toBe(false)
+			expect(first.terminate).not.toHaveBeenCalled()
+			expect(subject.createWorker).toHaveBeenCalledTimes(1)
+
+			await retriesAndSpeaks(subject, first, second)
+		})
+
+		it('becomes available when a load past its time limit answers ready later, with no second worker', async () => {
+			const slow = fakeWorker({ initAfterMs: 90000 })
+			const subject = retrying([slow, fakeWorker()], { retryIntervalMs, loadTimeoutMs: 60000 })
+			const result = subject.e.available()
+			await vi.advanceTimersByTimeAsync(60000)
+			expect(await result).toBe(false)
+
+			await vi.advanceTimersByTimeAsync(30000)
+			expect(await subject.e.available()).toBe(true)
+			await subject.e.say('hola', 100)
+			expect(audio.played).toHaveLength(1)
+
+			await vi.advanceTimersByTimeAsync(retryIntervalMs)
+			expect(await subject.e.available()).toBe(true)
+			expect(subject.createWorker).toHaveBeenCalledTimes(1)
+			expect(slow.terminate).not.toHaveBeenCalled()
+		})
+
+		it('ends a load past its time limit that then fails, and loads again with a fresh worker after the retry interval', async () => {
+			const first = fakeWorker({ initError: 'network', initAfterMs: 30000 })
+			const second = fakeWorker()
+			const subject = retrying([first, second], { retryIntervalMs, loadTimeoutMs: 20000 })
+			const result = subject.e.available()
+			await vi.advanceTimersByTimeAsync(20000)
+			expect(await result).toBe(false)
+			expect(first.terminate).not.toHaveBeenCalled()
+
+			await vi.advanceTimersByTimeAsync(10000)
+			expect(first.terminate).toHaveBeenCalled()
+			await vi.advanceTimersByTimeAsync(retryIntervalMs - 1)
+			expect(await subject.e.available()).toBe(false)
+			expect(subject.createWorker).toHaveBeenCalledTimes(1)
 
 			await retriesAndSpeaks(subject, first, second)
 		})
