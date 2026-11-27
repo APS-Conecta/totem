@@ -13,12 +13,13 @@ use OCA\Totem\Service\PrinterTransport;
 use OCA\Totem\Service\TicketPrinter;
 use OCP\ICacheFactory;
 use OCP\Server;
-use Psr\Log\LoggerInterface;
+use Psr\Log\AbstractLogger;
 
 /**
  * A printer named by a host name whose lookup fails: the instance's real cache remembers the failure for that
  * host for 30 seconds, so a DNS server that does not answer makes at most one print per host wait for it.
- * The clock and the resolver are stand-ins; everything else is the container's.
+ * A print that fails after the lookup is logged with the address the name resolved to.
+ * The clock, the resolver and the logger are stand-ins; everything else is the container's.
  */
 final class PrinterNameLookupTest extends IntegrationTestCase {
 	private const START = 1_792_400_000;
@@ -27,6 +28,8 @@ final class PrinterNameLookupTest extends IntegrationTestCase {
 	/** @var \Closure(): (list<string>|false) what the resolver answers */
 	private \Closure $answer;
 	private string $host;
+	/** @var list<array{0: string, 1: array<string, mixed>}> the warnings the printer logged, as [message, context] */
+	private array $warnings = [];
 
 	protected function setUp(): void {
 		parent::setUp();
@@ -43,10 +46,23 @@ final class PrinterNameLookupTest extends IntegrationTestCase {
 			return ($this->answer)();
 		};
 
+		$warnings = &$this->warnings;
+		$logger = new class($warnings) extends AbstractLogger {
+			/** @param list<array{0: string, 1: array<string, mixed>}> $warnings */
+			public function __construct(private array &$warnings) {
+			}
+
+			public function log($level, string|\Stringable $message, array $context = []): void {
+				if ($level === 'warning') {
+					$this->warnings[] = [(string)$message, $context];
+				}
+			}
+		};
+
 		return new TicketPrinter(
 			Server::get(PrinterTransport::class),
 			Server::get(TotemMapper::class),
-			Server::get(LoggerInterface::class),
+			$logger,
 			$this->today(),
 			Server::get(ICacheFactory::class),
 			$resolve,
@@ -121,5 +137,33 @@ final class PrinterNameLookupTest extends IntegrationTestCase {
 		$this->assertFalse($this->print($printer, $sala));
 
 		$this->assertSame(3, $this->lookups, 'a failure remembered before a successful lookup of the same host still blocked the resolver');
+	}
+
+	public function testAPrintThatFailsAfterTheLookupLogsTheAddressTheNameResolvedTo(): void {
+		$this->answer = fn (): array => [$this->ownAddress()];
+
+		$this->assertFalse($this->print($this->printer(), $this->totem('sala', 'Sala', $this->host)));
+
+		$this->assertSame([['Totem ticket not printed', [
+			'totem' => 'sala',
+			'host' => $this->host,
+			'address' => $this->ownAddress(),
+			'port' => 9100,
+			'reason' => 'the printer did not answer',
+		]]], $this->warnings);
+	}
+
+	public function testANameThatResolvesOutsideTheClinicLogsNoAddressAndTheReason(): void {
+		$this->answer = fn (): array => ['8.8.8.8'];
+
+		$this->assertFalse($this->print($this->printer(), $this->totem('sala', 'Sala', $this->host)));
+
+		$this->assertSame([['Totem ticket not printed', [
+			'totem' => 'sala',
+			'host' => $this->host,
+			'address' => null,
+			'port' => 9100,
+			'reason' => 'La impresora debe estar en la red de la clínica (direcciones 10.x, 172.16 a 172.31 o 192.168.x).',
+		]]], $this->warnings);
 	}
 }

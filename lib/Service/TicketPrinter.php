@@ -57,7 +57,7 @@ class TicketPrinter {
 				$sent = $this->transport->send($address, $port, EscPosTicket::render($ticket));
 			}
 			if (!$sent) {
-				$this->logger->warning('Totem ticket not printed', ['totem' => $totem->getSlug(), 'host' => $host, 'port' => $port, 'reason' => $problem ?? 'the printer did not answer']);
+				$this->logger->warning('Totem ticket not printed', ['totem' => $totem->getSlug(), 'host' => $host, 'address' => $address, 'port' => $port, 'reason' => $problem ?? 'the printer did not answer']);
 			}
 		} catch (\Throwable $e) {
 			$this->logger->warning('Totem ticket not printed', ['totem' => $totem->getSlug(), 'exception' => $e]);
