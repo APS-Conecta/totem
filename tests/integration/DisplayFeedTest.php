@@ -88,7 +88,7 @@ final class DisplayFeedTest extends IntegrationTestCase {
 		}
 	}
 
-	/** The instance's BoxMapper, counting every query it runs on the Box table. */
+	/** The instance's BoxMapper, counting every read it makes of the Box table. */
 	private function boxReadsCounted(): BoxMapper {
 		return new class(Server::get(IDBConnection::class)) extends BoxMapper {
 			public int $count = 0;
