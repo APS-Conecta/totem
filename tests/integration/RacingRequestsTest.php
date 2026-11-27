@@ -8,8 +8,6 @@ namespace OCA\Totem\Tests\Integration;
 
 use OCA\Totem\Db\Box;
 use OCA\Totem\Db\BoxMapper;
-use OCA\Totem\Db\Llamado;
-use OCA\Totem\Db\LlamadoMapper;
 use OCA\Totem\Db\Servicio;
 use OCA\Totem\Db\ServicioLinks;
 use OCA\Totem\Db\ServicioMapper;
@@ -18,9 +16,7 @@ use OCA\Totem\Db\Turno;
 use OCA\Totem\Db\TurnoMapper;
 use OCA\Totem\Domain\Estado;
 use OCA\Totem\Service\BoxService;
-use OCA\Totem\Service\CallService;
 use OCA\Totem\Service\TicketPrinting;
-use OCA\Totem\Service\Today;
 use OCA\Totem\Service\TurnoService;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Db\Entity;
@@ -33,21 +29,11 @@ use OCP\Server;
  * once, so the reads that follow (the re-check, the box's state) see the database as it is.
  */
 final class RacingRequestsTest extends IntegrationTestCase {
-	private const NOW = 50_000;
-
-	private Today $today;
 	private TurnoMapper $turnos;
-	private LlamadoMapper $llamados;
 
 	protected function setUp(): void {
 		parent::setUp();
-		$this->today = $this->createMock(Today::class);
-		$this->today->method('day')->willReturn(self::DAY);
-		$this->today->method('now')->willReturn(self::NOW);
-		$this->today->method('time')->willReturn('12:00');
-		// Every moment of this suite fits one window: the Día scoping of the feed is not what races here.
-		$this->today->method('dayWindow')->willReturn([0, PHP_INT_MAX]);
-		$this->llamados = new LlamadoMapper(Server::get(IDBConnection::class), $this->today);
+		$this->now = $this->momentOf(self::DAY, '12:00');
 		$this->turnos = new class(Server::get(IDBConnection::class)) extends TurnoMapper {
 			/** @var array<string, \Closure> the competitor's write, by the mapper method it runs inside */
 			private array $hooks = [];
@@ -93,46 +79,46 @@ final class RacingRequestsTest extends IntegrationTestCase {
 	public function testASecondCallOnTheSameBoxIsGivenBackAndRefused(): void {
 		$s = $this->servicio();
 		$boxId = $this->box('Box 1', $s);
-		$x = $this->waiting($s, false, 1);
-		$y = $this->waiting($s, false, 2);
-		$this->turnos->once('findActiveForBox', function (\Closure $parent) use ($x, $boxId): ?Turno {
+		$calledElsewhere = $this->waiting($s, false, 1);
+		$takenHere = $this->waiting($s, false, 2);
+		$this->turnos->once('findActiveForBox', function (\Closure $parent) use ($calledElsewhere, $boxId): ?Turno {
 			$held = $parent();
-			$this->turnos->claim($x->getId(), $boxId, self::NOW); // the box's other console calls X meanwhile
+			$this->turnos->claim($calledElsewhere->getId(), $boxId, $this->now); // the box's other console calls it meanwhile
 
 			return $held;
 		});
 
-		$refusal = $this->refusal(fn () => $this->calls()->callNext($boxId));
+		$refusal = $this->refusal(fn () => $this->calls($this->turnos)->callNext($boxId));
 
-		$given = $this->turnos->find($y->getId());
+		$given = $this->turnos->find($takenHere->getId());
 		$this->assertSame(Estado::Waiting->value, $given->getEstado(), 'the turno this call took is waiting again');
 		$this->assertNull($given->getBoxId());
 		$this->assertNull($given->getCalledAt());
-		$this->assertSame(0, $this->llamadosOf($y));
-		$this->assertSame($x->getId(), $this->turnos->findActiveForBox($boxId)?->getId());
+		$this->assertSame(0, $this->llamadosOf($takenHere));
+		$this->assertSame($calledElsewhere->getId(), $this->turnos->findActiveForBox($boxId)?->getId());
 		$this->assertSame('Finalice la atención del turno actual o marque “No se presentó” antes de llamar otro.', $refusal);
 	}
 
 	public function testTwoCallsOnTheSameBoxThatBothGiveTheirTurnoBackChooseAgain(): void {
 		$s = $this->servicio();
 		$boxId = $this->box('Box 1', $s);
-		$x = $this->waiting($s, false, 1);
-		$y = $this->waiting($s, false, 2);
-		$this->turnos->once('countActiveForBox', function (\Closure $parent) use ($y, $boxId): int {
-			$this->turnos->claim($y->getId(), $boxId, self::NOW); // the box's other console has claimed Y before this count
+		$calledHere = $this->waiting($s, false, 1);
+		$givenBack = $this->waiting($s, false, 2);
+		$this->turnos->once('countActiveForBox', function (\Closure $parent) use ($givenBack, $boxId): int {
+			$this->turnos->claim($givenBack->getId(), $boxId, $this->now); // the box's other console has claimed it before this count
 			$held = $parent();
-			$this->turnos->release($y->getId(), $boxId); // and, counting two as well, gives Y back
+			$this->turnos->release($givenBack->getId(), $boxId); // and, counting two as well, gives it back
 
 			return $held;
 		});
 
-		$state = $this->calls()->callNext($boxId);
+		$state = $this->calls($this->turnos)->callNext($boxId);
 
-		$this->assertSame($x->getId(), $state['current']['id']);
+		$this->assertSame($calledHere->getId(), $state['current']['id']);
 		$this->assertSame(1, $this->turnos->countActiveForBox($boxId));
-		$this->assertSame(1, $this->llamadosOf($x));
-		$this->assertSame(0, $this->llamadosOf($y));
-		$this->assertSame(Estado::Waiting->value, $this->turnos->find($y->getId())->getEstado());
+		$this->assertSame(1, $this->llamadosOf($calledHere));
+		$this->assertSame(0, $this->llamadosOf($givenBack));
+		$this->assertSame(Estado::Waiting->value, $this->turnos->find($givenBack->getId())->getEstado());
 	}
 
 	public function testAnotherBoxWinningTheTurnoStillLetsThisBoxCallTheNext(): void {
@@ -147,7 +133,7 @@ final class RacingRequestsTest extends IntegrationTestCase {
 			return $parent();
 		});
 
-		$state = $this->calls()->callNext($boxId);
+		$state = $this->calls($this->turnos)->callNext($boxId);
 
 		$this->assertSame($next->getId(), $state['current']['id']);
 		$this->assertSame(1, $this->turnos->countActiveForBox($boxId));
@@ -156,7 +142,7 @@ final class RacingRequestsTest extends IntegrationTestCase {
 	}
 
 	public function testAnIssueThatCollidesOnTheSequencePastTheQuotaIsWithdrawn(): void {
-		$s = $this->servicioWithQuota(3);
+		$s = $this->servicio(dailyQuota: 3);
 		$this->waiting($s, false, 1);
 		$this->waiting($s, false, 2);
 		$competitor = null;
@@ -176,7 +162,7 @@ final class RacingRequestsTest extends IntegrationTestCase {
 	}
 
 	public function testAnIssueRacingAcrossPreferenteAndGeneralPastTheQuotaIsWithdrawn(): void {
-		$s = $this->servicioWithQuota(3);
+		$s = $this->servicio(dailyQuota: 3);
 		$this->waiting($s, false, 1);
 		$this->waiting($s, false, 2);
 		$this->turnos->once('countForDay', function (\Closure $parent) use ($s): int {
@@ -193,13 +179,13 @@ final class RacingRequestsTest extends IntegrationTestCase {
 	}
 
 	public function testAnIssuePastTheQuotaThatABoxHasAlreadyCalledStands(): void {
-		$s = $this->servicioWithQuota(3);
+		$s = $this->servicio(dailyQuota: 3);
 		$this->turnoEnded($s, false, 1, Estado::Completed, self::DAY);
 		$this->turnoEnded($s, false, 2, Estado::Completed, self::DAY);
 		$boxId = $this->box('Box 1', $s);
 		$this->turnos->once('insert', function (\Closure $parent) use ($s, $boxId): Turno {
 			$stored = $parent();
-			$this->calls()->callNext($boxId); // a box with an empty queue calls the new turno at once
+			$this->calls($this->turnos)->callNext($boxId); // a box with an empty queue calls the new turno at once
 			$this->waiting($s, true, 1); // and a preferente turno is issued before this issue counts again
 
 			return $stored;
@@ -227,7 +213,7 @@ final class RacingRequestsTest extends IntegrationTestCase {
 
 		$notFound = false;
 		try {
-			$this->calls()->callNext($boxId);
+			$this->calls($this->turnos)->callNext($boxId);
 		} catch (DoesNotExistException) {
 			$notFound = true;
 		}
@@ -247,7 +233,7 @@ final class RacingRequestsTest extends IntegrationTestCase {
 		$t = $this->waiting($s, false, 1);
 		$this->turnos->once('findActiveForBox', function (\Closure $parent) use ($boxId): ?Turno {
 			$held = $parent();
-			$this->calls()->callNext($boxId); // the box's console calls the next turno once the guard has read it idle
+			$this->calls($this->turnos)->callNext($boxId); // the box's console calls the next turno once the guard has read it idle
 
 			return $held;
 		});
@@ -259,17 +245,6 @@ final class RacingRequestsTest extends IntegrationTestCase {
 		$this->assertNull($given->getBoxId());
 		$this->assertNull($given->getCalledAt());
 		$this->assertNull($this->turnos->findActiveForBox($boxId));
-	}
-
-	protected function calls(): CallService {
-		return new CallService(
-			Server::get(BoxMapper::class),
-			Server::get(ServicioLinks::class),
-			Server::get(ServicioMapper::class),
-			$this->turnos,
-			$this->llamados,
-			$this->today,
-		);
 	}
 
 	private function boxes(): BoxService {
@@ -285,18 +260,11 @@ final class RacingRequestsTest extends IntegrationTestCase {
 		return new TurnoService(
 			Server::get(ServicioMapper::class),
 			$this->turnos,
-			$this->today,
+			$this->today(),
 			Server::get(TotemMapper::class),
 			Server::get(ServicioLinks::class),
 			Server::get(TicketPrinting::class),
 		);
-	}
-
-	private function servicioWithQuota(int $quota): Servicio {
-		$s = $this->servicio();
-		$s->setDailyQuota($quota);
-
-		return Server::get(ServicioMapper::class)->update($s);
 	}
 
 	/** A box covering this servicio; its id. */
@@ -312,12 +280,5 @@ final class RacingRequestsTest extends IntegrationTestCase {
 	/** A waiting turno issued in sequence order. */
 	private function waiting(Servicio $s, bool $preferente, int $seq): Turno {
 		return $this->turno($s, $preferente, $seq, 1000 + $seq);
-	}
-
-	/** How many llamados were logged for this turno. */
-	private function llamadosOf(Turno $t): int {
-		$all = $this->llamados->findSince([], self::DAY, 0, 50);
-
-		return count(array_filter($all, static fn (Llamado $l) => $l->getTurnoId() === $t->getId()));
 	}
 }

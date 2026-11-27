@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace OCA\Totem\Tests\Integration;
 
 use OCA\Totem\Db\BoxMapper;
+use OCA\Totem\Db\Llamado;
 use OCA\Totem\Db\LlamadoMapper;
 use OCA\Totem\Db\Pantalla;
 use OCA\Totem\Db\PantallaMapper;
@@ -63,8 +64,13 @@ abstract class IntegrationTestCase extends TestCase {
 		return Server::get(IConfig::class)->getSystemValueString('dbtableprefix', 'oc_') . $table;
 	}
 
-	/** A servicio open all day, 00:00-23:59, with no quota. */
-	protected function servicio(string $name = 'Farmacia', string $prefix = 'FAR'): Servicio {
+	/** {@see self::DAY} moved by this many days: -1 is the Día before, 1 the Día after. */
+	final protected function dayMovedBy(int $days): string {
+		return (new \DateTimeImmutable(self::DAY, new \DateTimeZone('UTC')))->modify("$days day")->format('Y-m-d');
+	}
+
+	/** A servicio open all day, 00:00-23:59, with this daily quota or none. */
+	protected function servicio(string $name = 'Farmacia', string $prefix = 'FAR', ?int $dailyQuota = null): Servicio {
 		$s = new Servicio();
 		$s->setSlug(strtolower($prefix));
 		$s->setName($name);
@@ -72,7 +78,7 @@ abstract class IntegrationTestCase extends TestCase {
 		$s->setColor('#0b6e69');
 		$s->setOpens('00:00');
 		$s->setCloses('23:59');
-		$s->setDailyQuota(null);
+		$s->setDailyQuota($dailyQuota);
 		$s->setActive(true);
 
 		return Server::get(ServicioMapper::class)->insert($s);
@@ -133,9 +139,9 @@ abstract class IntegrationTestCase extends TestCase {
 		return new Today($clock, Server::get(IDateTimeZone::class));
 	}
 
-	/** The calls a box makes, on the clock of {@see self::today()}. */
-	protected function calls(): CallService {
-		return new CallService(Server::get(BoxMapper::class), Server::get(ServicioLinks::class), Server::get(ServicioMapper::class), Server::get(TurnoMapper::class), Server::get(LlamadoMapper::class), $this->today());
+	/** The calls a box makes, on the clock of {@see self::today()}, through the given TurnoMapper or the instance's. */
+	protected function calls(?TurnoMapper $turnos = null): CallService {
+		return new CallService(Server::get(BoxMapper::class), Server::get(ServicioLinks::class), Server::get(ServicioMapper::class), $turnos ?? Server::get(TurnoMapper::class), Server::get(LlamadoMapper::class), $this->today());
 	}
 
 	/** The feed a Pantalla polls, on the clock of {@see self::today()}, reading Boxes through the given mapper or the instance's. */
@@ -143,15 +149,22 @@ abstract class IntegrationTestCase extends TestCase {
 		return new DisplayFeed(Server::get(PantallaMapper::class), Server::get(ServicioLinks::class), Server::get(LlamadoMapper::class), Server::get(TurnoMapper::class), Server::get(ServicioMapper::class), $boxes ?? Server::get(BoxMapper::class), $this->today());
 	}
 
-	/** The sentence the request was refused with; null when it went through. */
-	protected function refusal(\Closure $request): ?string {
+	/** The sentence the action was refused with; the test fails when the action goes through. */
+	protected function refusal(callable $action): string {
 		try {
-			$request();
+			$action();
 		} catch (Refused $e) {
 			return $e->getMessage();
 		}
 
-		return null;
+		$this->fail('The action was not refused.');
+	}
+
+	/** How many llamados were made for this turno on this Día. */
+	protected function llamadosOf(Turno $t, string $day = self::DAY): int {
+		$all = Server::get(LlamadoMapper::class)->findSince([], $day, 0, 50);
+
+		return count(array_filter($all, static fn (Llamado $l) => $l->getTurnoId() === $t->getId()));
 	}
 
 	private function emptyTables(): void {
