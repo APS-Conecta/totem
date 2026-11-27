@@ -7,7 +7,7 @@
 // page's wall clock can be moved apart from it.
 
 const { test, expect } = require('@playwright/test')
-const { call, kiosk, login, waitOutDoubleTap, world } = require('./helpers')
+const { answerQuestion, call, kiosk, login, world } = require('./helpers')
 
 const HOME = 'Seleccione la unidad a la que acude.'
 const QUESTION = '¿Tiene 60 años o más, una discapacidad o cuida a una persona con discapacidad?'
@@ -79,13 +79,13 @@ test('Sí tapped 1 s after a servicio bar is answered though the wall clock step
 // Each way home, reached from a servicio bar tapped on a fresh totem.
 const WAYS_HOME = [
 	['Volver al inicio', async (totem, page, w) => {
-		await waitOutDoubleTap(totem)
 		// Switched off after the totem loaded its list: the bar stays until the next poll, the server refuses.
 		await call(page, 'PUT', `/apps/totem/servicios/${w.servicio.id}`, { ...w.servicio, active: false })
-		await choice(totem, 'No').click()
+		await answerQuestion(totem, 'No')
 		await expect(totem.getByRole('alert')).toContainText('Esta unidad no está disponible.')
 	}],
-	['‹ Volver', (totem) => waitOutDoubleTap(totem)],
+	// "‹ Volver" has no double-tap window: it is tapped as soon as the question is up.
+	['‹ Volver', async () => {}],
 ]
 
 for (const [way, reach] of WAYS_HOME) {

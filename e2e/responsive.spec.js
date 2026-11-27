@@ -8,7 +8,7 @@
 // (with its chip).
 
 const { test, expect } = require('@playwright/test')
-const { call, login, waitOutDoubleTap, world } = require('./helpers')
+const { answerQuestion, call, login, openQuestion, world } = require('./helpers')
 
 const TOTEM_SIZES = [[1080, 1920], [720, 1280], [768, 1024], [1920, 1080], [1366, 768], [1024, 1024], [3840, 2160]]
 const DISPLAY_SIZES = [[1920, 1080], [1366, 768], [1024, 768], [2560, 1080], [1080, 1920], [800, 480], [3840, 2160]]
@@ -93,12 +93,11 @@ test.describe('screens adapt to any size', () => {
 				await expect(bar).toBeVisible()
 				expect(await patient.evaluate(audit), 'home').toEqual([])
 
-				await bar.click()
+				await openQuestion(patient, w.servicio.name)
 				await expect(patient.getByRole('button', { name: answer, exact: true })).toBeVisible()
 				expect(await patient.evaluate(audit), 'question').toEqual([])
 
-				await waitOutDoubleTap(patient)
-				await patient.getByRole('button', { name: answer, exact: true }).click()
+				await answerQuestion(patient, answer)
 				await expect(patient.getByText('Su turno')).toBeVisible()
 				expect(await patient.evaluate(audit), `ticket after ${answer}`).toEqual([])
 			}

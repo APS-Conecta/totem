@@ -4,7 +4,7 @@
 // stands at the totem then still sees their own unidad and its question, never the earlier patient's refusal.
 
 const { test, expect } = require('@playwright/test')
-const { call, kiosk, login, waitOutDoubleTap, world } = require('./helpers')
+const { call, kiosk, login, openQuestion, takeTurno, world } = require('./helpers')
 
 let w
 let run
@@ -29,7 +29,6 @@ test.afterEach(async ({ page }) => {
 	await w.cleanup()
 })
 
-const unidad = (screen, name) => screen.getByRole('button', { name: new RegExp(`^${name} ${run}`) })
 const back = (screen) => screen.getByRole('button', { name: '‹ Volver' })
 
 /** Answer «No» for Farmacia while its turno request is held back; resolves with the held route. */
@@ -37,9 +36,7 @@ async function askFarmaciaAndHold(screen) {
 	let held
 	const holding = new Promise((resolve) => { held = resolve })
 	await screen.route('**/apps/totem/turnos', (route) => held(route))
-	await unidad(screen, 'Farmacia').click()
-	await waitOutDoubleTap(screen)
-	await screen.getByRole('button', { name: 'No', exact: true }).click()
+	await takeTurno(screen, `Farmacia ${run}`, 'No')
 	return holding
 }
 
@@ -60,8 +57,7 @@ test('a refusal that arrives after the patient went back is not shown to the nex
 	try {
 		const route = await askFarmaciaAndHold(screen)
 		await back(screen).click()
-		await waitOutDoubleTap(screen)
-		await unidad(screen, 'Dental').click()
+		await openQuestion(screen, `Dental ${run}`)
 
 		await refuseAndExpectQuestion(screen, route, 'Dental')
 	} finally {
@@ -74,8 +70,7 @@ test('a refusal that arrives after the patient went back is not shown to the nex
 	try {
 		const route = await askFarmaciaAndHold(screen)
 		await back(screen).click()
-		await waitOutDoubleTap(screen)
-		await unidad(screen, 'Farmacia').click()
+		await openQuestion(screen, `Farmacia ${run}`)
 
 		await refuseAndExpectQuestion(screen, route, 'Farmacia')
 	} finally {
@@ -89,8 +84,7 @@ test('a refusal that arrives after the question timed out is not shown to the ne
 		await screen.clock.install()
 		const route = await askFarmaciaAndHold(screen)
 		await screen.clock.runFor(30_000)
-		await waitOutDoubleTap(screen)
-		await unidad(screen, 'Dental').click()
+		await openQuestion(screen, `Dental ${run}`)
 
 		await refuseAndExpectQuestion(screen, route, 'Dental')
 	} finally {

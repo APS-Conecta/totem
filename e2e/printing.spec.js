@@ -8,7 +8,7 @@
 // file is about the server path and its guards.
 
 const { test, expect } = require('@playwright/test')
-const { call, kiosk, login, waitOutDoubleTap, world } = require('./helpers')
+const { call, kiosk, login, takeTurno, world } = require('./helpers')
 
 const PRINTER = process.env.TOTEM_PRINTER_URL || 'http://127.0.0.1:9191'
 const ESC_POS_CUT = '\x1D\x56\x42\x03'
@@ -176,12 +176,6 @@ test('a kiosk lists only the unidades its totem offers, and the default one list
 	}
 })
 
-async function takeTicketOnScreen(screen, unidad, answer) {
-	await screen.getByRole('button', { name: new RegExp(unidad) }).click()
-	await waitOutDoubleTap(screen)
-	await screen.getByRole('button', { name: answer, exact: true }).click()
-}
-
 test.describe('on the totem screen', () => {
 	test('a patient at a totem with a printer takes the ticket, it prints there, and the browser stays out of it', async ({ page, browser }) => {
 		const slugged = await totem(page)
@@ -189,7 +183,7 @@ test.describe('on the totem screen', () => {
 		try {
 			await expect(screen.getByRole('heading', { name: 'Seleccione la unidad a la que acude.' })).toBeVisible()
 
-			await takeTicketOnScreen(screen, w.servicio.name, 'Sí')
+			await takeTurno(screen, w.servicio.name, 'Sí')
 
 			await expect(screen.locator('.t-ticket')).toContainText(`${w.prefix}-P-001`)
 			await expect(screen.locator('.t-ticket')).toContainText('Retire su ticket impreso')
@@ -205,7 +199,7 @@ test.describe('on the totem screen', () => {
 		const broken = await totem(page, { printerPort: 9109 })
 		const { patient, screen } = await kiosk(browser, `/apps/totem/totem/${broken.slug}`)
 		try {
-			await takeTicketOnScreen(screen, w.servicio.name, 'No')
+			await takeTurno(screen, w.servicio.name, 'No')
 
 			const ticket = screen.locator('.t-ticket')
 			await expect(ticket).toContainText(`${w.prefix}-G-001`)
@@ -223,7 +217,7 @@ test.describe('on the totem screen', () => {
 		for (const path of [`/apps/totem/totem/${plain.slug}`, '/apps/totem/totem']) {
 			const { patient, screen } = await kiosk(browser, path)
 			try {
-				await takeTicketOnScreen(screen, w.servicio.name, 'No')
+				await takeTurno(screen, w.servicio.name, 'No')
 
 				await expect(screen.locator('.t-ticket')).toContainText('Retire su ticket impreso')
 				await expect.poll(() => screen.evaluate(() => window.__prints)).toBe(1)

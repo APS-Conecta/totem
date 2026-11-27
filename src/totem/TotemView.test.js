@@ -43,20 +43,25 @@ const buttons = (wrapper) => wrapper.findAll('button').map((b) => b.text())
 const button = (wrapper, text) => wrapper.findAll('button').find((b) => b.text() === text)
 const pastDoubleTap = () => vi.advanceTimersByTimeAsync(500)
 
-async function openFarmacia() {
+/** A fresh Tótem, on the question for Farmacia. */
+async function openQuestion() {
 	const wrapper = await mountTotem()
 	await button(wrapper, 'FarmaciaFAR').trigger('click')
 	return wrapper
+}
+
+/** Taps `text` ("Sí", "No", or the next patient's servicio bar after a way home) once the double-tap window is over. */
+async function answerQuestion(wrapper, text) {
+	await pastDoubleTap()
+	await button(wrapper, text).trigger('click')
 }
 
 const refusal = (status, message) => Object.assign(new Error('Request failed'), { response: { status, data: message ? { message } : {} } })
 
 async function refused(error) {
 	issueTurno.mockRejectedValue(error)
-	const wrapper = await mountTotem()
-	await button(wrapper, 'FarmaciaFAR').trigger('click')
-	await pastDoubleTap()
-	await button(wrapper, 'No').trigger('click')
+	const wrapper = await openQuestion()
+	await answerQuestion(wrapper, 'No')
 	await flushPromises()
 	return wrapper
 }
@@ -192,8 +197,7 @@ describe('paging many servicios', () => {
 		const wrapper = await mountTotem()
 		await button(wrapper, 'Siguiente').trigger('click')
 		await button(wrapper, 'Servicio 8S08').trigger('click')
-		await pastDoubleTap()
-		await button(wrapper, 'No').trigger('click')
+		await answerQuestion(wrapper, 'No')
 		await flushPromises()
 		await vi.advanceTimersByTimeAsync(8000)
 
@@ -242,7 +246,7 @@ describe('paging many servicios', () => {
 
 describe('question screen', () => {
 	it('asks the one preferente question under the servicio band', async () => {
-		const wrapper = await openFarmacia()
+		const wrapper = await openQuestion()
 
 		expect(wrapper.text()).toContain('Farmacia')
 		expect(wrapper.text()).toContain('¿Tiene 60 años o más, una discapacidad o cuida a una persona con discapacidad?')
@@ -252,7 +256,7 @@ describe('question screen', () => {
 	})
 
 	it('colors the band with the servicio color and a readable text color', async () => {
-		const wrapper = await openFarmacia()
+		const wrapper = await openQuestion()
 		const band = wrapper.find('header')
 
 		expect(band.element.style.backgroundColor).toBe('rgb(27, 110, 194)')
@@ -260,7 +264,7 @@ describe('question screen', () => {
 	})
 
 	it('goes back to the home screen with "‹ Volver"', async () => {
-		const wrapper = await openFarmacia()
+		const wrapper = await openQuestion()
 		await button(wrapper, '‹ Volver').trigger('click')
 
 		expect(wrapper.text()).toContain('Seleccione la unidad a la que acude.')
@@ -327,7 +331,7 @@ describe('a double tap on a way home', () => {
 	const refusedFarmacia = () => refused(refusal(422, 'Esta unidad no está disponible.'))
 
 	async function backFromFarmacia() {
-		const wrapper = await openFarmacia()
+		const wrapper = await openQuestion()
 		await pastDoubleTap()
 		return wrapper
 	}
@@ -367,10 +371,8 @@ describe('issuing a turno', () => {
 	const issued = (label, preferente) => ({ id: 41, label, servicio: 'Farmacia', preferente })
 
 	async function answer(choice) {
-		const wrapper = await mountTotem()
-		await button(wrapper, 'FarmaciaFAR').trigger('click')
-		await pastDoubleTap()
-		await button(wrapper, choice).trigger('click')
+		const wrapper = await openQuestion()
+		await answerQuestion(wrapper, choice)
 		await flushPromises()
 		return wrapper
 	}
@@ -393,10 +395,8 @@ describe('issuing a turno', () => {
 	it('still shows and prints the ticket when the patient left the question while it was being issued', async () => {
 		let arrive
 		issueTurno.mockReturnValue(new Promise((resolve) => (arrive = resolve)))
-		const wrapper = await mountTotem()
-		await button(wrapper, 'FarmaciaFAR').trigger('click')
-		await pastDoubleTap()
-		await button(wrapper, 'No').trigger('click')
+		const wrapper = await openQuestion()
+		await answerQuestion(wrapper, 'No')
 		await button(wrapper, '‹ Volver').trigger('click')
 		arrive(issued('FAR-G-007', false))
 		await flushPromises()
@@ -440,10 +440,8 @@ describe('issuing a turno', () => {
 	it('takes one turno even when the choice is tapped twice before the answer arrives', async () => {
 		let arrive
 		issueTurno.mockReturnValue(new Promise((resolve) => (arrive = resolve)))
-		const wrapper = await mountTotem()
-		await button(wrapper, 'FarmaciaFAR').trigger('click')
-		await pastDoubleTap()
-		await button(wrapper, 'No').trigger('click')
+		const wrapper = await openQuestion()
+		await answerQuestion(wrapper, 'No')
 		await button(wrapper, 'No').trigger('click')
 		await button(wrapper, 'Sí').trigger('click')
 		arrive(issued('FAR-G-007', false))
@@ -462,8 +460,7 @@ describe('a totem with its own address', () => {
 
 		expect(publicServicios).toHaveBeenCalledWith('sala-sur')
 		await button(wrapper, 'FarmaciaFAR').trigger('click')
-		await pastDoubleTap()
-		await button(wrapper, 'No').trigger('click')
+		await answerQuestion(wrapper, 'No')
 		await flushPromises()
 
 		expect(issueTurno).toHaveBeenCalledWith(1, false, 'sala-sur')
@@ -480,11 +477,9 @@ describe('printing the ticket', () => {
 	async function issue(result, choice) {
 		issueTurno.mockResolvedValue(result)
 		provideEstablishment('CESFAM Ejemplo')
-		const wrapper = await mountTotem()
-		await button(wrapper, 'FarmaciaFAR').trigger('click')
+		const wrapper = await openQuestion()
 		expect(window.print).not.toHaveBeenCalled()
-		await pastDoubleTap()
-		await button(wrapper, choice).trigger('click')
+		await answerQuestion(wrapper, choice)
 		await flushPromises()
 		return wrapper
 	}
@@ -581,15 +576,12 @@ describe('when the server refuses the turno', () => {
 	it('does not show a late refusal to the next patient', async () => {
 		let fail
 		issueTurno.mockReturnValue(new Promise((resolve, reject) => (fail = reject)))
-		const wrapper = await mountTotem()
-		await button(wrapper, 'FarmaciaFAR').trigger('click')
-		await pastDoubleTap()
-		await button(wrapper, 'No').trigger('click')
+		const wrapper = await openQuestion()
+		await answerQuestion(wrapper, 'No')
 		await button(wrapper, '‹ Volver').trigger('click')
 		fail(refusal(422, 'Hoy ya no quedan turnos para Farmacia.'))
 		await flushPromises()
-		await pastDoubleTap()
-		await button(wrapper, 'VacunatorioVAC').trigger('click')
+		await answerQuestion(wrapper, 'VacunatorioVAC')
 
 		expect(wrapper.text()).toContain('¿Tiene 60 años o más')
 		expect(wrapper.find('[role="alert"]').exists()).toBe(false)
@@ -600,20 +592,15 @@ describe('when the server refuses the turno', () => {
 	async function refusedAfterNextChoice(leave, next) {
 		let fail
 		issueTurno.mockReturnValue(new Promise((resolve, reject) => (fail = reject)))
-		const wrapper = await mountTotem()
-		await button(wrapper, 'FarmaciaFAR').trigger('click')
-		await pastDoubleTap()
-		await button(wrapper, 'No').trigger('click')
+		const wrapper = await openQuestion()
+		await answerQuestion(wrapper, 'No')
 		await leave(wrapper)
-		await button(wrapper, next).trigger('click')
+		await answerQuestion(wrapper, next)
 		fail(refusal(422, 'Hoy ya no quedan turnos para Farmacia.'))
 		await flushPromises()
 		return wrapper
 	}
-	async function byVolver(wrapper) {
-		await button(wrapper, '‹ Volver').trigger('click')
-		await pastDoubleTap()
-	}
+	const byVolver = (wrapper) => button(wrapper, '‹ Volver').trigger('click')
 	const byIdleTimeout = () => vi.advanceTimersByTimeAsync(30000)
 
 	it.each([
@@ -632,8 +619,7 @@ describe('when the server refuses the turno', () => {
 	it('does not carry the error into the next patient', async () => {
 		const wrapper = await refused(refusal(422, 'Hoy ya no quedan turnos para Farmacia.'))
 		await button(wrapper, 'Volver al inicio').trigger('click')
-		await pastDoubleTap()
-		await button(wrapper, 'FarmaciaFAR').trigger('click')
+		await answerQuestion(wrapper, 'FarmaciaFAR')
 
 		expect(wrapper.find('[role="alert"]').exists()).toBe(false)
 		expect(button(wrapper, 'No').attributes('disabled')).toBeUndefined()
@@ -666,12 +652,10 @@ describe('when the network is down', () => {
 	})
 
 	it('shows the notice, not a refusal, when taking the turno fails without an answer', async () => {
-		const wrapper = await mountTotem()
-		await button(wrapper, 'FarmaciaFAR').trigger('click')
+		const wrapper = await openQuestion()
 		issueTurno.mockRejectedValue(noAnswer())
 		publicServicios.mockRejectedValue(noAnswer()) // the server really is unreachable
-		await pastDoubleTap()
-		await button(wrapper, 'No').trigger('click')
+		await answerQuestion(wrapper, 'No')
 		await flushPromises()
 
 		expect(overlay(wrapper).text()).toContain('Sin conexión')
@@ -680,11 +664,9 @@ describe('when the network is down', () => {
 	})
 
 	it('checks again at once after such a failure, and clears the notice if the server is back', async () => {
-		const wrapper = await mountTotem()
-		await button(wrapper, 'FarmaciaFAR').trigger('click')
+		const wrapper = await openQuestion()
 		issueTurno.mockRejectedValue(noAnswer())
-		await pastDoubleTap()
-		await button(wrapper, 'No').trigger('click')
+		await answerQuestion(wrapper, 'No')
 		await flushPromises()
 		expect(publicServicios).toHaveBeenCalledTimes(2)
 
@@ -694,7 +676,7 @@ describe('when the network is down', () => {
 
 describe('a patient who walks away', () => {
 	it('returns to the home screen after 30 seconds without a tap on the question', async () => {
-		const wrapper = await openFarmacia()
+		const wrapper = await openQuestion()
 
 		await vi.advanceTimersByTimeAsync(29999)
 		expect(wrapper.text()).toContain('¿Tiene 60 años o más')
@@ -705,7 +687,7 @@ describe('a patient who walks away', () => {
 	})
 
 	it('waits another 30 seconds after each tap on the screen', async () => {
-		const wrapper = await openFarmacia()
+		const wrapper = await openQuestion()
 
 		await vi.advanceTimersByTimeAsync(20000)
 		await wrapper.find('header').trigger('pointerdown')
@@ -719,7 +701,8 @@ describe('a patient who walks away', () => {
 	it('does not cut the ticket screen short when the answer was slow to arrive', async () => {
 		let arrive
 		issueTurno.mockReturnValue(new Promise((resolve) => (arrive = resolve)))
-		const wrapper = await openFarmacia()
+		const wrapper = await openQuestion()
+		// A real tap's pointerdown comes between the window and its click, so this answer is spelled out.
 		await pastDoubleTap()
 		await button(wrapper, 'No').trigger('pointerdown')
 		await button(wrapper, 'No').trigger('click')
@@ -732,11 +715,10 @@ describe('a patient who walks away', () => {
 	})
 
 	it('does not pull the next patient back home with the previous one\'s wait', async () => {
-		const wrapper = await openFarmacia()
+		const wrapper = await openQuestion()
 		await vi.advanceTimersByTimeAsync(25000)
 		await button(wrapper, '‹ Volver').trigger('click')
-		await pastDoubleTap()
-		await button(wrapper, 'VacunatorioVAC').trigger('click')
+		await answerQuestion(wrapper, 'VacunatorioVAC')
 
 		await vi.advanceTimersByTimeAsync(10000) // 35.5 s after the first patient arrived, 10 s after this one
 		expect(wrapper.text()).toContain('¿Tiene 60 años o más')
