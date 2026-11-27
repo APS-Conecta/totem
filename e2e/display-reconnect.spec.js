@@ -10,9 +10,8 @@
 // after AVISO_GAP_MS has no Aviso waiting behind it.
 
 const { test, expect } = require('@playwright/test')
-const { callNew, chimes, login, openDisplay, world } = require('./helpers')
+const { FEED, callNew, chimes, login, openDisplay, world } = require('./helpers')
 
-const FEED = /\/apps\/totem\/display\/[^/]+\/feed/
 const OFFLINE = 'Sin conexión con el servidor. Reintentando…'
 const UNLOCK = 'Toque aquí para activar el sonido'
 const AVISO_GAP_MS = 3_000
