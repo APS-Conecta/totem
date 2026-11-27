@@ -50,16 +50,10 @@ async function openQuestion() {
 	return wrapper
 }
 
-/** Taps `choice` ("Sí" or "No") once the servicio bar's double-tap window is over. */
-async function answerQuestion(wrapper, choice) {
+/** Taps `text` ("Sí", "No", or the next patient's servicio bar after a way home) once the double-tap window is over. */
+async function answerQuestion(wrapper, text) {
 	await pastDoubleTap()
-	await button(wrapper, choice).trigger('click')
-}
-
-/** The next patient taps the servicio `bar` once the double-tap window of a way home is over. */
-async function chooseAfterWayHome(wrapper, bar) {
-	await pastDoubleTap()
-	await button(wrapper, bar).trigger('click')
+	await button(wrapper, text).trigger('click')
 }
 
 const refusal = (status, message) => Object.assign(new Error('Request failed'), { response: { status, data: message ? { message } : {} } })
@@ -587,7 +581,7 @@ describe('when the server refuses the turno', () => {
 		await button(wrapper, '‹ Volver').trigger('click')
 		fail(refusal(422, 'Hoy ya no quedan turnos para Farmacia.'))
 		await flushPromises()
-		await chooseAfterWayHome(wrapper, 'VacunatorioVAC')
+		await answerQuestion(wrapper, 'VacunatorioVAC')
 
 		expect(wrapper.text()).toContain('¿Tiene 60 años o más')
 		expect(wrapper.find('[role="alert"]').exists()).toBe(false)
@@ -601,7 +595,7 @@ describe('when the server refuses the turno', () => {
 		const wrapper = await openQuestion()
 		await answerQuestion(wrapper, 'No')
 		await leave(wrapper)
-		await chooseAfterWayHome(wrapper, next)
+		await answerQuestion(wrapper, next)
 		fail(refusal(422, 'Hoy ya no quedan turnos para Farmacia.'))
 		await flushPromises()
 		return wrapper
@@ -625,7 +619,7 @@ describe('when the server refuses the turno', () => {
 	it('does not carry the error into the next patient', async () => {
 		const wrapper = await refused(refusal(422, 'Hoy ya no quedan turnos para Farmacia.'))
 		await button(wrapper, 'Volver al inicio').trigger('click')
-		await chooseAfterWayHome(wrapper, 'FarmaciaFAR')
+		await answerQuestion(wrapper, 'FarmaciaFAR')
 
 		expect(wrapper.find('[role="alert"]').exists()).toBe(false)
 		expect(button(wrapper, 'No').attributes('disabled')).toBeUndefined()
@@ -724,7 +718,7 @@ describe('a patient who walks away', () => {
 		const wrapper = await openQuestion()
 		await vi.advanceTimersByTimeAsync(25000)
 		await button(wrapper, '‹ Volver').trigger('click')
-		await chooseAfterWayHome(wrapper, 'VacunatorioVAC')
+		await answerQuestion(wrapper, 'VacunatorioVAC')
 
 		await vi.advanceTimersByTimeAsync(10000) // 35.5 s after the first patient arrived, 10 s after this one
 		expect(wrapper.text()).toContain('¿Tiene 60 años o más')
