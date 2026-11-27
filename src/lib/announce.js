@@ -6,6 +6,9 @@ import { browserEngine, speak } from './voice.js'
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
+/** Whether a Pantalla's voice speaks: «Sin voz, solo tonos» stores `'off'`, and its Aviso is the chime alone. */
+export const hasVoice = (voice) => voice !== 'off'
+
 let bundled = null // { voice, engine }: the one bundled voice the page keeps loaded
 let browser = null
 
@@ -33,11 +36,11 @@ export function createAnnouncer({ chime = playChime, speak: say = speak, wait = 
 
 	async function run({ text, volume, voice }) {
 		if (volume <= 0) return
-		const list = voice === 'off' ? [] : engines(voice)
+		// A Pantalla with no voice gets no engines, so speak says nothing after its chime.
+		const list = hasVoice(voice) ? engines(voice) : []
 		list[0]?.prepare?.(text)?.catch(() => {}) // a failure here surfaces at speaking time, where the chain falls back
 		const seconds = chime(volume)
 		await wait(seconds * 1000 + 200)
-		if (voice === 'off') return
 		await say(text, { engines: list, volume, pauseMs: 700 })
 	}
 
@@ -53,9 +56,12 @@ export function createAnnouncer({ chime = playChime, speak: say = speak, wait = 
 const shared = createAnnouncer()
 export const announce = (call) => shared.announce(call)
 
-/** Load the bundled voice ahead of the first call, so that call is not slowed by loading the model. */
+/**
+ * Load the bundled voice ahead of the first call, so that call is not slowed by loading the model.
+ * A Pantalla with no voice loads nothing.
+ */
 export function warmUp(voice) {
-	enginesFor(voice)[0].available()
+	if (hasVoice(voice)) enginesFor(voice)[0].available()
 }
 
 /** Play the chimes and the chosen voice once, as a Pantalla would, so an admin can hear its settings. */

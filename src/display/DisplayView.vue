@@ -46,7 +46,7 @@
 import { loadState } from '@nextcloud/initial-state'
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { readFeed, warnError } from '../api.js'
-import { announce, warmUp } from '../lib/announce.js'
+import { announce, hasVoice, warmUp } from '../lib/announce.js'
 import { audioReady, unlockAudio } from '../lib/chime.js'
 import { readableOn } from '../lib/color.js'
 import { poll } from '../lib/poll.js'
@@ -92,7 +92,7 @@ const recent = computed(() => {
 
 const caption = computed(() => {
 	const { volume, voice } = pantalla.value
-	const sound = volume <= 0 ? 'Sonido apagado' : voice === 'off' ? 'Sonido activado' : 'Sonido y voz activados'
+	const sound = volume <= 0 ? 'Sonido apagado' : hasVoice(voice) ? 'Sonido y voz activados' : 'Sonido activado'
 	return current.value ? `${sound} · ${current.value.spoken}` : sound
 })
 
@@ -106,7 +106,7 @@ function onData(data) {
 	soundReady.value = audioReady()
 	// Every answer: the Pantalla's voice or volume can change after the page opened.
 	const { volume, voice } = data.pantalla
-	if (volume > 0 && voice !== 'off' && voice !== warmed) {
+	if (volume > 0 && voice !== warmed) {
 		warmUp(voice)
 		warmed = voice
 	}

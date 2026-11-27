@@ -32,6 +32,19 @@ test.describe('the Pantalla warms up the voice it will speak', () => {
 
 	const setPantalla = (page, change) => call(page, 'PUT', `/apps/totem/pantallas/${w.screen.id}`, { ...w.screen, ...change })
 
+	// A Pantalla with no voice has no model to ask for: the proof is that the page starts no worker.
+	test('a Pantalla with no voice loads no voice', async ({ browser, page }) => {
+		w = await world(page, { pantalla: { volume: 100, voice: 'off' } })
+		const room = await openDisplay(browser, w)
+		const workers = []
+		room.on('worker', (worker) => workers.push(worker.url()))
+
+		// Reloaded with the listener on, so the first answer's warm-up is seen too.
+		await Promise.all([room.waitForResponse(FEED), room.reload()])
+		await room.waitForResponse(FEED)
+		expect(workers).toEqual([])
+	})
+
 	test('a voice chosen after the page opened', async ({ browser, page }) => {
 		w = await world(page, { pantalla: { volume: 100, voice: 'off' } })
 		const room = await openDisplay(browser, w)
