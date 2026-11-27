@@ -8,9 +8,14 @@ namespace OCA\Totem\Tests\Integration;
 
 use OCA\Totem\Db\Box;
 use OCA\Totem\Db\BoxMapper;
+use OCA\Totem\Db\LlamadoMapper;
 use OCA\Totem\Db\Pantalla;
 use OCA\Totem\Db\PantallaMapper;
 use OCA\Totem\Db\ServicioLinks;
+use OCA\Totem\Db\ServicioMapper;
+use OCA\Totem\Db\TurnoMapper;
+use OCA\Totem\Domain\Estado;
+use OCA\Totem\Service\CallService;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\DB\Exception;
 use OCP\IConfig;
@@ -95,5 +100,25 @@ final class BoxAndPantallaTest extends IntegrationTestCase {
 		$this->assertSame([10], $this->links->ids(ServicioLinks::BOX, 1));
 		$this->assertSame([20], $this->links->ids(ServicioLinks::PANTALLA, 1));
 		$this->assertSame([30], $this->links->ids(ServicioLinks::BOX, 2));
+	}
+
+	public function testANoSePresentoOnATurnoAlreadyMarkedNoSePresentoIsRefused(): void {
+		$this->now = $this->momentOf(self::DAY, '12:00');
+		$s = $this->servicio();
+		$box = new Box();
+		$box->setName('Box 1');
+		$boxId = (int)Server::get(BoxMapper::class)->insert($box)->getId();
+		$this->links->replace(ServicioLinks::BOX, $boxId, [$s->getId()]);
+		$x = $this->turno($s, false, 1, $this->now);
+		$turnos = Server::get(TurnoMapper::class);
+		$calls = new CallService(Server::get(BoxMapper::class), $this->links, Server::get(ServicioMapper::class), $turnos, Server::get(LlamadoMapper::class), $this->today());
+		$calls->callNext($boxId);
+		// The box's other console has already marked X No se presentó; this console still shows X called.
+		$turnos->transition($x->getId(), Estado::Called, Estado::NoShow, $this->now);
+
+		$refusal = $this->refusal(fn () => $calls->absent($boxId));
+
+		$this->assertSame(Estado::NoShow->value, $turnos->find($x->getId())->getEstado());
+		$this->assertSame('No hay un turno llamado para marcar “No se presentó”.', $refusal);
 	}
 }
