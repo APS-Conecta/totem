@@ -66,6 +66,7 @@ const clock = ref(timeNow())
 let cursor = 0
 let day = null
 let opened = false
+let warmed = null // the voice last warmed up, so an answer that keeps it loads nothing again
 let reconnected = false
 let pulseTimer = null
 
@@ -104,7 +105,12 @@ function onData(data) {
 	// Read on every answer: the context can stop (a screen lock) or start by itself after the page opened.
 	soundReady.value = audioReady()
 	// The first answer is the day so far: show it, never announce it (a reload must not repeat the day).
-	if (!opened && data.pantalla.volume > 0 && data.pantalla.voice !== 'off') warmUp(data.pantalla.voice)
+	// Every answer, not only the first: the Pantalla's voice or volume can change after the page opened.
+	const { volume, voice } = data.pantalla
+	if (volume > 0 && voice !== 'off' && voice !== warmed) {
+		warmUp(voice)
+		warmed = voice
+	}
 	if (opened && data.llamados.length > 0) {
 		// Sound still locked: show the call, never announce it, or it would play as a backlog after the tap.
 		if (soundReady.value) {

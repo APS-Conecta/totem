@@ -108,7 +108,7 @@ async function openDisplay(browser, w, { locked = false } = {}) {
 	}, locked)
 	await room.goto('/apps/totem/display/' + w.screen.slug)
 	// The caption names the Pantalla's own sound once the first feed answer is in: from here a llamado is new.
-	await expect(room.locator('.d-foot .cap')).toHaveText(/^Sonido (activado|y voz activados)/)
+	await expect(room.locator('.d-foot .cap')).toHaveText(/^Sonido (apagado|activado|y voz activados)/)
 	return room
 }
 

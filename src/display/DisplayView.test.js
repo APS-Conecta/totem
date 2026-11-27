@@ -131,6 +131,27 @@ describe('DisplayView', () => {
 		expect(warmUp).not.toHaveBeenCalled()
 	})
 
+	it.each([
+		['a voice chosen after the page opened', { voice: 'off' }, { voice: 'mujer' }, 'mujer'],
+		['a change to the other voice', { voice: 'mujer' }, { voice: 'hombre' }, 'hombre'],
+		['sound turned on after the page opened', { volume: 0 }, { volume: 80 }, 'mujer'],
+	])('warms up %s on the answer that names it', async (_, before, after, voice) => {
+		await open({ ...feed([]), pantalla: { ...pantalla, ...before } })
+		warmUp.mockClear()
+		await next({ ...feed([]), pantalla: { ...pantalla, ...after } })
+
+		expect(warmUp).toHaveBeenCalledTimes(1)
+		expect(warmUp).toHaveBeenCalledWith(voice)
+	})
+
+	it('warms a voice up once while the pantalla keeps it, however many answers name it', async () => {
+		await open(feed([]))
+		await next(feed([]))
+		await next(feed([]))
+
+		expect(warmUp).toHaveBeenCalledTimes(1)
+	})
+
 	it('asks only for what is new: the next poll starts after the cursor it was given', async () => {
 		await open(feed([llamado(7, 'FAR-P-012')], 7))
 		await next(feed([], 7))
