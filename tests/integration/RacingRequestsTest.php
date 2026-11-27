@@ -110,7 +110,24 @@ final class RacingRequestsTest extends IntegrationTestCase {
 		$this->assertNull($given->getCalledAt());
 		$this->assertSame(0, $this->llamadosOf($y));
 		$this->assertSame($x->getId(), $this->turnos->findActiveForBox($boxId)?->getId());
-		$this->assertSame('Termine o marque como ausente el turno actual antes de llamar otro.', $refusal);
+		$this->assertSame('Finalice la atención del turno actual o marque “No se presentó” antes de llamar otro.', $refusal);
+	}
+
+	public function testANoSePresentoAfterTheOtherConsoleMarkedItIsRefused(): void {
+		$s = $this->servicio();
+		$boxId = $this->box('Box 1', $s);
+		$x = $this->waiting($s, false, 1);
+		$this->calls()->callNext($boxId);
+		$this->turnos->once('findActiveForBox', function (\Closure $parent) use ($x): ?Turno {
+			$this->turnos->transition($x->getId(), Estado::Called, Estado::NoShow, self::NOW); // the box's other console marks X No se presentó first
+
+			return $parent();
+		});
+
+		$refusal = $this->refusal(fn () => $this->calls()->absent($boxId));
+
+		$this->assertSame(Estado::NoShow->value, $this->turnos->find($x->getId())->getEstado());
+		$this->assertSame('No hay un turno llamado para marcar “No se presentó”.', $refusal);
 	}
 
 	public function testTwoCallsOnTheSameBoxThatBothGiveTheirTurnoBackChooseAgain(): void {

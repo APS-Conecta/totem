@@ -81,7 +81,7 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 		$this->assertNotNull($current, 'the box lost the turno it holds');
 		$this->assertSame($held->getId(), $current['id']);
 		$this->assertSame('called', $current['estado']);
-		$this->assertSame('Termine o marque como ausente el turno actual antes de llamar otro.', $this->refusal(fn () => $this->calls->callNext($this->boxId)));
+		$this->assertSame('Finalice la atención del turno actual o marque “No se presentó” antes de llamar otro.', $this->refusal(fn () => $this->calls->callNext($this->boxId)));
 		$this->assertSame('waiting', $this->turnos->find($waiting->getId())->getEstado());
 	}
 
