@@ -28,6 +28,25 @@ export async function speak(text, { engines, volume, pauseMs = 700, times = 2 })
 const spanish = (voices) => voices.find((v) => /^es[-_]CL/i.test(v.lang)) ?? voices.find((v) => /^es/i.test(v.lang)) ?? null
 
 /**
+ * The voices `synth` has. Chromium-based browsers commonly answer the first getVoices() with an
+ * empty list, load it in the background and then fire voiceschanged: an empty list waits for
+ * that event, at most `ms`, so a browser that never fires it still answers.
+ */
+function loadedVoices(synth, ms = 1000) {
+	const voices = synth.getVoices()
+	if (voices.length > 0) return Promise.resolve(voices)
+	return new Promise((resolve) => {
+		const done = () => {
+			clearTimeout(timer)
+			synth.removeEventListener('voiceschanged', done)
+			resolve(synth.getVoices())
+		}
+		const timer = setTimeout(done, ms)
+		synth.addEventListener('voiceschanged', done)
+	})
+}
+
+/**
  * The browser's own voice: the last resort. It depends on what the operating system has
  * installed, which on a kiosk is often no Spanish voice at all (docs/adr/0005).
  */
@@ -36,7 +55,7 @@ export function browserEngine() {
 	return {
 		name: 'browser',
 		async available() {
-			return synth() != null && spanish(synth().getVoices()) !== null
+			return synth() != null && spanish(await loadedVoices(synth())) !== null
 		},
 		say(text, volume) {
 			return new Promise((resolve, reject) => {

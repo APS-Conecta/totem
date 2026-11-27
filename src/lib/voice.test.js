@@ -67,12 +67,17 @@ describe('speak', () => {
 describe('browserEngine', () => {
 	function fakeSynth({ voices = [], fail = false } = {}) {
 		const spoken = []
+		const listeners = new Set()
 		const synth = {
 			getVoices: () => voices,
 			cancel: vi.fn(),
 			speak: vi.fn((u) => { spoken.push(u); queueMicrotask(() => (fail ? u.onerror?.({ error: 'synthesis-failed' }) : u.onend?.())) }),
+			addEventListener: vi.fn((type, listener) => { if (type === 'voiceschanged') listeners.add(listener) }),
+			removeEventListener: vi.fn((type, listener) => { if (type === 'voiceschanged') listeners.delete(listener) }),
 		}
-		return { synth, spoken }
+		/** The list a Chromium-based browser loads after its first, empty answer, then announces. */
+		const load = (loaded) => { voices = loaded; listeners.forEach((listener) => listener()) }
+		return { synth, spoken, load }
 	}
 	function withSynth(synth) {
 		globalThis.window = { speechSynthesis: synth }
@@ -98,6 +103,62 @@ describe('browserEngine', () => {
 	it('is unavailable when the machine has no Spanish voice at all (a kiosk Linux often has none)', async () => {
 		withSynth(fakeSynth({ voices: [{ lang: 'en-US', name: 'en' }] }).synth)
 		expect(await browserEngine().available()).toBe(false)
+	})
+
+	it('waits for a voice list that is still loading, and finds its Spanish voice (#43)', async () => {
+		const { synth, load } = fakeSynth()
+		withSynth(synth)
+		const available = browserEngine().available()
+		load([{ lang: 'en-US', name: 'en' }, { lang: 'es-CL', name: 'cl' }])
+		expect(await available).toBe(true)
+	})
+
+	it('is unavailable when the loaded list has no Spanish voice', async () => {
+		const { synth, load } = fakeSynth()
+		withSynth(synth)
+		const available = browserEngine().available()
+		load([{ lang: 'en-US', name: 'en' }])
+		expect(await available).toBe(false)
+	})
+
+	it('is unavailable within about a second when the list stays empty and never announces a change', async () => {
+		vi.useFakeTimers()
+		try {
+			withSynth(fakeSynth().synth)
+			let answer
+			browserEngine().available().then((ok) => { answer = ok })
+			await vi.advanceTimersByTimeAsync(999)
+			expect(answer).toBeUndefined()
+			await vi.advanceTimersByTimeAsync(1)
+			expect(answer).toBe(false)
+			expect(vi.getTimerCount()).toBe(0)
+		} finally {
+			vi.useRealTimers()
+		}
+	})
+
+	it('answers at once when the voices are already loaded', async () => {
+		vi.useFakeTimers()
+		try {
+			const { synth } = fakeSynth({ voices: [{ lang: 'es-ES', name: 'es' }] })
+			withSynth(synth)
+			let answer
+			browserEngine().available().then((ok) => { answer = ok })
+			await vi.advanceTimersByTimeAsync(0)
+			expect(answer).toBe(true)
+			expect(synth.addEventListener).not.toHaveBeenCalled()
+		} finally {
+			vi.useRealTimers()
+		}
+	})
+
+	it('stops listening once the wait ends', async () => {
+		const { synth, load } = fakeSynth()
+		withSynth(synth)
+		const available = browserEngine().available()
+		load([{ lang: 'es-CL', name: 'cl' }])
+		await available
+		expect(synth.removeEventListener).toHaveBeenCalledWith('voiceschanged', synth.addEventListener.mock.calls[0][1])
 	})
 
 	it('rejects when the browser fails to speak, so the chain can move on', async () => {
