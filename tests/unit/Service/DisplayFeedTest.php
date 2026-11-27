@@ -27,6 +27,9 @@ class DisplayFeedTest extends TestCase {
 	private PantallaMapper&MockObject $pantallas;
 	private ServicioLinks&MockObject $links;
 	private LlamadoMapper&MockObject $llamados;
+	private TurnoMapper&MockObject $turnos;
+	private ServicioMapper&MockObject $servicios;
+	private BoxMapper&MockObject $boxes;
 	private DisplayFeed $feed;
 	/** @var list<Box> every ventanilla of the clinic: two by default, so a number is spoken */
 	private array $allBoxes = [];
@@ -42,8 +45,8 @@ class DisplayFeedTest extends TestCase {
 		$this->links = $this->createMock(ServicioLinks::class);
 		$this->llamados = $this->createMock(LlamadoMapper::class);
 
-		$turnos = $this->createMock(TurnoMapper::class);
-		$turnos->method('find')->willReturnCallback(static function (int $id): Turno {
+		$this->turnos = $this->createMock(TurnoMapper::class);
+		$this->turnos->method('find')->willReturnCallback(static function (int $id): Turno {
 			$t = new Turno();
 			$t->setId($id);
 			$t->setServicioId(3);
@@ -52,20 +55,24 @@ class DisplayFeedTest extends TestCase {
 
 			return $t;
 		});
-		$servicios = $this->createMock(ServicioMapper::class);
+		$this->servicios = $this->createMock(ServicioMapper::class);
 		$s = new Servicio();
 		$s->setId(3);
 		$s->setName('Farmacia');
 		$s->setPrefix('FAR');
 		$s->setColor('#0b6e69');
-		$servicios->method('find')->willReturn($s);
-		$boxes = $this->createMock(BoxMapper::class);
-		$boxes->method('findAll')->willReturnCallback(fn (): array => $this->allBoxes);
+		$this->servicios->method('find')->willReturn($s);
+		$this->boxes = $this->createMock(BoxMapper::class);
+		$this->boxes->method('findAll')->willReturnCallback(fn (): array => $this->allBoxes);
 		$today = $this->createMock(Today::class);
 		$today->method('day')->willReturn('2026-10-18');
 
 		$this->allBoxes = [$this->boxNamed(8, 'Box 2'), $this->boxNamed(9, 'Box 3')];
-		$this->feed = new DisplayFeed($this->pantallas, $this->links, $this->llamados, $turnos, $servicios, $boxes, $today);
+		$this->feed = $this->feedWith($today);
+	}
+
+	private function feedWith(Today $today): DisplayFeed {
+		return new DisplayFeed($this->pantallas, $this->links, $this->llamados, $this->turnos, $this->servicios, $this->boxes, $today);
 	}
 
 	private function boxNamed(int $id, string $name): Box {
@@ -139,7 +146,7 @@ class DisplayFeedTest extends TestCase {
 	public function testTheDayItNamesIsTheDayThatFilteredTheLlamados(): void {
 		$today = $this->createMock(Today::class);
 		$today->method('day')->willReturnOnConsecutiveCalls('2026-10-18', '2026-10-19');
-		$feed = new DisplayFeed($this->pantallas, $this->links, $this->llamados, $this->createMock(TurnoMapper::class), $this->createMock(ServicioMapper::class), $this->createMock(BoxMapper::class), $today);
+		$feed = $this->feedWith($today);
 		$this->links->method('ids')->willReturn([]);
 		$this->llamados->expects($this->once())->method('findSince')->with([], '2026-10-18', 0, 30)->willReturn([]);
 

@@ -5,8 +5,8 @@ import DisplayView from './DisplayView.vue'
 
 vi.mock('@nextcloud/initial-state', () => ({ loadState: (app, key, fallback) => (key === 'slug' ? 'sala_farmacia' : fallback) }))
 vi.mock('../api.js', () => ({ readFeed: vi.fn(), warnError: vi.fn(), messageFrom: vi.fn() }))
-vi.mock('../lib/announce.js', () => ({ announce: vi.fn(() => Promise.resolve()), warmUp: vi.fn() }))
-vi.mock('../lib/chime.js', () => ({ audioReady: vi.fn(() => true), unlockAudio: vi.fn(() => Promise.resolve(true)) }))
+vi.mock('../lib/announce.js', async (importOriginal) => ({ ...(await importOriginal()), announce: vi.fn(() => Promise.resolve()), warmUp: vi.fn() }))
+vi.mock('../lib/chime.js', () => ({ audioReady: vi.fn(() => true), playChime: vi.fn(), unlockAudio: vi.fn(() => Promise.resolve(true)) }))
 
 import { readFeed } from '../api.js'
 import { announce, warmUp } from '../lib/announce.js'
@@ -123,10 +123,8 @@ describe('DisplayView', () => {
 		expect(warmUp).toHaveBeenCalledWith('mujer')
 	})
 
-	it('warms nothing up for a pantalla without voice or sound', async () => {
-		readFeed.mockResolvedValueOnce({ pantalla: { ...pantalla, voice: 'off' }, llamados: [], cursor: 0 })
-		mount(DisplayView)
-		await flushPromises()
+	it('warms nothing up for a pantalla without sound', async () => {
+		await open({ ...feed([]), pantalla: { ...pantalla, volume: 0 } })
 
 		expect(warmUp).not.toHaveBeenCalled()
 	})

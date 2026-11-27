@@ -86,7 +86,7 @@ export function piperEngine(voice, { createWorker = defaultWorker, getContext = 
 		else {
 			const id = nextId++
 			audio = engine.available().then((ok) => {
-				if (!ok) throw new Error('la voz incluida no está disponible')
+				if (!ok) throw new Error('the bundled voice is not available')
 				let timer
 				return new Promise((resolve, reject) => {
 					pending.set(id, { resolve, reject })

@@ -40,11 +40,19 @@ function fakeAudio({ state = 'running' } = {}) {
 	return { ctx, played }
 }
 
+/** The `say` messages a fake worker received, only those for `text` when given. */
+const says = (worker, text) => worker.sent.filter((m) => m.type === 'say' && (text === undefined || m.text === text))
+
 describe('piperEngine', () => {
 	let audio
 	beforeEach(() => { audio = fakeAudio() })
 
 	const engine = (voice, worker, extra = {}) => piperEngine(voice, { createWorker: () => worker, getContext: () => audio.ctx, ...extra })
+	/** An engine for the Mujer voice whose every load takes the next of `workers`. */
+	const retrying = (workers, extra = {}) => {
+		const createWorker = vi.fn(() => workers.shift())
+		return { createWorker, e: piperEngine('mujer', { createWorker, getContext: () => audio.ctx, ...extra }) }
+	}
 
 	it('is available once the worker has loaded the model for the pantalla voice', async () => {
 		const worker = fakeWorker()
@@ -73,6 +81,10 @@ describe('piperEngine', () => {
 		expect(await engine('mujer', fakeWorker({ initError: '404' })).available()).toBe(false)
 	})
 
+	it('fails a phrase with an English error when the model could not be loaded', async () => {
+		await expect(engine('mujer', fakeWorker({ initError: '404' })).prepare('hola')).rejects.toThrow(new Error('the bundled voice is not available'))
+	})
+
 	it('is unavailable when loading takes too long, so the browser voice can take over', async () => {
 		vi.useFakeTimers()
 		const e = engine('mujer', fakeWorker({ never: true }), { loadTimeoutMs: 20000 })
@@ -89,7 +101,7 @@ describe('piperEngine', () => {
 		await e.available()
 		await e.say('Turno Farmacia, preferente 12. Diríjase al Box 2.', 60)
 
-		expect(worker.sent.find((m) => m.type === 'say').text).toBe('Turno Farmacia, preferente 12. Diríjase al Box 2.')
+		expect(says(worker)[0].text).toBe('Turno Farmacia, preferente 12. Diríjase al Box 2.')
 		expect(audio.played).toHaveLength(1)
 		expect(audio.played[0].buffer.rate).toBe(22050)
 	})
@@ -101,7 +113,7 @@ describe('piperEngine', () => {
 		await e.say('hola', 100)
 		await e.say('hola', 100)
 
-		expect(worker.sent.filter((m) => m.type === 'say')).toHaveLength(1)
+		expect(says(worker)).toHaveLength(1)
 		expect(audio.played).toHaveLength(2)
 	})
 
@@ -114,7 +126,7 @@ describe('piperEngine', () => {
 		e.prepare('c')
 		await e.say('a', 100)
 
-		expect(worker.sent.filter((m) => m.type === 'say' && m.text === 'a')).toHaveLength(2)
+		expect(says(worker, 'a')).toHaveLength(2)
 	})
 
 	it('keeps at most 50 phrases by default', async () => {
@@ -124,7 +136,7 @@ describe('piperEngine', () => {
 		for (let i = 0; i <= 50; i++) e.prepare(`p${i}`)
 		await e.say('p0', 100)
 
-		expect(worker.sent.filter((m) => m.type === 'say' && m.text === 'p0')).toHaveLength(2)
+		expect(says(worker, 'p0')).toHaveLength(2)
 	})
 
 	it('keeps a phrase said again among the most recent, so a re-llamado reuses it', async () => {
@@ -133,7 +145,7 @@ describe('piperEngine', () => {
 		await e.available()
 		for (const text of ['a', 'b', 'a', 'c', 'a']) await e.say(text, 100)
 
-		expect(worker.sent.filter((m) => m.type === 'say' && m.text === 'a')).toHaveLength(1)
+		expect(says(worker, 'a')).toHaveLength(1)
 	})
 
 	it('plays a phrase dropped while it was still being synthesized', async () => {
@@ -143,7 +155,7 @@ describe('piperEngine', () => {
 		const held = []
 		worker.postMessage = (m) => { worker.sent.push(m); held.push(m) }
 		const saying = e.say('a', 100)
-		await vi.waitFor(() => expect(worker.sent.some((m) => m.type === 'say' && m.text === 'a')).toBe(true))
+		await vi.waitFor(() => expect(says(worker, 'a')).toHaveLength(1))
 		e.prepare('b')
 		const { id } = held.find((m) => m.text === 'a')
 		worker.onmessage({ data: { type: 'audio', id, pcm: new Float32Array([0, 0.5]), sampleRate: 22050 } })
@@ -159,7 +171,7 @@ describe('piperEngine', () => {
 		await e.prepare('hola')
 		await e.say('hola', 100)
 
-		expect(worker.sent.filter((m) => m.type === 'say')).toHaveLength(1)
+		expect(says(worker)).toHaveLength(1)
 	})
 
 	it('fails the saying, so the chain can fall back, when the worker reports a synthesis error', async () => {
@@ -169,6 +181,17 @@ describe('piperEngine', () => {
 		worker.postMessage = (m) => { worker.sent.push(m); queueMicrotask(() => worker.onmessage({ data: { type: 'error', id: m.id, error: 'phonemizer failed' } })) }
 
 		await expect(e.say('hola', 100)).rejects.toThrow('phonemizer failed')
+	})
+
+	it('keeps a loaded worker running when it reports an error later, outside the load', async () => {
+		const worker = fakeWorker()
+		const e = engine('mujer', worker)
+		expect(await e.available()).toBe(true)
+
+		worker.onerror()
+		expect(worker.terminate).not.toHaveBeenCalled()
+		await e.say('hola', 100)
+		expect(audio.played).toHaveLength(1)
 	})
 
 	it('fails the saying at once and plays nothing while the browser holds the sound back', async () => {
@@ -198,24 +221,23 @@ describe('piperEngine', () => {
 		const e = engine('mujer', worker, { maxPhrases: 1 })
 		await e.available()
 		worker.postMessage = (m) => { worker.sent.push(m) } // answered by hand below
-		const says = (text) => worker.sent.filter((m) => m.type === 'say' && m.text === text)
 		const answer = (m) => worker.onmessage({ data: { type: 'audio', id: m.id, pcm: new Float32Array([0, 0.5]), sampleRate: 22050 } })
 
 		const older = e.prepare('a')
-		await vi.waitFor(() => expect(says('a')).toHaveLength(1))
+		await vi.waitFor(() => expect(says(worker, 'a')).toHaveLength(1))
 		e.prepare('b')
-		await vi.waitFor(() => expect(says('b')).toHaveLength(1))
-		answer(says('b')[0])
+		await vi.waitFor(() => expect(says(worker, 'b')).toHaveLength(1))
+		answer(says(worker, 'b')[0])
 		const newer = e.prepare('a')
-		await vi.waitFor(() => expect(says('a')).toHaveLength(2))
-		worker.onmessage({ data: { type: 'error', id: says('a')[0].id, error: 'boom' } })
+		await vi.waitFor(() => expect(says(worker, 'a')).toHaveLength(2))
+		worker.onmessage({ data: { type: 'error', id: says(worker, 'a')[0].id, error: 'boom' } })
 		await expect(older).rejects.toThrow()
-		answer(says('a')[1])
+		answer(says(worker, 'a')[1])
 		await newer
 		worker.postMessage = (m) => { worker.sent.push(m); queueMicrotask(() => answer(m)) } // a further say would be answered
 
 		await e.say('a', 100)
-		expect(says('a')).toHaveLength(2)
+		expect(says(worker, 'a')).toHaveLength(2)
 		expect(audio.played).toHaveLength(1)
 	})
 
@@ -287,9 +309,7 @@ describe('piperEngine', () => {
 		it('ends the worker, answers unavailable, and loads a fresh one after the retry interval that speaks the phrase again', async () => {
 			const first = silentWorker()
 			const second = fakeWorker()
-			const workers = [first, second]
-			const createWorker = vi.fn(() => workers.shift())
-			const e = engine('mujer', null, { createWorker, sayTimeoutMs, retryIntervalMs })
+			const { createWorker, e } = retrying([first, second], { sayTimeoutMs, retryIntervalMs })
 			await e.available()
 			const saying = outcome(e.say('hola', 100))
 			await vi.advanceTimersByTimeAsync(sayTimeoutMs)
@@ -305,7 +325,7 @@ describe('piperEngine', () => {
 			expect(await e.available()).toBe(true)
 			await e.say('hola', 100)
 
-			expect(second.sent.filter((m) => m.type === 'say' && m.text === 'hola')).toHaveLength(1)
+			expect(says(second, 'hola')).toHaveLength(1)
 			expect(audio.played).toHaveLength(1)
 		})
 
@@ -316,7 +336,7 @@ describe('piperEngine', () => {
 			await vi.advanceTimersByTimeAsync(15000)
 			worker.onmessage({ data: { type: 'ready' } })
 			await flush()
-			const { id } = worker.sent.find((m) => m.type === 'say')
+			const [{ id }] = says(worker)
 
 			await vi.advanceTimersByTimeAsync(sayTimeoutMs - 1)
 			worker.onmessage({ data: { type: 'audio', id, pcm: new Float32Array([0, 0.5]), sampleRate: 22050 } })
@@ -341,10 +361,6 @@ describe('piperEngine', () => {
 
 		const retryIntervalMs = 5 * 60000
 		const flush = () => vi.advanceTimersByTimeAsync(0) // runs every queued microtask; no time passes
-		const retrying = (workers, extra = {}) => {
-			const createWorker = vi.fn(() => workers.shift())
-			return { createWorker, e: engine('mujer', null, { createWorker, ...extra }) }
-		}
 
 		/** After the first load failed: the retry interval passes, `second` loads and speaks, `first` is gone, and no load follows. */
 		async function retriesAndSpeaks({ createWorker, e }, first, second) {
@@ -356,8 +372,8 @@ describe('piperEngine', () => {
 			expect(await e.available()).toBe(true)
 			await e.say('hola', 100)
 			expect(audio.played).toHaveLength(1)
-			expect(second.sent.filter((m) => m.type === 'say')).toHaveLength(1)
-			expect(first.sent.filter((m) => m.type === 'say')).toHaveLength(0)
+			expect(says(second)).toHaveLength(1)
+			expect(says(first)).toHaveLength(0)
 			expect(first.terminate).toHaveBeenCalled()
 
 			await vi.advanceTimersByTimeAsync(retryIntervalMs)
@@ -456,17 +472,6 @@ describe('piperEngine', () => {
 
 			expect(settled).toEqual([false, false])
 			expect(createWorker).toHaveBeenCalledTimes(2)
-		})
-
-		it('keeps a loaded worker running when it reports an error later, outside the load', async () => {
-			const worker = fakeWorker()
-			const e = engine('mujer', worker)
-			expect(await e.available()).toBe(true)
-
-			worker.onerror()
-			expect(worker.terminate).not.toHaveBeenCalled()
-			await e.say('hola', 100)
-			expect(audio.played).toHaveLength(1)
 		})
 
 		it('counts a worker that throws when sent the model as a failed load, and loads again later', async () => {

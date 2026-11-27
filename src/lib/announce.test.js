@@ -1,12 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
 import { piperEngine } from '../tts/piper.js'
-import { createAnnouncer, enginesFor } from './announce.js'
+import { createAnnouncer, enginesFor, warmUp } from './announce.js'
 import { speak } from './voice.js'
 
 function setup({ chimeMs = 2200 } = {}) {
 	const log = []
 	const chime = vi.fn((volume) => { log.push(['chime', volume]); return volume === 0 ? 0 : chimeMs / 1000 })
-	const speak = vi.fn(async (text, opts) => { log.push(['speak', text, opts.volume]); return 'piper' })
+	// As the real speak(): an empty engine list speaks nothing.
+	const speak = vi.fn(async (text, { engines, volume }) => {
+		if (engines.length === 0) return null
+		log.push(['speak', text, volume])
+		return 'piper'
+	})
 	const wait = vi.fn(async () => {})
 	return { announcer: createAnnouncer({ chime, speak, wait, engines: () => ['e'] }), log, chime, speak, wait }
 }
@@ -21,11 +26,10 @@ describe('createAnnouncer', () => {
 	})
 
 	it('only rings when the pantalla has no voice', async () => {
-		const { announcer, speak, chime } = setup()
+		const { announcer, log } = setup()
 		await announcer.announce({ text: 'x', volume: 100, voice: 'off' })
 
-		expect(chime).toHaveBeenCalled()
-		expect(speak).not.toHaveBeenCalled()
+		expect(log).toEqual([['chime', 100]])
 	})
 
 	it('is silent at volume 0', async () => {
@@ -135,6 +139,21 @@ describe('a bundled voice that stops answering', () => {
 	})
 })
 
+/** Stubs the global Worker for `run`; answers the voices of the workers it started, and which still run. */
+async function withWorkers(run) {
+	const workers = []
+	vi.stubGlobal('Worker', class {
+		constructor() { this.terminated = false; workers.push(this) }
+		postMessage(message) { if (message.type === 'init') { this.voice = message.voice; queueMicrotask(() => this.onmessage({ data: { type: 'ready' } })) } }
+		terminate() { this.terminated = true }
+	})
+	try {
+		await run(workers)
+	} finally {
+		vi.unstubAllGlobals()
+	}
+}
+
 describe('enginesFor', () => {
 	it('tries the bundled voice first, and the browser voice after it', () => {
 		expect(enginesFor('mujer').map((e) => e.name)).toEqual(['piper', 'browser'])
@@ -145,23 +164,29 @@ describe('enginesFor', () => {
 		expect(enginesFor('hombre')[0]).not.toBe(enginesFor('mujer')[0])
 	})
 
-	it('keeps only the model of the voice asked for last: a voice change ends the previous one\'s worker', async () => {
-		const workers = []
-		vi.stubGlobal('Worker', class {
-			constructor() { this.terminated = false; workers.push(this) }
-			postMessage(message) { if (message.type === 'init') { this.voice = message.voice; queueMicrotask(() => this.onmessage({ data: { type: 'ready' } })) } }
-			terminate() { this.terminated = true }
-		})
-		try {
-			expect(await enginesFor('mujer')[0].available()).toBe(true)
-			expect(await enginesFor('hombre')[0].available()).toBe(true)
-			expect(await enginesFor('hombre')[0].available()).toBe(true)
+	it('keeps only the model of the voice asked for last: a voice change ends the previous one\'s worker', () => withWorkers(async (workers) => {
+		expect(await enginesFor('mujer')[0].available()).toBe(true)
+		expect(await enginesFor('hombre')[0].available()).toBe(true)
+		expect(await enginesFor('hombre')[0].available()).toBe(true)
 
-			expect(workers.filter((w) => !w.terminated).map((w) => w.voice)).toEqual(['hombre'])
-			expect(workers.filter((w) => w.voice === 'hombre')).toHaveLength(1)
-		} finally {
-			vi.unstubAllGlobals()
-		}
-	})
+		expect(workers.filter((w) => !w.terminated).map((w) => w.voice)).toEqual(['hombre'])
+		expect(workers.filter((w) => w.voice === 'hombre')).toHaveLength(1)
+	}))
+})
+
+describe('warmUp', () => {
+	it('loads the bundled model of the pantalla\'s voice', () => withWorkers(async (workers) => {
+		warmUp('mujer')
+		await Promise.resolve()
+
+		expect(workers.map((w) => w.voice)).toEqual(['mujer'])
+	}))
+
+	it('loads no bundled model for a pantalla with no voice', () => withWorkers(async (workers) => {
+		warmUp('off')
+		await Promise.resolve()
+
+		expect(workers).toEqual([])
+	}))
 })
 
