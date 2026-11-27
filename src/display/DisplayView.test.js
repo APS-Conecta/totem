@@ -106,10 +106,12 @@ describe('DisplayView', () => {
 		expect(card.classes()).toContain('pulse')
 		expect(wrapper.get('.d-foot').text()).toContain('Turno FAR-G-004. Diríjase a Box 2.')
 		expect(announce).not.toHaveBeenCalled()
+		expect(wrapper.get('button.d-unlock').text()).toBe('Toque aquí para activar el sonido')
 
 		audioReady.mockReturnValue(true)
 		await next({ ...feed([llamado(5, 'FAR-G-005')]), pantalla: { ...pantalla, voice } })
 
+		expect(wrapper.find('button.d-unlock').exists()).toBe(false)
 		expect(announce).toHaveBeenCalledTimes(1)
 		expect(announce).toHaveBeenCalledWith({ text: 'Turno FAR-G-005. Diríjase a Box 2.', volume: 80, voice })
 	})
@@ -223,6 +225,31 @@ describe('DisplayView', () => {
 		await flushPromises()
 
 		expect(unlockAudio).toHaveBeenCalled()
+		expect(wrapper.find('button.d-unlock').exists()).toBe(false)
+	})
+
+	it('asks for a touch and announces nothing when the sound stops after the page opened', async () => {
+		const wrapper = await open(feed([llamado(1, 'FAR-G-001')]))
+		await next(feed([llamado(2, 'FAR-G-002')]))
+		expect(announce).toHaveBeenCalledTimes(1)
+
+		audioReady.mockReturnValue(false)
+		await next(feed([llamado(3, 'FAR-G-003')]))
+
+		expect(wrapper.get('[role="status"]').text()).toContain('FAR-G-003')
+		expect(wrapper.get('button.d-unlock').text()).toBe('Toque aquí para activar el sonido')
+		expect(announce).toHaveBeenCalledTimes(1)
+	})
+
+	it('follows the sound state on a feed answer without llamados', async () => {
+		const wrapper = await open(feed([llamado(1, 'FAR-G-001')]))
+
+		audioReady.mockReturnValue(false)
+		await next(feed([], 1))
+		expect(wrapper.find('button.d-unlock').exists()).toBe(true)
+
+		audioReady.mockReturnValue(true)
+		await next(feed([], 1))
 		expect(wrapper.find('button.d-unlock').exists()).toBe(false)
 	})
 

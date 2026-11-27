@@ -99,11 +99,13 @@ function onData(data) {
 	const held = data.day === day ? calls.value : []
 	day = data.day
 	calls.value = [...held, ...data.llamados].slice(-KEEP)
+	// Read on every answer: the context can stop (a screen lock) or start by itself after the page opened.
+	soundReady.value = audioReady()
 	// The first answer is the day so far: show it, never announce it (a reload must not repeat the day).
-	// Sound still locked: show the call, never announce it, or it would play as a backlog after the tap.
 	if (!opened && data.pantalla.volume > 0 && data.pantalla.voice !== 'off') warmUp(data.pantalla.voice)
 	if (opened && data.llamados.length > 0) {
-		if (audioReady()) {
+		// Sound still locked: show the call, never announce it, or it would play as a backlog after the tap.
+		if (soundReady.value) {
 			for (const call of data.llamados) {
 				announce({ text: call.spoken, volume: data.pantalla.volume, voice: data.pantalla.voice }).catch((e) => warnError('announce', e))
 			}
