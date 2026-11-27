@@ -73,6 +73,10 @@ describe('piperEngine', () => {
 		expect(await engine('mujer', fakeWorker({ initError: '404' })).available()).toBe(false)
 	})
 
+	it('fails a phrase with an English error when the model could not be loaded', async () => {
+		await expect(engine('mujer', fakeWorker({ initError: '404' })).prepare('hola')).rejects.toThrow(new Error('the bundled voice is not available'))
+	})
+
 	it('is unavailable when loading takes too long, so the browser voice can take over', async () => {
 		vi.useFakeTimers()
 		const e = engine('mujer', fakeWorker({ never: true }), { loadTimeoutMs: 20000 })
