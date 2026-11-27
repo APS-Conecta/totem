@@ -4,7 +4,7 @@
 // back from the question, must not hand the next patient that page: the totem returns to the first one.
 
 const { test, expect } = require('@playwright/test')
-const { call, kiosk, login, waitOutDoubleTap, world } = require('./helpers')
+const { call, kiosk, login, takeTurno, world } = require('./helpers')
 
 let w
 let run
@@ -78,9 +78,7 @@ test('the next patient after a ticket taken on the second page sees the first pa
 	const { patient, screen } = await atTotem(browser)
 	try {
 		await turnToSecondPage(screen)
-		await screen.getByRole('button', { name: new RegExp(`Servicio 8 ${run}`) }).click()
-		await waitOutDoubleTap(screen)
-		await screen.getByRole('button', { name: 'No', exact: true }).click()
+		await takeTurno(screen, `Servicio 8 ${run}`, 'No')
 		await expect(screen.locator('.t-ticket')).toContainText(`${run.slice(-3)}8-G-001`)
 
 		// The ticket screen counts down 8 seconds on its own, then gives the totem back.

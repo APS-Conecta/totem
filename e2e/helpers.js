@@ -3,8 +3,8 @@
 // Shared plumbing for the end-to-end tests: log in as the instance's admin, talk to the admin
 // endpoints with the session's request token, build (and tear down) a small world of one
 // servicio, one box and one pantalla with names that cannot collide with an earlier run, open a
-// kiosk page as a patient or a Pantalla that counts its chimes, make a llamado, and wait out the
-// totem's double-tap window before the next tap.
+// kiosk page as a patient or a Pantalla that counts its chimes, make a llamado, and take a turno at the
+// Tótem past its double-tap windows.
 
 const { expect } = require('@playwright/test')
 
@@ -84,6 +84,24 @@ async function waitOutDoubleTap(page) {
 	await page.waitForTimeout(500)
 }
 
+/** A patient at the Tótem taps the bar of the servicio named `servicioName` once a way home's double-tap window is over. */
+async function openQuestion(page, servicioName) {
+	await waitOutDoubleTap(page)
+	await page.getByRole('button', { name: new RegExp(servicioName) }).click()
+}
+
+/** The patient answers the preferente question with `answer` ("Sí" or "No") once the servicio bar's double-tap window is over. */
+async function answerQuestion(page, answer) {
+	await waitOutDoubleTap(page)
+	await page.getByRole('button', { name: answer, exact: true }).click()
+}
+
+/** A patient at the Tótem takes a turno for the servicio named `servicioName`, answering the question with `answer`. */
+async function takeTurno(page, servicioName, answer) {
+	await openQuestion(page, servicioName)
+	await answerQuestion(page, answer)
+}
+
 /** Any Pantalla's feed request, the one the display polls. */
 const FEED = /\/apps\/totem\/display\/[^/]+\/feed/
 
@@ -127,4 +145,4 @@ async function callNew(page, w) {
 	return turno.label
 }
 
-module.exports = { FEED, call, callNew, chimes, kiosk, login, openDisplay, waitOutDoubleTap, world }
+module.exports = { FEED, answerQuestion, call, callNew, chimes, kiosk, login, openDisplay, openQuestion, takeTurno, world }
