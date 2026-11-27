@@ -42,6 +42,54 @@ class MetadataTest extends TestCase {
 		$this->assertSame(['Totem' => 'totem.page.box'], $entries);
 	}
 
+	public function testEveryEndpointTheDocsCiteIsARoute(): void {
+		$routes = array_map(fn (array $route): string => $route['verb'] . ' ' . $route['url'], (require self::APP_DIR . '/appinfo/routes.php')['routes']);
+
+		$unknown = [];
+		$files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(self::APP_DIR . '/docs', \FilesystemIterator::SKIP_DOTS));
+		foreach ($files as $file) {
+			if ($file->getExtension() !== 'md') {
+				continue;
+			}
+			foreach (self::citedEndpoints((string)file_get_contents($file->getPathname())) as $endpoint) {
+				if (!in_array($endpoint, $routes, true)) {
+					$unknown[] = substr($file->getPathname(), strlen(self::APP_DIR . '/')) . ": $endpoint";
+				}
+			}
+		}
+		$this->assertSame([], $unknown, 'every backticked endpoint in docs/ must be a verb and url of appinfo/routes.php, letter for letter');
+	}
+
+	/** @return array<string, array{string, list<string>}> */
+	public static function citations(): array {
+		return [
+			'the query string is dropped' => ['`GET /display/{slug}/feed?since=<llamado id>`', ['GET /display/{slug}/feed']],
+			'two on one line' => ['`GET /stats`, `GET /stats/csv`', ['GET /stats', 'GET /stats/csv']],
+			'every verb' => ['`POST /a` `PUT /b/{id}` `DELETE /c/{id}`', ['POST /a', 'PUT /b/{id}', 'DELETE /c/{id}']],
+			'a path without a verb' => ['(`/box`, `/admin`)', []],
+			'a verb outside backticks' => ['GET /stats returns the board', []],
+			'empty input' => ['', []],
+		];
+	}
+
+	/**
+	 * @dataProvider citations
+	 * @param list<string> $expected
+	 */
+	public function testTheCitationReaderFindsEachBacktickedEndpoint(string $markdown, array $expected): void {
+		$this->assertSame($expected, self::citedEndpoints($markdown));
+	}
+
+	/**
+	 * Each backticked `VERB /path` in the text, as "VERB /path" without its query string.
+	 *
+	 * @return list<string>
+	 */
+	private static function citedEndpoints(string $markdown): array {
+		preg_match_all('/`(GET|POST|PUT|DELETE) (\/[^`?\s]*)[^`]*`/', $markdown, $matches, PREG_SET_ORDER);
+		return array_map(fn (array $match): string => "$match[1] $match[2]", $matches);
+	}
+
 	/** @return array<string, array{string, string}> */
 	public static function icons(): array {
 		return ['app.svg on dark surfaces' => ['app.svg', '#fff'], 'app-dark.svg on light surfaces' => ['app-dark.svg', '#000']];

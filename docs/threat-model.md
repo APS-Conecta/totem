@@ -7,7 +7,7 @@ Nothing about a patient: a turno is a servicio, a preferente flag, a sequence an
 | Surface | Who | Guard |
 |---|---|---|
 | Totem page and `POST /turnos` | anyone on the clinic network (the kiosk) | opening hours, daily quota, generous `#[AnonRateLimit]` |
-| Display page and `GET /display/feed` | anyone (the room's screen) | read-only, no personal data; `#[AnonRateLimit]` |
+| Display page and `GET /display/{slug}/feed` | anyone (the room's screen) | read-only, no personal data; `#[AnonRateLimit]` |
 | Box page and call/transition endpoints | logged-in Nextcloud users | session, CSRF token, `UserRateLimit` |
 | Staff app (`/box`, `/estadisticas`, `/admin`), the console and `GET /stats`, `GET /stats/csv` | logged-in Nextcloud users | session, `UserRateLimit`; the CSV link carries no CSRF token and changes nothing |
 | Configuration endpoints (unidades, ventanillas, pantallas, tótems) | logged-in Nextcloud users, **not only admins** (docs/adr/0008) | session, CSRF token, `UserRateLimit` |
