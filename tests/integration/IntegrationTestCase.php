@@ -16,6 +16,8 @@ use OCA\Totem\Db\Turno;
 use OCA\Totem\Db\TurnoMapper;
 use OCA\Totem\Domain\Estado;
 use OCA\Totem\Exception\Refused;
+use OCA\Totem\Service\Today;
+use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 use OCP\IDateTimeZone;
 use OCP\Server;
@@ -34,6 +36,9 @@ use PHPUnit\Framework\TestCase;
 abstract class IntegrationTestCase extends TestCase {
 	protected const DAY = '2026-10-18';
 	private const TABLES = ['totem_llamado', 'totem_turno', 'totem_box_servicio', 'totem_box', 'totem_pantalla_servicio', 'totem_pantalla', 'totem_totem_servicio', 'totem_totem', 'totem_servicio'];
+
+	/** The moment, as Unix seconds, that the clock of {@see self::today()} answers. */
+	protected int $now;
 
 	protected function setUp(): void {
 		$this->emptyTables();
@@ -107,6 +112,14 @@ abstract class IntegrationTestCase extends TestCase {
 	/** A moment of a Día, as Unix seconds in the instance's time zone. */
 	protected function momentOf(string $day, string $time): int {
 		return (new \DateTimeImmutable("$day $time", Server::get(IDateTimeZone::class)->getDefaultTimeZone()))->getTimestamp();
+	}
+
+	/** The instance's Today on a stand-in clock that answers {@see self::$now}. */
+	protected function today(): Today {
+		$clock = $this->createStub(ITimeFactory::class);
+		$clock->method('getTime')->willReturnCallback(fn (): int => $this->now);
+
+		return new Today($clock, Server::get(IDateTimeZone::class));
 	}
 
 	/** The sentence the request was refused with; null when it went through. */
