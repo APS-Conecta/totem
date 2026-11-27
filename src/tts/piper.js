@@ -96,7 +96,9 @@ export function piperEngine(voice, { createWorker = defaultWorker, getContext = 
 					pending.delete(id)
 				})
 			})
-			audio.catch(() => phrases.delete(text)) // a failed phrase may be tried again
+			audio.catch(() => { // a failed phrase may be tried again; a newer synthesis of it stays
+				if (phrases.get(text) === audio) phrases.delete(text)
+			})
 		}
 		phrases.set(text, audio)
 		if (phrases.size > maxPhrases) phrases.delete(phrases.keys().next().value)
