@@ -91,16 +91,19 @@ test('a Pantalla whose voice changes keeps only the new voice loaded, and speaks
 	const w = await world(page, { pantalla: { volume: 100, voice: 'mujer' } })
 	try {
 		const room = await openDisplay(browser, w)
-		// Record every bundled-voice worker the page starts: its voice, whether it loaded, what it was asked to say, whether it was ended.
+		// Record every bundled-voice worker the page starts: its voice, whether it loaded, what it was asked to say, whether it answered with audio, whether it was ended.
 		await room.addInitScript(() => {
 			window.__voiceWorkers = []
 			const Native = window.Worker
 			window.Worker = class extends Native {
 				constructor(...args) {
 					super(...args)
-					this.record = { voice: null, ready: false, said: 0, terminated: false }
+					this.record = { voice: null, ready: false, said: 0, spoke: false, terminated: false }
 					window.__voiceWorkers.push(this.record)
-					this.addEventListener('message', ({ data }) => { if (data?.type === 'ready') this.record.ready = true })
+					this.addEventListener('message', ({ data }) => {
+						if (data?.type === 'ready') this.record.ready = true
+						if (data?.type === 'audio') this.record.spoke = true
+					})
 				}
 
 				postMessage(message, ...rest) {
@@ -116,19 +119,19 @@ test('a Pantalla whose voice changes keeps only the new voice loaded, and speaks
 			}
 		})
 		await room.reload()
-		const workers = () => room.evaluate(() => window.__voiceWorkers.map(({ voice, ready, said, terminated }) => ({ voice, ready, said: said > 0, terminated })))
-		await expect.poll(workers, { timeout: 90_000, intervals: [1000] }).toEqual([{ voice: 'mujer', ready: true, said: false, terminated: false }])
+		const workers = () => room.evaluate(() => window.__voiceWorkers.map(({ voice, ready, said, spoke, terminated }) => ({ voice, ready, said: said > 0, spoke, terminated })))
+		await expect.poll(workers, { timeout: 90_000, intervals: [1000] }).toEqual([{ voice: 'mujer', ready: true, said: false, spoke: false, terminated: false }])
 
 		await call(page, 'PUT', `/apps/totem/pantallas/${w.screen.id}`, { ...w.screen, voice: 'hombre' })
 		await expect.poll(workers, { timeout: 90_000, intervals: [1000] }).toEqual([
-			{ voice: 'mujer', ready: true, said: false, terminated: true },
-			{ voice: 'hombre', ready: true, said: false, terminated: false },
+			{ voice: 'mujer', ready: true, said: false, spoke: false, terminated: true },
+			{ voice: 'hombre', ready: true, said: false, spoke: false, terminated: false },
 		])
 
 		await callNew(page, w)
 		await expect.poll(workers, { timeout: 60_000, intervals: [1000] }).toEqual([
-			{ voice: 'mujer', ready: true, said: false, terminated: true },
-			{ voice: 'hombre', ready: true, said: true, terminated: false },
+			{ voice: 'mujer', ready: true, said: false, spoke: false, terminated: true },
+			{ voice: 'hombre', ready: true, said: true, spoke: true, terminated: false },
 		])
 	} finally {
 		await w.cleanup()
