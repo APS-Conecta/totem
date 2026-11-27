@@ -46,7 +46,7 @@ final class TurnoMapperTest extends IntegrationTestCase {
 		$this->turno($s, true, 1);
 
 		$this->turno($s, false, 1); // the other type has its own sequence
-		$this->turno($s, true, 1, 1000, '2026-10-19'); // and so does the next day
+		$this->turno($s, true, 1, 1000, $this->dayMovedBy(1)); // and so does the next day
 
 		$this->expectException(Exception::class);
 		$this->turno($s, true, 1);
@@ -57,11 +57,11 @@ final class TurnoMapperTest extends IntegrationTestCase {
 		$this->turno($s, true, 1);
 		$this->turno($s, true, 2);
 		$this->turno($s, false, 1);
-		$this->turno($s, true, 9, 1000, '2026-10-19');
+		$this->turno($s, true, 9, 1000, $this->dayMovedBy(1));
 
 		$this->assertSame(2, $this->turnos->maxSeq($s->getId(), self::DAY, true));
 		$this->assertSame(1, $this->turnos->maxSeq($s->getId(), self::DAY, false));
-		$this->assertSame(0, $this->turnos->maxSeq($s->getId(), '2026-10-20', true));
+		$this->assertSame(0, $this->turnos->maxSeq($s->getId(), $this->dayMovedBy(2), true));
 		$this->assertSame(3, $this->turnos->countForDay($s->getId(), self::DAY));
 	}
 
@@ -108,7 +108,7 @@ final class TurnoMapperTest extends IntegrationTestCase {
 		$this->turnos->transition($done->getId(), Estado::Called, Estado::InService, 5100);
 		$this->turnos->transition($done->getId(), Estado::InService, Estado::Completed, 5200);
 		$this->turnos->claim($open->getId(), 7, 5300);
-		$yesterdays = $this->turno($s, true, 9, 1000, '2026-10-17');
+		$yesterdays = $this->turno($s, true, 9, 1000, $this->dayMovedBy(-1));
 		$this->turnos->claim($yesterdays->getId(), 8, 900);
 
 		$this->assertSame($open->getId(), $this->turnos->findActiveForBox(7)->getId());
@@ -123,7 +123,7 @@ final class TurnoMapperTest extends IntegrationTestCase {
 		$completed = $this->turno($s, false, 3);
 		$this->turno($s, false, 4); // still waiting
 		$otherBox = $this->turno($s, false, 5);
-		$yesterdays = $this->turno($s, false, 1, 1000, '2026-10-17');
+		$yesterdays = $this->turno($s, false, 1, 1000, $this->dayMovedBy(-1));
 		$this->turnos->claim($called->getId(), 7, 5000);
 		$this->turnos->claim($inService->getId(), 7, 5100);
 		$this->turnos->transition($inService->getId(), Estado::Called, Estado::InService, 5200);
@@ -160,14 +160,14 @@ final class TurnoMapperTest extends IntegrationTestCase {
 		$a = $this->turno($s, true, 1);
 		$b = $this->turno($s, false, 1);
 		$c = $this->turno($s, true, 2);
-		$old = $this->turno($s, false, 7, 1000, '2026-10-17');
+		$old = $this->turno($s, false, 7, 1000, $this->dayMovedBy(-1));
 		$this->turnos->claim($old->getId(), 7, 100);
 		$this->turnos->claim($a->getId(), 7, 5000);
 		$this->turnos->claim($b->getId(), 7, 5100);
 		$this->turnos->claim($c->getId(), 7, 5200);
 
 		$this->assertSame([true, false], $this->turnos->lastCalledPreferente($s->getId(), self::DAY, 2));
-		$this->assertSame([], $this->turnos->lastCalledPreferente($s->getId(), '2026-10-20', 2));
+		$this->assertSame([], $this->turnos->lastCalledPreferente($s->getId(), $this->dayMovedBy(2), 2));
 	}
 
 	public function testTheDisplayFeedReturnsLlamadosAfterTheCursorForTheChosenServicios(): void {
@@ -180,7 +180,7 @@ final class TurnoMapperTest extends IntegrationTestCase {
 		$this->llamado($t1, 7, $this->momentOf(self::DAY, '10:02')); // a re-llamado is another row
 		// The feed scopes by when the llamado was made, so a llamado of the same turno made the night
 		// before stays out of this Día's feed even though the turno belongs to it.
-		$this->llamado($t1, 7, $this->momentOf('2026-10-17', '23:00'));
+		$this->llamado($t1, 7, $this->momentOf($this->dayMovedBy(-1), '23:00'));
 
 		$all = $this->llamados->findSince([], self::DAY, 0, 50);
 		$this->assertCount(3, $all);

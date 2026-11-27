@@ -6,7 +6,6 @@ declare(strict_types=1);
 
 namespace OCA\Totem\Tests\Integration;
 
-use OCA\Totem\Db\LlamadoMapper;
 use OCA\Totem\Db\Pantalla;
 use OCA\Totem\Db\PantallaMapper;
 use OCA\Totem\Db\Servicio;
@@ -23,7 +22,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
  * closed; a turno left waiting ends with its Día (CONTEXT.md, Día).
  */
 final class CallAcrossTheDiaTest extends IntegrationTestCase {
-	private const NEXT_DAY = '2026-10-19';
+	private string $nextDay;
 	private TurnoMapper $turnos;
 	private BoxService $boxes;
 	private Servicio $farmacia;
@@ -31,6 +30,7 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 
 	protected function setUp(): void {
 		parent::setUp();
+		$this->nextDay = $this->dayMovedBy(1);
 		$this->turnos = Server::get(TurnoMapper::class);
 		$links = Server::get(ServicioLinks::class);
 		$this->boxes = Server::get(BoxService::class);
@@ -52,7 +52,7 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 		$this->calls()->callNext($this->boxId);
 		$this->calls()->start($this->boxId);
 
-		$this->at(self::NEXT_DAY, '00:01');
+		$this->at($this->nextDay, '00:01');
 		$this->calls()->finish($this->boxId);
 
 		$this->assertSame('completed', $this->turnos->find($turno->getId())->getEstado());
@@ -63,8 +63,8 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 		$held = $this->turno($this->farmacia, false, 40, $this->now);
 		$this->calls()->callNext($this->boxId);
 
-		$this->at(self::NEXT_DAY, '00:01');
-		$waiting = $this->turno($this->farmacia, false, 1, $this->now, self::NEXT_DAY);
+		$this->at($this->nextDay, '00:01');
+		$waiting = $this->turno($this->farmacia, false, 1, $this->now, $this->nextDay);
 		$current = $this->calls()->state($this->boxId)['current'];
 
 		$this->assertNotNull($current, 'the box lost the turno it holds');
@@ -91,26 +91,25 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 		$turno = $this->turno($this->farmacia, false, 40, $this->now);
 		$this->calls()->callNext($this->boxId);
 
-		$this->at(self::NEXT_DAY, '00:01');
+		$this->at($this->nextDay, '00:01');
 		$this->calls()->$action($this->boxId);
 
 		$this->assertSame($estado, $this->turnos->find($turno->getId())->getEstado());
-		$llamados = Server::get(LlamadoMapper::class);
-		$this->assertCount($llamadosThatDia, $llamados->findSince([], self::DAY, 0, 50));
-		$this->assertCount($llamadosTheNextDia, $llamados->findSince([], self::NEXT_DAY, 0, 50));
+		$this->assertSame($llamadosThatDia, $this->llamadosOf($turno));
+		$this->assertSame($llamadosTheNextDia, $this->llamadosOf($turno, $this->nextDay));
 	}
 
 	public function testTheFeedCarriesARecallOfATurnoHeldAcrossTheDia(): void {
 		$this->turno($this->farmacia, false, 40, $this->now);
 		$this->calls()->callNext($this->boxId);
-		$first = Server::get(LlamadoMapper::class)->findSince([], self::DAY, 0, 50)[0]->getId();
+		$first = $this->feed()->since('sala', 0)['llamados'][0]['id'];
 
-		$this->at(self::NEXT_DAY, '00:01');
+		$this->at($this->nextDay, '00:01');
 		$this->calls()->recall($this->boxId);
 
 		$answer = $this->feed()->since('sala', 0);
 
-		$this->assertSame(self::NEXT_DAY, $answer['day']);
+		$this->assertSame($this->nextDay, $answer['day']);
 		$this->assertCount(1, $answer['llamados'], 'the feed carries the recall, not the call made the Día before');
 		$this->assertSame([
 			'id' => $first + 1,
@@ -129,7 +128,7 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 		$this->turno($this->farmacia, false, 40, $this->now);
 		$this->calls()->callNext($this->boxId);
 
-		$this->at(self::NEXT_DAY, '00:01');
+		$this->at($this->nextDay, '00:01');
 
 		$this->assertSame('Esta ventanilla tiene un turno en curso.', $this->refusal(fn () => $this->boxes->delete($this->boxId)));
 	}
@@ -138,7 +137,7 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 		$this->at(self::DAY, '23:59');
 		$this->turno($this->farmacia, false, 41, $this->now);
 
-		$this->at(self::NEXT_DAY, '00:01');
+		$this->at($this->nextDay, '00:01');
 
 		$this->assertSame([], $this->calls()->state($this->boxId)['waiting']);
 		$this->assertSame('No hay turnos en espera.', $this->refusal(fn () => $this->calls()->callNext($this->boxId)));
