@@ -37,6 +37,10 @@ instance-up:
 	$(OCC) app:enable totem
 	# A fresh instance greets its admin with a modal wizard that would cover every e2e page.
 	$(OCC) app:disable firstrunwizard || true
+	# Every e2e test is the one admin user and every kiosk the one address, so the parallel workers
+	# share each endpoint's #[UserRateLimit] / #[AnonRateLimit] budget and a burst of setup answers 429.
+	# tests/unit/Controller/SurfaceTest.php asserts the attributes; this throwaway instance ignores them.
+	$(OCC) config:system:set ratelimit.protection.enabled --value=false --type=boolean
 	# Restart AFTER enabling: Nextcloud's web workers cache the route collection
 	# and the enabled-app state in APCu (local, one hour), and `occ` runs in the
 	# CLI SAPI, which cannot invalidate it. The healthcheck's status.php already
