@@ -79,6 +79,26 @@ final class DisplayFeedTest extends IntegrationTestCase {
 		$this->assertSame(0, $reads->count);
 	}
 
+	public function testALlamadoOfADeletedBoxStillShowsWithAGenericName(): void {
+		$this->now = $this->momentOf(self::DAY, '10:00');
+		$farmacia = $this->servicio();
+		$boxes = Server::get(BoxService::class);
+		$box1 = $boxes->create(['name' => 'Box 1', 'servicioIds' => [$farmacia->getId()]])['id'];
+		$boxes->create(['name' => 'Box 2', 'servicioIds' => [$farmacia->getId()]]);
+		$boxes->create(['name' => 'Box 3', 'servicioIds' => [$farmacia->getId()]]);
+		Server::get(ServicioLinks::class)->replace(ServicioLinks::PANTALLA, (int)$this->pantalla('sala', 'Sala')->getId(), [(int)$farmacia->getId()]);
+		$this->turno($farmacia, false, 1, $this->now);
+		$this->calls()->callNext($box1);
+		$this->calls()->start($box1);
+		$this->calls()->finish($box1);
+		$boxes->delete($box1);
+
+		$llamado = $this->feed()->since('sala', 0)['llamados'][0];
+
+		$this->assertSame('Ventanilla', $llamado['box']);
+		$this->assertStringEndsWith('Diríjase a Ventanilla.', $llamado['spoken']);
+	}
+
 	public function testTheThreatModelNamesEveryFieldTheFeedSends(): void {
 		$threatModel = (string)file_get_contents(__DIR__ . '/../../docs/threat-model.md');
 		$this->assertSame(1, preg_match('/^- The display feed .*$/m', $threatModel, $bullet), 'the threat model has a display feed bullet');
