@@ -60,6 +60,7 @@ test('a refusal that arrives after the patient went back is not shown to the nex
 	try {
 		const route = await askFarmaciaAndHold(screen)
 		await back(screen).click()
+		await waitOutDoubleTap(screen)
 		await unidad(screen, 'Dental').click()
 
 		await refuseAndExpectQuestion(screen, route, 'Dental')
@@ -73,6 +74,7 @@ test('a refusal that arrives after the patient went back is not shown to the nex
 	try {
 		const route = await askFarmaciaAndHold(screen)
 		await back(screen).click()
+		await waitOutDoubleTap(screen)
 		await unidad(screen, 'Farmacia').click()
 
 		await refuseAndExpectQuestion(screen, route, 'Farmacia')
@@ -87,6 +89,7 @@ test('a refusal that arrives after the question timed out is not shown to the ne
 		await screen.clock.install()
 		const route = await askFarmaciaAndHold(screen)
 		await screen.clock.runFor(30_000)
+		await waitOutDoubleTap(screen)
 		await unidad(screen, 'Dental').click()
 
 		await refuseAndExpectQuestion(screen, route, 'Dental')
