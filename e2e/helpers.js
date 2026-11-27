@@ -3,7 +3,7 @@
 // Shared plumbing for the end-to-end tests: log in as the instance's admin, talk to the admin
 // endpoints with the session's request token, build (and tear down) a small world of one
 // servicio, one box and one pantalla with names that cannot collide with an earlier run, open a
-// kiosk page as a patient, and wait out the totem's double-tap window before answering its question.
+// kiosk page as a patient, and wait out the totem's double-tap window before the next tap.
 
 async function login(page, user = 'admin', password = 'admin') {
 	await page.goto('/login')
@@ -76,7 +76,7 @@ async function kiosk(browser, path) {
 	return { patient, screen }
 }
 
-/** Sí and No ignore taps for 500 ms after the question appears, so a double tap on a servicio bar cannot answer it. */
+/** Sí and No ignore taps for 500 ms after the question appears, and servicio bars for 500 ms after a return home. */
 async function waitOutDoubleTap(page) {
 	await page.waitForTimeout(500)
 }
