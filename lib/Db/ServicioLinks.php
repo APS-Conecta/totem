@@ -6,6 +6,7 @@ declare(strict_types=1);
 
 namespace OCA\Totem\Db;
 
+use OCP\AppFramework\Db\TTransactional;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 
@@ -14,6 +15,8 @@ use OCP\IDBConnection;
  * shape, so one reader and one writer (no foreign keys, by convention).
  */
 class ServicioLinks {
+	use TTransactional;
+
 	public const BOX = ['totem_box_servicio', 'box_id'];
 	public const PANTALLA = ['totem_pantalla_servicio', 'pantalla_id'];
 	public const TOTEM = ['totem_totem_servicio', 'totem_id'];
@@ -40,26 +43,29 @@ class ServicioLinks {
 	}
 
 	/**
-	 * Make the owner's links exactly these servicio ids.
+	 * Make the owner's links exactly these servicio ids, in one transaction: a reader sees the old set or the new
+	 * one, never the empty set the delete leaves before the inserts (an empty set means every servicio).
 	 *
 	 * @param array{string, string} $link
 	 * @param list<int> $servicioIds
 	 */
 	public function replace(array $link, int $ownerId, array $servicioIds): void {
 		[$table, $column] = $link;
-		$qb = $this->db->getQueryBuilder();
-		$qb->delete($table)
-			->where($qb->expr()->eq($column, $qb->createNamedParameter($ownerId, IQueryBuilder::PARAM_INT)))
-			->executeStatement();
-
-		foreach (array_unique($servicioIds) as $servicioId) {
+		$this->atomic(function () use ($table, $column, $ownerId, $servicioIds): void {
 			$qb = $this->db->getQueryBuilder();
-			$qb->insert($table)
-				->values([
-					$column => $qb->createNamedParameter($ownerId, IQueryBuilder::PARAM_INT),
-					'servicio_id' => $qb->createNamedParameter($servicioId, IQueryBuilder::PARAM_INT),
-				])
+			$qb->delete($table)
+				->where($qb->expr()->eq($column, $qb->createNamedParameter($ownerId, IQueryBuilder::PARAM_INT)))
 				->executeStatement();
-		}
+
+			foreach (array_unique($servicioIds) as $servicioId) {
+				$qb = $this->db->getQueryBuilder();
+				$qb->insert($table)
+					->values([
+						$column => $qb->createNamedParameter($ownerId, IQueryBuilder::PARAM_INT),
+						'servicio_id' => $qb->createNamedParameter($servicioId, IQueryBuilder::PARAM_INT),
+					])
+					->executeStatement();
+			}
+		}, $this->db);
 	}
 }

@@ -12,6 +12,8 @@ use OCA\Totem\Db\Pantalla;
 use OCA\Totem\Db\PantallaMapper;
 use OCA\Totem\Db\ServicioLinks;
 use OCP\AppFramework\Db\DoesNotExistException;
+use OCP\DB\Exception;
+use OCP\IConfig;
 use OCP\Server;
 
 /** Boxes, pantallas and the servicio links they share, against real PostgreSQL. */
@@ -49,6 +51,29 @@ final class BoxAndPantallaTest extends IntegrationTestCase {
 		$this->assertSame('hombre', $found->getVoice());
 		$this->expectException(DoesNotExistException::class);
 		$mapper->findBySlug('otra');
+	}
+
+	/**
+	 * A display reads its pantalla's servicios while an admin saves the pantalla, and an empty set means every
+	 * servicio (#131): the replace must be all or nothing. The database refuses the new link, so a replace that
+	 * is not one transaction leaves the set it already deleted.
+	 */
+	public function testALinkSetTheDatabaseRefusesKeepsTheServiciosItHad(): void {
+		$this->links->replace(ServicioLinks::PANTALLA, 3, [10, 11]);
+		$table = Server::get(IConfig::class)->getSystemValueString('dbtableprefix', 'oc_') . ServicioLinks::PANTALLA[0];
+		$this->db()->executeStatement("CREATE FUNCTION totem_test_refuse_link() RETURNS trigger LANGUAGE plpgsql AS \$\$ BEGIN RAISE EXCEPTION 'refused'; END \$\$");
+		$this->db()->executeStatement("CREATE TRIGGER totem_test_refuse_link BEFORE INSERT ON $table FOR EACH ROW WHEN (NEW.servicio_id = 99) EXECUTE FUNCTION totem_test_refuse_link()");
+		try {
+			$this->links->replace(ServicioLinks::PANTALLA, 3, [99]);
+			$this->fail('the database took the refused link');
+		} catch (Exception) {
+			// refused, as arranged
+		} finally {
+			$this->db()->executeStatement("DROP TRIGGER totem_test_refuse_link ON $table");
+			$this->db()->executeStatement('DROP FUNCTION totem_test_refuse_link()');
+		}
+
+		$this->assertSame([10, 11], $this->links->ids(ServicioLinks::PANTALLA, 3));
 	}
 
 	public function testReplacingALinkSetMakesExactlyTheseServicios(): void {
