@@ -36,11 +36,8 @@ class TurnoMapper extends QBMapper {
 			->where($qb->expr()->eq('servicio_id', $qb->createNamedParameter($servicioId, IQueryBuilder::PARAM_INT)))
 			->andWhere($qb->expr()->eq('day', $qb->createNamedParameter($day)))
 			->andWhere($qb->expr()->eq('preferente', $qb->createNamedParameter($preferente, IQueryBuilder::PARAM_BOOL)));
-		$result = $qb->executeQuery();
-		$max = $result->fetchOne();
-		$result->closeCursor();
 
-		return (int)$max;
+		return $this->fetchInt($qb);
 	}
 
 	/** Every turno issued for the servicio that day, whatever its estado: what the daily quota counts. */
@@ -50,11 +47,8 @@ class TurnoMapper extends QBMapper {
 			->from($this->getTableName())
 			->where($qb->expr()->eq('servicio_id', $qb->createNamedParameter($servicioId, IQueryBuilder::PARAM_INT)))
 			->andWhere($qb->expr()->eq('day', $qb->createNamedParameter($day)));
-		$result = $qb->executeQuery();
-		$count = $result->fetchOne();
-		$result->closeCursor();
 
-		return (int)$count;
+		return $this->fetchInt($qb);
 	}
 
 	/**
@@ -185,11 +179,8 @@ class TurnoMapper extends QBMapper {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select($qb->func()->count('*'))->from($this->getTableName());
 		$this->whereActiveForBox($qb, $boxId);
-		$result = $qb->executeQuery();
-		$count = $result->fetchOne();
-		$result->closeCursor();
 
-		return (int)$count;
+		return $this->fetchInt($qb);
 	}
 
 	/**
@@ -214,6 +205,15 @@ class TurnoMapper extends QBMapper {
 		$result->closeCursor();
 
 		return $flags;
+	}
+
+	/** The one value the query selects, as an int; 0 when it is NULL, which MAX gives when no Turno matches. */
+	private function fetchInt(IQueryBuilder $qb): int {
+		$result = $qb->executeQuery();
+		$value = $result->fetchOne();
+		$result->closeCursor();
+
+		return (int)$value;
 	}
 
 	/** What "the box holds a turno" means, shared by the lookup and the count so they never disagree. */
