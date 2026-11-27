@@ -8,8 +8,12 @@ const defaultWorker = () => new Worker(new URL('./worker.js', import.meta.url))
  * The bundled voice: a Piper model run in a Web Worker (so the display never freezes while it
  * synthesizes), offline, from files this app ships (docs/adr/0005). It is an engine in the sense of
  * lib/voice.js: `available()` says whether the bundled voice can speak now, and `say()` plays a
- * phrase. After a failed load, `available()` loads again with a fresh worker, at most once per retry
- * interval and only when asked, without waiting for that load. `prepare()` synthesizes ahead, and
+ * phrase. `loadTimeoutMs` only limits how long callers wait for the first load: once it passes they
+ * hear false, so a llamado falls back, but the worker keeps loading and its later `ready` makes the
+ * voice available. After a failed load, `available()` loads again with a fresh worker, at most once
+ * per retry interval and only when asked, without waiting for that load; a load still unanswered
+ * once the retry interval has passed its time limit is ended the same way, the retry interval being
+ * its only cap. `prepare()` synthesizes ahead, and
  * the engine keeps the audio of the last `maxPhrases` phrases said: the second saying of a call and
  * a recent re-llamado reuse it, an older phrase is synthesized again. A phrase the worker does not
  * answer within `sayTimeoutMs` of being sent fails, and that worker counts as lost: it is ended and
@@ -23,40 +27,13 @@ const defaultWorker = () => new Worker(new URL('./worker.js', import.meta.url))
  */
 export function piperEngine(voice, { createWorker = defaultWorker, getContext = sharedContext, loadTimeoutMs = 60000, maxPhrases = 50, retryIntervalMs = 10 * 60000, sayTimeoutMs = 20000 } = {}) {
 	let worker = null
-	let ready = null // the first load, replaced by a later load that succeeds or by a lost worker's false
-	let retryAt = Infinity // when a failed load may run again: never while one runs, or once one has succeeded
+	let ready = null // the first load, replaced by a load's `ready` or by a lost worker's false
+	let retryAt = Infinity // when a load may run again: after a failed one, or after one past its time limit
 	let nextId = 1
 	let disposed = false
 	let abandon = () => {} // fails the load that runs, if any
 	const pending = new Map()
 	const phrases = new Map()
-
-	function start() {
-		return new Promise((resolve) => {
-			const timer = setTimeout(() => settle(false), loadTimeoutMs)
-			let done = false
-			const settle = (ok) => {
-				if (done) return // past the load, a worker error or stray `failed` ends nothing: only a phrase's time limit does
-				done = true
-				clearTimeout(timer)
-				resolve(ok)
-			}
-			abandon = () => settle(false)
-			try {
-				worker = createWorker()
-				worker.onerror = () => settle(false)
-				worker.onmessage = ({ data }) => {
-					if (data.type === 'ready') settle(true)
-					else if (data.type === 'failed') settle(false)
-					else if (data.type === 'audio') pending.get(data.id)?.resolve({ pcm: data.pcm, sampleRate: data.sampleRate })
-					else if (data.type === 'error') pending.get(data.id)?.reject(new Error(data.error))
-				}
-				worker.postMessage({ type: 'init', voice })
-			} catch {
-				settle(false)
-			}
-		})
-	}
 
 	/** A worker that failed to load or stopped answering is ended; a load after the retry interval replaces it. */
 	function lose() {
@@ -65,15 +42,42 @@ export function piperEngine(voice, { createWorker = defaultWorker, getContext = 
 		retryAt = performance.now() + retryIntervalMs
 	}
 
+	/** Loads with a fresh worker, ending one still unanswered; callers wait until it answers or its time limit passes. */
 	function load() {
+		abandon()
 		retryAt = Infinity
-		const attempt = start().then((ok) => {
-			if (disposed) return false
-			if (ok) ready = attempt
-			else lose()
-			return ok
+		return new Promise((resolve) => {
+			const timer = setTimeout(() => { // callers stop waiting; the worker keeps loading
+				resolve(false)
+				retryAt = performance.now() + retryIntervalMs
+			}, loadTimeoutMs)
+			let answered = false
+			const answer = (ok) => {
+				if (answered) return // past the load, a worker error or stray `failed` ends nothing: only a phrase's time limit does
+				answered = true
+				clearTimeout(timer)
+				if (disposed) ok = false
+				else if (ok) {
+					ready = Promise.resolve(true)
+					retryAt = Infinity
+				} else lose()
+				resolve(ok)
+			}
+			abandon = () => answer(false)
+			try {
+				worker = createWorker()
+				worker.onerror = () => answer(false)
+				worker.onmessage = ({ data }) => {
+					if (data.type === 'ready') answer(true)
+					else if (data.type === 'failed') answer(false)
+					else if (data.type === 'audio') pending.get(data.id)?.resolve({ pcm: data.pcm, sampleRate: data.sampleRate })
+					else if (data.type === 'error') pending.get(data.id)?.reject(new Error(data.error))
+				}
+				worker.postMessage({ type: 'init', voice })
+			} catch {
+				answer(false)
+			}
 		})
-		return attempt
 	}
 
 	function prepare(text) {

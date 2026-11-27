@@ -137,3 +137,66 @@ test('a Pantalla whose voice changes keeps only the new voice loaded, and speaks
 		await w.cleanup()
 	}
 })
+
+test('a model that downloads for longer than the load time limit still loads, and a later llamado is spoken by it', async ({ browser, page }) => {
+	test.setTimeout(240_000)
+	await login(page)
+	const w = await world(page, { pantalla: { volume: 100, voice: 'mujer' } })
+	try {
+		const room = await openDisplay(browser, w)
+		// A slow link: the model's download is held past the 60 s a llamado waits for the load (#65), then let through.
+		let release
+		const held = new Promise((resolve) => { release = resolve })
+		let requested = 0
+		await room.context().route('**/*.onnx', async (route) => {
+			requested += 1
+			await held
+			await route.continue().catch(() => {}) // the request is gone if its worker was ended
+		})
+		// Record every bundled-voice worker the page starts and whether it loaded, and every audio buffer played.
+		await room.addInitScript(() => {
+			window.__voiceWorkers = []
+			window.__voiceBuffers = []
+			const Native = window.Worker
+			window.Worker = class extends Native {
+				constructor(...args) {
+					super(...args)
+					this.record = { ready: false }
+					window.__voiceWorkers.push(this.record)
+					this.addEventListener('message', ({ data }) => { if (data?.type === 'ready') this.record.ready = true })
+				}
+			}
+			const create = AudioContext.prototype.createBufferSource
+			AudioContext.prototype.createBufferSource = function () {
+				const source = create.call(this)
+				const start = source.start.bind(source)
+				source.start = (...args) => { window.__voiceBuffers.push(source.buffer.duration); return start(...args) }
+				return source
+			}
+		})
+		await room.reload()
+		await expect(room.locator('.d-foot .cap')).toHaveText(/^Sonido y voz activados/)
+		await expect.poll(() => requested, { timeout: 30_000, intervals: [500] }).toBe(1)
+		const card = room.getByRole('status')
+		const buffers = () => room.evaluate(() => window.__voiceBuffers)
+
+		// Past the time limit, with the model still downloading: the llamado rings and falls back.
+		await room.waitForTimeout(62_000)
+		const meanwhile = await callNew(page, w)
+		await expect(card).toContainText(meanwhile, { timeout: 8_000 })
+		await expect.poll(() => chimes(room), { timeout: 10_000, intervals: [500] }).toBe(1)
+		expect(await buffers()).toEqual([])
+
+		release()
+		const workers = () => room.evaluate(() => window.__voiceWorkers.map(({ ready }) => ({ ready })))
+		await expect.poll(workers, { timeout: 90_000, intervals: [1000] }).toEqual([{ ready: true }])
+
+		const later = await callNew(page, w)
+		await expect(card).toContainText(later, { timeout: 8_000 })
+		await expect.poll(async () => (await buffers()).length, { timeout: 60_000, intervals: [1000] }).toBeGreaterThanOrEqual(2)
+		expect((await buffers())[0]).toBeGreaterThan(2)
+		expect(await workers()).toEqual([{ ready: true }])
+	} finally {
+		await w.cleanup()
+	}
+})
