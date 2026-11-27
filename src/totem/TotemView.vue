@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <script setup>
 import { loadState } from '@nextcloud/initial-state'
-import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { issueTurno, messageFrom, publicServicios, warnError } from '../api.js'
 import { readableOn } from '../lib/color.js'
 import { poll } from '../lib/poll.js'
@@ -56,7 +56,12 @@ const DOUBLE_TAP_MS = 500
 let screenShownAt = -Infinity
 const tooSoon = (event) => event.timeStamp - screenShownAt < DOUBLE_TAP_MS
 
-// A way home is a tap, or a timer that nobody tapped: then its window starts now, on the same timeline.
+// A screen comes into view by a tap, or with nobody tapping (a timer, the offline notice clearing): then its window
+// starts now, on the same timeline.
+function startWindow(event) {
+	screenShownAt = event?.timeStamp ?? performance.now()
+}
+
 function goHome(event) {
 	departures += 1
 	clearInterval(countdown)
@@ -65,16 +70,22 @@ function goHome(event) {
 	servicio.value = null
 	ticket.value = null
 	problem.value = ''
-	screenShownAt = event?.timeStamp ?? performance.now()
+	startWindow(event)
 }
 
 function choose(s, event) {
 	if (tooSoon(event)) return
 	servicio.value = s
 	step.value = 'question'
-	screenShownAt = event.timeStamp
+	startWindow(event)
 	watchIdle()
 }
+
+// The offline notice covers the question, and taps on it keep the question up: when it clears, Sí and No are back
+// under a finger that was tapping the notice, as if the question had just appeared.
+watch(offline, (isOffline) => {
+	if (!isOffline && step.value === 'question' && !problem.value) startWindow()
+})
 
 async function answer(preferente, event) {
 	if (issuing.value || tooSoon(event)) return
