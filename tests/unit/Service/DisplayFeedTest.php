@@ -61,14 +61,6 @@ class DisplayFeedTest extends TestCase {
 		$servicios->method('find')->willReturn($s);
 		$boxes = $this->createMock(BoxMapper::class);
 		$boxes->method('findAll')->willReturnCallback(fn (): array => $this->allBoxes);
-		$boxes->method('find')->willReturnCallback(function (int $id): Box {
-			foreach ($this->allBoxes as $b) {
-				if ($b->getId() === $id) {
-					return $b;
-				}
-			}
-			throw new DoesNotExistException('deleted');
-		});
 		$today = $this->createMock(Today::class);
 		$today->method('day')->willReturn('2026-10-18');
 

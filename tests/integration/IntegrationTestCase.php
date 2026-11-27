@@ -138,9 +138,9 @@ abstract class IntegrationTestCase extends TestCase {
 		return new CallService(Server::get(BoxMapper::class), Server::get(ServicioLinks::class), Server::get(ServicioMapper::class), Server::get(TurnoMapper::class), Server::get(LlamadoMapper::class), $this->today());
 	}
 
-	/** The feed a Pantalla polls, on the clock of {@see self::today()}. */
-	protected function feed(): DisplayFeed {
-		return new DisplayFeed(Server::get(PantallaMapper::class), Server::get(ServicioLinks::class), Server::get(LlamadoMapper::class), Server::get(TurnoMapper::class), Server::get(ServicioMapper::class), Server::get(BoxMapper::class), $this->today());
+	/** The feed a Pantalla polls, on the clock of {@see self::today()}, reading Boxes through the given mapper or the instance's. */
+	protected function feed(?BoxMapper $boxes = null): DisplayFeed {
+		return new DisplayFeed(Server::get(PantallaMapper::class), Server::get(ServicioLinks::class), Server::get(LlamadoMapper::class), Server::get(TurnoMapper::class), Server::get(ServicioMapper::class), $boxes ?? Server::get(BoxMapper::class), $this->today());
 	}
 
 	/** The sentence the request was refused with; null when it went through. */
