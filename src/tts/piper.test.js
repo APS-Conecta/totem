@@ -191,6 +191,88 @@ describe('piperEngine', () => {
 		expect(audio.played).toHaveLength(1)
 	})
 
+	describe('a phrase the worker never answers', () => {
+		beforeEach(() => vi.useFakeTimers())
+		afterEach(() => vi.useRealTimers())
+
+		const sayTimeoutMs = 20000
+		const retryIntervalMs = 5 * 60000
+		const flush = () => vi.advanceTimersByTimeAsync(0)
+		/** Loads as tts/worker.js does but never answers a `say`, as when the phonemizer's data fails to download. */
+		function silentWorker() {
+			const worker = fakeWorker()
+			const answer = worker.postMessage.bind(worker)
+			worker.postMessage = (message) => (message.type === 'say' ? worker.sent.push(message) : answer(message))
+			return worker
+		}
+		const outcome = (promise) => {
+			const state = { now: 'pending' }
+			promise.then(() => { state.now = 'played' }, () => { state.now = 'failed' })
+			return state
+		}
+
+		it('fails once the time limit has passed since the phrase was sent', async () => {
+			const e = engine('mujer', silentWorker(), { sayTimeoutMs })
+			await e.available()
+			const saying = outcome(e.say('hola', 100))
+
+			await vi.advanceTimersByTimeAsync(sayTimeoutMs - 1)
+			expect(saying.now).toBe('pending')
+			await vi.advanceTimersByTimeAsync(1)
+			expect(saying.now).toBe('failed')
+		})
+
+		it('ends the worker, answers unavailable, and loads a fresh one after the retry interval that speaks the phrase again', async () => {
+			const first = silentWorker()
+			const second = fakeWorker()
+			const workers = [first, second]
+			const createWorker = vi.fn(() => workers.shift())
+			const e = engine('mujer', null, { createWorker, sayTimeoutMs, retryIntervalMs })
+			await e.available()
+			const saying = outcome(e.say('hola', 100))
+			await vi.advanceTimersByTimeAsync(sayTimeoutMs)
+
+			expect(saying.now).toBe('failed')
+			expect(first.terminate).toHaveBeenCalled()
+			expect(await e.available()).toBe(false)
+
+			await vi.advanceTimersByTimeAsync(retryIntervalMs)
+			expect(await e.available()).toBe(false) // the retry runs; until it has loaded, llamados fall back
+			expect(createWorker).toHaveBeenCalledTimes(2)
+			await flush()
+			expect(await e.available()).toBe(true)
+			await e.say('hola', 100)
+
+			expect(second.sent.filter((m) => m.type === 'say' && m.text === 'hola')).toHaveLength(1)
+			expect(audio.played).toHaveLength(1)
+		})
+
+		it('starts the clock when the phrase is sent, not while the model is still loading', async () => {
+			const worker = fakeWorker({ never: true })
+			const e = engine('mujer', worker, { sayTimeoutMs })
+			const saying = outcome(e.say('hola', 100))
+			await vi.advanceTimersByTimeAsync(15000)
+			worker.onmessage({ data: { type: 'ready' } })
+			await flush()
+			const { id } = worker.sent.find((m) => m.type === 'say')
+
+			await vi.advanceTimersByTimeAsync(sayTimeoutMs - 1)
+			worker.onmessage({ data: { type: 'audio', id, pcm: new Float32Array([0, 0.5]), sampleRate: 22050 } })
+			await flush()
+			expect(saying.now).toBe('played')
+		})
+
+		it('leaves no timer behind once a phrase is answered in time', async () => {
+			const e = engine('mujer', fakeWorker(), { sayTimeoutMs })
+			await e.available()
+			await e.say('hola', 100)
+
+			expect(vi.getTimerCount()).toBe(0)
+			await vi.advanceTimersByTimeAsync(sayTimeoutMs)
+			expect(audio.played).toHaveLength(1)
+		})
+	})
+
 	describe('after a failed load', () => {
 		beforeEach(() => vi.useFakeTimers())
 		afterEach(() => vi.useRealTimers())

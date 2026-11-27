@@ -9,7 +9,7 @@
 // (#108): the phrase is fixed per Playwright worker, servicio «Farmacia N» after the worker and box «Ventanilla».
 
 const { test, expect } = require('@playwright/test')
-const { call, login, world } = require('./helpers')
+const { call, callNew, chimes, login, openDisplay, world } = require('./helpers')
 
 // No number in it: said as itself, or as «ventanilla» while it is the instance's only box: one word either way.
 const BOX = 'Ventanilla'
@@ -59,3 +59,28 @@ for (const voice of ['hombre', 'mujer']) {
 		}
 	})
 }
+
+test('a phrase the bundled voice never answers leaves the next llamado its Aviso', async ({ browser, page }) => {
+	test.setTimeout(150_000)
+	await login(page)
+	const w = await world(page, { pantalla: { volume: 100, voice: 'mujer' } })
+	try {
+		const room = await openDisplay(browser, w)
+		// The espeak-ng data the phonemizer downloads for a phrase fails: the loaded worker never answers it (#35).
+		let refused = 0
+		await room.context().route('**/piper_phonemize.data', (route) => { refused += 1; return route.abort() })
+		const card = room.getByRole('status')
+
+		const unanswered = await callNew(page, w)
+		await expect(card).toContainText(unanswered, { timeout: 8_000 })
+		await expect.poll(() => refused, { timeout: 90_000, intervals: [1000] }).toBeGreaterThan(0)
+		expect(await chimes(room)).toBe(1)
+
+		const next = await callNew(page, w)
+		await expect(card).toContainText(next, { timeout: 8_000 })
+		// The unanswered phrase fails after its time limit, so the queue moves on and the next llamado rings.
+		await expect.poll(() => chimes(room), { timeout: 60_000, intervals: [1000] }).toBe(2)
+	} finally {
+		await w.cleanup()
+	}
+})

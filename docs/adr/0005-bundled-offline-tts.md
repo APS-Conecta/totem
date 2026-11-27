@@ -8,7 +8,7 @@ The display announces each llamado with chimes and a Spanish voice. The voice is
 
 **Licenses.** Piper is MIT, the two voices CC0 and Apache-2.0, eSpeak-ng GPL-3.0-or-later, which is compatible with this app's AGPL-3.0-or-later. Voices needing attribution or share-alike (Sharvard, Daniela) were rejected.
 
-**Fallback chain.** Model fails to load → `speechSynthesis` → chimes only. The gold frame and the written caption never depend on sound.
+**Fallback chain.** Model fails to load, or the worker does not answer a phrase within 20 s (it is then ended and loaded again, as after a failed load) → `speechSynthesis` → chimes only. The gold frame and the written caption never depend on sound.
 
 
 
