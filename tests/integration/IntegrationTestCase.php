@@ -23,6 +23,7 @@ use OCA\Totem\Service\CallService;
 use OCA\Totem\Service\DisplayFeed;
 use OCA\Totem\Service\Today;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\IConfig;
 use OCP\IDBConnection;
 use OCP\IDateTimeZone;
 use OCP\Server;
@@ -55,6 +56,11 @@ abstract class IntegrationTestCase extends TestCase {
 
 	final protected function db(): IDBConnection {
 		return Server::get(IDBConnection::class);
+	}
+
+	/** The table's name in the database, with the instance's table prefix. */
+	final protected function tableName(string $table): string {
+		return Server::get(IConfig::class)->getSystemValueString('dbtableprefix', 'oc_') . $table;
 	}
 
 	/** A servicio open all day, 00:00-23:59, with no quota. */
