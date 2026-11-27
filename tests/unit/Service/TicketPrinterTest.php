@@ -109,9 +109,29 @@ class TicketPrinterTest extends TestCase {
 	public function testItChecksTheAddressAgainWhenPrintingNotOnlyWhenItWasSaved(): void {
 		// A name can be re-pointed after it was configured; an address outside the clinic is never connected to.
 		$this->transport->expects($this->never())->method('send');
-		$this->logger->expects($this->once())->method('warning');
+		$this->logger->expects($this->once())->method('warning')->with('Totem ticket not printed', [
+			'totem' => 'sala',
+			'host' => '8.8.8.8',
+			'address' => null,
+			'port' => 9100,
+			'reason' => 'La impresora debe estar en la red de la clínica (direcciones 10.x, 172.16 a 172.31 o 192.168.x).',
+		]);
 
 		$this->assertFalse($this->printer->print($this->totem(host: '8.8.8.8'), $this->ticket()));
+	}
+
+	public function testTheWarningForAPrinterNameThatDidNotAnswerNamesTheAddressItTried(): void {
+		$printer = $this->printerResolving(static fn (string $host): array => ['192.168.1.20']);
+		$this->transport->method('send')->willReturn(false);
+		$this->logger->expects($this->once())->method('warning')->with('Totem ticket not printed', [
+			'totem' => 'sala',
+			'host' => 'printer.clinic.test',
+			'address' => '192.168.1.20',
+			'port' => 9100,
+			'reason' => 'the printer did not answer',
+		]);
+
+		$this->assertFalse($printer->print($this->totem(host: 'printer.clinic.test'), $this->ticket()));
 	}
 
 	public function testANameWithAnyAddressOutsideTheClinicIsNotPrinted(): void {
