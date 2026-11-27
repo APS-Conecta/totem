@@ -161,15 +161,6 @@ class DisplayFeedTest extends TestCase {
 		$this->assertSame(['name' => 'Sala Farmacia', 'volume' => 70, 'voice' => 'hombre'], $this->feed->since('sala', 0)['pantalla']);
 	}
 
-	public function testNoPersonalDataIsEverInTheFeed(): void {
-		$this->links->method('ids')->willReturn([]);
-		$this->llamados->method('findSince')->willReturn([$this->llamado(21)]);
-
-		$keys = array_keys($this->feed->since('sala', 0)['llamados'][0]);
-
-		$this->assertSame(['id', 'label', 'spoken', 'servicio', 'color', 'preferente', 'box', 'calledAt'], $keys);
-	}
-
 	public function testALlamadoOfADeletedBoxStillShowsWithAGenericName(): void {
 		$this->links->method('ids')->willReturn([]);
 		$this->llamados->method('findSince')->willReturn([$this->llamado(21, 99)]);

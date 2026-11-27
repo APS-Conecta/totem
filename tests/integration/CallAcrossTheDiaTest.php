@@ -6,17 +6,13 @@ declare(strict_types=1);
 
 namespace OCA\Totem\Tests\Integration;
 
-use OCA\Totem\Db\BoxMapper;
 use OCA\Totem\Db\LlamadoMapper;
 use OCA\Totem\Db\Pantalla;
 use OCA\Totem\Db\PantallaMapper;
 use OCA\Totem\Db\Servicio;
 use OCA\Totem\Db\ServicioLinks;
-use OCA\Totem\Db\ServicioMapper;
 use OCA\Totem\Db\TurnoMapper;
 use OCA\Totem\Service\BoxService;
-use OCA\Totem\Service\CallService;
-use OCA\Totem\Service\DisplayFeed;
 use OCA\Totem\Service\StatsService;
 use OCP\Server;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -29,21 +25,15 @@ use PHPUnit\Framework\Attributes\DataProvider;
 final class CallAcrossTheDiaTest extends IntegrationTestCase {
 	private const NEXT_DAY = '2026-10-19';
 	private TurnoMapper $turnos;
-	private CallService $calls;
 	private BoxService $boxes;
-	private DisplayFeed $feed;
 	private Servicio $farmacia;
 	private int $boxId;
 
 	protected function setUp(): void {
 		parent::setUp();
-		$today = $this->today();
 		$this->turnos = Server::get(TurnoMapper::class);
-		$boxes = Server::get(BoxMapper::class);
 		$links = Server::get(ServicioLinks::class);
-		$servicios = Server::get(ServicioMapper::class);
-		$this->calls = new CallService($boxes, $links, $servicios, $this->turnos, Server::get(LlamadoMapper::class), $today);
-		$this->boxes = new BoxService($boxes, $links, $servicios, $this->turnos);
+		$this->boxes = Server::get(BoxService::class);
 
 		$this->at(self::DAY, '23:55');
 		$this->farmacia = $this->servicio();
@@ -55,16 +45,15 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 		$pantalla->setVoice('hombre');
 		Server::get(PantallaMapper::class)->insert($pantalla);
 		$links->replace(ServicioLinks::PANTALLA, (int)$pantalla->getId(), [(int)$this->farmacia->getId()]);
-		$this->feed = new DisplayFeed(Server::get(PantallaMapper::class), $links, Server::get(LlamadoMapper::class), $this->turnos, $servicios, $boxes, $today);
 	}
 
 	public function testATurnoStartedBeforeMidnightIsFinishedAfterIt(): void {
 		$turno = $this->turno($this->farmacia, false, 40, $this->now);
-		$this->calls->callNext($this->boxId);
-		$this->calls->start($this->boxId);
+		$this->calls()->callNext($this->boxId);
+		$this->calls()->start($this->boxId);
 
 		$this->at(self::NEXT_DAY, '00:01');
-		$this->calls->finish($this->boxId);
+		$this->calls()->finish($this->boxId);
 
 		$this->assertSame('completed', $this->turnos->find($turno->getId())->getEstado());
 		$this->assertSame(['emitidos' => 1, 'atendidos' => 1, 'noShow' => 0, 'sinAtender' => 0], $this->totals(self::DAY));
@@ -72,16 +61,16 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 
 	public function testACalledTurnoFromTheDayBeforeStaysTheBoxsCurrentTurno(): void {
 		$held = $this->turno($this->farmacia, false, 40, $this->now);
-		$this->calls->callNext($this->boxId);
+		$this->calls()->callNext($this->boxId);
 
 		$this->at(self::NEXT_DAY, '00:01');
 		$waiting = $this->turno($this->farmacia, false, 1, $this->now, self::NEXT_DAY);
-		$current = $this->calls->state($this->boxId)['current'];
+		$current = $this->calls()->state($this->boxId)['current'];
 
 		$this->assertNotNull($current, 'the box lost the turno it holds');
 		$this->assertSame($held->getId(), $current['id']);
 		$this->assertSame('called', $current['estado']);
-		$this->assertSame('Finalice la atención del turno actual o marque “No se presentó” antes de llamar otro.', $this->refusal(fn () => $this->calls->callNext($this->boxId)));
+		$this->assertSame('Finalice la atención del turno actual o marque “No se presentó” antes de llamar otro.', $this->refusal(fn () => $this->calls()->callNext($this->boxId)));
 		$this->assertSame('waiting', $this->turnos->find($waiting->getId())->getEstado());
 	}
 
@@ -100,10 +89,10 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 	#[DataProvider('closings')]
 	public function testACalledTurnoFromTheDayBeforeCanBeClosedOnTheNext(string $action, string $estado, int $llamadosThatDia, int $llamadosTheNextDia): void {
 		$turno = $this->turno($this->farmacia, false, 40, $this->now);
-		$this->calls->callNext($this->boxId);
+		$this->calls()->callNext($this->boxId);
 
 		$this->at(self::NEXT_DAY, '00:01');
-		$this->calls->$action($this->boxId);
+		$this->calls()->$action($this->boxId);
 
 		$this->assertSame($estado, $this->turnos->find($turno->getId())->getEstado());
 		$llamados = Server::get(LlamadoMapper::class);
@@ -113,13 +102,13 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 
 	public function testTheFeedCarriesARecallOfATurnoHeldAcrossTheDia(): void {
 		$this->turno($this->farmacia, false, 40, $this->now);
-		$this->calls->callNext($this->boxId);
+		$this->calls()->callNext($this->boxId);
 		$first = Server::get(LlamadoMapper::class)->findSince([], self::DAY, 0, 50)[0]->getId();
 
 		$this->at(self::NEXT_DAY, '00:01');
-		$this->calls->recall($this->boxId);
+		$this->calls()->recall($this->boxId);
 
-		$answer = $this->feed->since('sala', 0);
+		$answer = $this->feed()->since('sala', 0);
 
 		$this->assertSame(self::NEXT_DAY, $answer['day']);
 		$this->assertCount(1, $answer['llamados'], 'the feed carries the recall, not the call made the Día before');
@@ -138,7 +127,7 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 
 	public function testABoxHoldingATurnoFromAnEarlierDiaCannotBeDeleted(): void {
 		$this->turno($this->farmacia, false, 40, $this->now);
-		$this->calls->callNext($this->boxId);
+		$this->calls()->callNext($this->boxId);
 
 		$this->at(self::NEXT_DAY, '00:01');
 
@@ -151,8 +140,8 @@ final class CallAcrossTheDiaTest extends IntegrationTestCase {
 
 		$this->at(self::NEXT_DAY, '00:01');
 
-		$this->assertSame([], $this->calls->state($this->boxId)['waiting']);
-		$this->assertSame('No hay turnos en espera.', $this->refusal(fn () => $this->calls->callNext($this->boxId)));
+		$this->assertSame([], $this->calls()->state($this->boxId)['waiting']);
+		$this->assertSame('No hay turnos en espera.', $this->refusal(fn () => $this->calls()->callNext($this->boxId)));
 		$this->assertSame(['emitidos' => 1, 'atendidos' => 0, 'noShow' => 0, 'sinAtender' => 1], $this->totals(self::DAY));
 	}
 

@@ -20,9 +20,8 @@ use OCP\AppFramework\Db\DoesNotExistException;
 /**
  * What a waiting-room display asks every two seconds: the llamados after the
  * last one it saw, for the servicios it shows, and the Día they belong to.
- * Public and read-only, so it carries labels, servicio and box names and
- * colors, and nothing else: there is no patient data to leak
- * (docs/threat-model.md).
+ * Public and read-only, so it carries no patient data; docs/threat-model.md
+ * names every field it sends.
  */
 class DisplayFeed {
 	/** A freshly opened display gets the latest llamados; a polling one gets the few that are new. */

@@ -6,9 +6,12 @@ declare(strict_types=1);
 
 namespace OCA\Totem\Tests\Integration;
 
+use OCA\Totem\Db\BoxMapper;
+use OCA\Totem\Db\LlamadoMapper;
 use OCA\Totem\Db\Pantalla;
 use OCA\Totem\Db\PantallaMapper;
 use OCA\Totem\Db\Servicio;
+use OCA\Totem\Db\ServicioLinks;
 use OCA\Totem\Db\ServicioMapper;
 use OCA\Totem\Db\Totem;
 use OCA\Totem\Db\TotemMapper;
@@ -16,6 +19,8 @@ use OCA\Totem\Db\Turno;
 use OCA\Totem\Db\TurnoMapper;
 use OCA\Totem\Domain\Estado;
 use OCA\Totem\Exception\Refused;
+use OCA\Totem\Service\CallService;
+use OCA\Totem\Service\DisplayFeed;
 use OCA\Totem\Service\Today;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
@@ -120,6 +125,16 @@ abstract class IntegrationTestCase extends TestCase {
 		$clock->method('getTime')->willReturnCallback(fn (): int => $this->now);
 
 		return new Today($clock, Server::get(IDateTimeZone::class));
+	}
+
+	/** The calls a box makes, on the clock of {@see self::today()}. */
+	protected function calls(): CallService {
+		return new CallService(Server::get(BoxMapper::class), Server::get(ServicioLinks::class), Server::get(ServicioMapper::class), Server::get(TurnoMapper::class), Server::get(LlamadoMapper::class), $this->today());
+	}
+
+	/** The feed a Pantalla polls, on the clock of {@see self::today()}. */
+	protected function feed(): DisplayFeed {
+		return new DisplayFeed(Server::get(PantallaMapper::class), Server::get(ServicioLinks::class), Server::get(LlamadoMapper::class), Server::get(TurnoMapper::class), Server::get(ServicioMapper::class), Server::get(BoxMapper::class), $this->today());
 	}
 
 	/** The sentence the request was refused with; null when it went through. */

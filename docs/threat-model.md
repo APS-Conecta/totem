@@ -25,7 +25,7 @@ A totem's printer is an address and a port that any logged-in user can set (conf
 It is never verified and no reason is stored, by design (Ley 20.584 / 21.168 intent; verification at a self-service totem would defeat it). Abuse shows up in the Estadísticas counts (a high preferente share), not in code.
 
 ## Other
-- The display feed carries labels, servicio names, box names and colors only.
+- The display feed carries `pantalla` (its `name`, `volume` and `voice`), the `day`, the `llamados` (each with its `id`, `label`, `spoken`, `servicio`, `color`, `preferente`, `box` and `calledAt`) and the `cursor`, and nothing else; none of them is patient data.
 - The statistics answer carries servicio names, colors and whole-number counts only (ADR-0007); a CSV cell that could run as a spreadsheet formula is defused.
 - The bundled voice model runs in the browser; no text leaves the machine.
 - `totem_llamado` is append-only: the display feed and the audit trail.

@@ -261,7 +261,7 @@ final class RacingRequestsTest extends IntegrationTestCase {
 		$this->assertNull($this->turnos->findActiveForBox($boxId));
 	}
 
-	private function calls(): CallService {
+	protected function calls(): CallService {
 		return new CallService(
 			Server::get(BoxMapper::class),
 			Server::get(ServicioLinks::class),
