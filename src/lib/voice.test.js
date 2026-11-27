@@ -50,17 +50,20 @@ describe('speak', () => {
 
 	it('waits between the two sayings', async () => {
 		vi.useFakeTimers()
-		const piper = engine('piper')
-		const done = speak('hola', { engines: [piper], volume: 100, pauseMs: 700 })
+		try {
+			const piper = engine('piper')
+			const done = speak('hola', { engines: [piper], volume: 100, pauseMs: 700 })
 
-		await vi.advanceTimersByTimeAsync(0)
-		expect(piper.say).toHaveBeenCalledTimes(1)
-		await vi.advanceTimersByTimeAsync(699)
-		expect(piper.say).toHaveBeenCalledTimes(1)
-		await vi.advanceTimersByTimeAsync(1)
-		await done
-		expect(piper.say).toHaveBeenCalledTimes(2)
-		vi.useRealTimers()
+			await vi.advanceTimersByTimeAsync(0)
+			expect(piper.say).toHaveBeenCalledTimes(1)
+			await vi.advanceTimersByTimeAsync(699)
+			expect(piper.say).toHaveBeenCalledTimes(1)
+			await vi.advanceTimersByTimeAsync(1)
+			await done
+			expect(piper.say).toHaveBeenCalledTimes(2)
+		} finally {
+			vi.useRealTimers()
+		}
 	})
 })
 

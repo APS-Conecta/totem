@@ -87,12 +87,15 @@ describe('piperEngine', () => {
 
 	it('is unavailable when loading takes too long, so the browser voice can take over', async () => {
 		vi.useFakeTimers()
-		const e = engine('mujer', fakeWorker({ never: true }), { loadTimeoutMs: 20000 })
-		const result = e.available()
-		await vi.advanceTimersByTimeAsync(20000)
+		try {
+			const e = engine('mujer', fakeWorker({ never: true }), { loadTimeoutMs: 20000 })
+			const result = e.available()
+			await vi.advanceTimersByTimeAsync(20000)
 
-		expect(await result).toBe(false)
-		vi.useRealTimers()
+			expect(await result).toBe(false)
+		} finally {
+			vi.useRealTimers()
+		}
 	})
 
 	it('speaks by synthesizing in the worker and playing the audio at the pantalla volume', async () => {
