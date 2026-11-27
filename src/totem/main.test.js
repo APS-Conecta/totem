@@ -9,6 +9,7 @@ vi.mock('../api.js', async (importOriginal) => ({
 	publicServicios: vi.fn().mockResolvedValue([{ id: 1, name: 'Farmacia', prefix: 'FAR', color: '#1b6ec2' }]),
 	issueTurno: vi.fn(),
 }))
+vi.mock('../lib/public-path.js', () => ({}))
 
 describe('the totem entry', () => {
 	beforeEach(() => {

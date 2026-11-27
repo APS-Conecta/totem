@@ -4,6 +4,7 @@ const webpackConfig = require('@nextcloud/webpack-vue-config')
 // One small bundle per page, each its own surface: js/totem-<name>.js, matching
 // Util::addScript in PageController. The totem and display are public pages and
 // share no chrome with the Nextcloud one (the staff app: box, statistics, configuration).
+// src/lib/public-path.test.js reads this entry list and checks each entry imports the public path first.
 const pages = ['totem', 'display', 'staff']
 webpackConfig.entry = Object.fromEntries(pages.map((p) => [p, path.join(__dirname, 'src', p, 'main.js')]))
 
