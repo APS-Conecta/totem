@@ -116,3 +116,103 @@ for (const [way, reach] of WAYS_HOME) {
 		}
 	})
 }
+
+// The "Sin conexión" notice covers the whole totem; under it the screen stays where it was. These tests hold the
+// page's clock paused, so the servicios poll and its retry run only when they move it, and the notice clears at one
+// exact moment on the page's performance timeline, the one the installed clock also gives every event's time stamp:
+// the taps after it carry time stamps measured from that moment.
+
+const SERVICIOS = /\/apps\/totem\/public\/servicios/
+const TURNOS = /\/apps\/totem\/turnos/
+const NOTICE = 'Sin conexión'
+
+/** A fresh totem with the world's servicio on it, on a paused clock that only the test moves. */
+async function pausedTotem(browser, page) {
+	await login(page)
+	const w = await world(page)
+	const { patient, screen: totem } = await kiosk(browser, '/apps/totem/totem')
+	await patient.clock.install()
+	await totem.reload() // the page's timers now run on the installed clock
+	const bar = totem.getByRole('button', { name: new RegExp(w.servicio.name) })
+	await expect(bar).toBeVisible()
+	await patient.clock.pauseAt(await totem.evaluate(() => Date.now() + 1000))
+	return { w, patient, totem, bar }
+}
+
+/** Moves the clock on by `ms`, the patient touching the totem (no button) every 20 s, which keeps the question up. */
+async function touchingFor(patient, totem, ms) {
+	for (let run = 0; run < ms; run += 20_000) {
+		await patient.clock.runFor(Math.min(20_000, ms - run))
+		await totem.locator('.t-page').dispatchEvent('pointerdown')
+	}
+}
+
+/** The servicios load again: the poll's retry, at most 30 s after it found the server gone, clears the notice. */
+async function noticeClears(patient, totem) {
+	await totem.unroute(SERVICIOS)
+	await touchingFor(patient, totem, 40_000)
+	await expect(totem.getByText(NOTICE)).toHaveCount(0)
+	return totem.evaluate(() => performance.now())
+}
+
+test('Sí tapped as the notice from a failed servicios check clears off the question is ignored; No after the window answers', async ({ browser, page }) => {
+	const { w, patient, totem, bar } = await pausedTotem(browser, page)
+	try {
+		await bar.click()
+		await expect(totem.getByText(QUESTION)).toBeVisible()
+		await totem.route(SERVICIOS, (route) => route.abort())
+		await touchingFor(patient, totem, 60_000) // the regular check, a minute after the page loaded
+		await expect(totem.getByText(NOTICE)).toBeVisible()
+
+		const cleared = await noticeClears(patient, totem)
+		await expect(totem.getByText(QUESTION)).toBeVisible()
+		await tapAt(totem, [choice(totem, 'Sí'), cleared], [choice(totem, 'Sí'), cleared + 499], [choice(totem, 'No'), cleared + 500])
+
+		await expect(totem.locator('.t-ticket')).toContainText(`${w.prefix}-G-001`)
+		await expect(totem.locator('.t-ticket')).not.toContainText('Atención preferente')
+	} finally {
+		await patient.close()
+		await w.cleanup()
+	}
+})
+
+test('No tapped as the notice from a turno taken with no network clears off the question is ignored; Sí after the window answers', async ({ browser, page }) => {
+	const { w, patient, totem, bar } = await pausedTotem(browser, page)
+	try {
+		await bar.click()
+		await patient.clock.runFor(500) // the installed clock also times the taps: past the bar's window
+		await totem.route(SERVICIOS, (route) => route.abort())
+		await totem.route(TURNOS, (route) => route.abort())
+		await choice(totem, 'No').click()
+		await expect(totem.getByText(NOTICE)).toBeVisible()
+		await totem.unroute(TURNOS)
+
+		const cleared = await noticeClears(patient, totem)
+		await expect(totem.getByText(QUESTION)).toBeVisible()
+		await tapAt(totem, [choice(totem, 'No'), cleared], [choice(totem, 'No'), cleared + 499], [choice(totem, 'Sí'), cleared + 500])
+
+		await expect(totem.locator('.t-ticket')).toContainText(`${w.prefix}-P-001`)
+		await expect(totem.locator('.t-ticket')).toContainText('Atención preferente')
+	} finally {
+		await patient.close()
+		await w.cleanup()
+	}
+})
+
+test('a servicio bar tapped as the notice clears off the home screen chooses it', async ({ browser, page }) => {
+	const { w, patient, totem, bar } = await pausedTotem(browser, page)
+	try {
+		await totem.route(SERVICIOS, (route) => route.abort())
+		await patient.clock.runFor(60_000)
+		await expect(totem.getByText(NOTICE)).toBeVisible()
+
+		const cleared = await noticeClears(patient, totem)
+		await tapAt(totem, [bar, cleared])
+
+		await expect(totem.getByText(QUESTION)).toBeVisible()
+		await expect(totem.locator('.t-band')).toContainText(w.servicio.name)
+	} finally {
+		await patient.close()
+		await w.cleanup()
+	}
+})
