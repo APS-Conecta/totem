@@ -44,7 +44,8 @@ class ServicioLinks {
 
 	/**
 	 * Make the owner's links exactly these servicio ids, in one transaction: a reader sees the old set or the new
-	 * one, never the empty set the delete leaves before the inserts (an empty set means every servicio).
+	 * one, never the empty set the delete leaves before the inserts (for a pantalla or a totem an empty set means
+	 * every servicio).
 	 *
 	 * @param array{string, string} $link
 	 * @param list<int> $servicioIds
