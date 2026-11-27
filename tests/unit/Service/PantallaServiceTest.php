@@ -24,7 +24,6 @@ class PantallaServiceTest extends TestCase {
 
 	protected function setUp(): void {
 		$this->pantallas = $this->createMock(PantallaMapper::class);
-		$this->pantallas->method('findBySlug')->willThrowException(new DoesNotExistException('free'));
 		$this->links = $this->createMock(ServicioLinks::class);
 		$this->servicios = $this->createMock(ServicioMapper::class);
 		$this->service = new PantallaService($this->pantallas, $this->links, $this->servicios);
