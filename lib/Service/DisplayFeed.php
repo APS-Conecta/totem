@@ -6,7 +6,6 @@ declare(strict_types=1);
 
 namespace OCA\Totem\Service;
 
-use OCA\Totem\Db\Box;
 use OCA\Totem\Db\BoxMapper;
 use OCA\Totem\Db\LlamadoMapper;
 use OCA\Totem\Db\PantallaMapper;
@@ -53,12 +52,13 @@ class DisplayFeed {
 		foreach ($this->llamados->findSince($servicioIds, $day, $cursor, self::LIMIT) as $llamado) {
 			$turno = $this->turnos->find($llamado->getTurnoId());
 			$servicio = $this->servicios->find($llamado->getServicioId());
-			$box = $this->boxName($llamado->getBoxId());
-			$boxNames ??= array_map(static fn (Box $b): string => $b->getName(), $this->boxes->findAll());
+			$boxNames ??= $this->boxNames();
+			// A Box deleted after it called still shows its old llamados, under a generic name.
+			$box = $boxNames[$llamado->getBoxId()] ?? 'Ventanilla';
 			$out[] = [
 				'id' => (int)$llamado->getId(),
 				'label' => TurnoLabel::of($servicio->getPrefix(), $turno->getPreferente(), $turno->getSeq()),
-				'spoken' => TurnoLabel::spoken($servicio->getName(), $turno->getPreferente(), $turno->getSeq(), SpokenPlace::of($box, $boxNames)),
+				'spoken' => TurnoLabel::spoken($servicio->getName(), $turno->getPreferente(), $turno->getSeq(), SpokenPlace::of($box, array_values($boxNames))),
 				'servicio' => $servicio->getName(),
 				'color' => $servicio->getColor(),
 				'preferente' => $turno->getPreferente(),
@@ -76,12 +76,13 @@ class DisplayFeed {
 		];
 	}
 
-	/** A box deleted after it called still shows its old llamados, under a generic name. */
-	private function boxName(int $boxId): string {
-		try {
-			return $this->boxes->find($boxId)->getName();
-		} catch (DoesNotExistException) {
-			return 'Ventanilla';
+	/** @return array<int, string> every Box's name, by Box id */
+	private function boxNames(): array {
+		$names = [];
+		foreach ($this->boxes->findAll() as $box) {
+			$names[(int)$box->getId()] = $box->getName();
 		}
+
+		return $names;
 	}
 }
