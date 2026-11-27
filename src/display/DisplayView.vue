@@ -2,8 +2,9 @@
 <!--
 	The waiting-room display. Public, read-only, no personal data: it polls the feed and shows the
 	latest call large, the earlier ones in a list, and announces each new call (chimes + voice) while
-	a gold frame breathes for people who cannot hear. Sized from --k, one design pixel fitted to the
-	screen, and laid out by aspect ratio (docs/adr/0006); the approved mockup is docs/mockups/index.html.
+	a gold frame breathes for people who cannot hear; the calls missed during a feed outage are shown
+	but only the newest is announced. Sized from --k, one design pixel fitted to the screen, and laid
+	out by aspect ratio (docs/adr/0006); the approved mockup is docs/mockups/index.html.
 -->
 <template>
 	<div class="stage">
@@ -65,6 +66,7 @@ const clock = ref(timeNow())
 let cursor = 0
 let day = null
 let opened = false
+let reconnected = false
 let pulseTimer = null
 
 function timeNow() {
@@ -106,7 +108,8 @@ function onData(data) {
 	if (opened && data.llamados.length > 0) {
 		// Sound still locked: show the call, never announce it, or it would play as a backlog after the tap.
 		if (soundReady.value) {
-			for (const call of data.llamados) {
+			// Back from an outage, the answer holds every llamado missed: announce only the one on the card.
+			for (const call of reconnected ? data.llamados.slice(-1) : data.llamados) {
 				announce({ text: call.spoken, volume: data.pantalla.volume, voice: data.pantalla.voice }).catch((e) => warnError('announce', e))
 			}
 		}
@@ -115,13 +118,17 @@ function onData(data) {
 		pulseTimer = setTimeout(() => { pulse.value = false }, PULSE_MS)
 	}
 	opened = true
+	reconnected = false
 }
 
 const polling = poll({
 	load: () => readFeed(slug, cursor),
 	onData,
 	onOffline: () => { offline.value = true },
-	onOnline: () => { offline.value = false },
+	onOnline: () => {
+		offline.value = false
+		reconnected = true
+	},
 	every: 2000,
 })
 const clockTimer = setInterval(() => { clock.value = timeNow() }, 20000)

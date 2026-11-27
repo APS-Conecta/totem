@@ -3,7 +3,10 @@
 // Shared plumbing for the end-to-end tests: log in as the instance's admin, talk to the admin
 // endpoints with the session's request token, build (and tear down) a small world of one
 // servicio, one box and one pantalla with names that cannot collide with an earlier run, open a
-// kiosk page as a patient, and wait out the totem's double-tap window before the next tap.
+// kiosk page as a patient or a Pantalla that counts its chimes, make a llamado, and wait out the
+// totem's double-tap window before the next tap.
+
+const { expect } = require('@playwright/test')
 
 async function login(page, user = 'admin', password = 'admin') {
 	await page.goto('/login')
@@ -81,4 +84,44 @@ async function waitOutDoubleTap(page) {
 	await page.waitForTimeout(500)
 }
 
-module.exports = { call, kiosk, login, waitOutDoubleTap, world }
+/**
+ * The display of `w`'s Pantalla, its AudioContext kept on window.__audio; `locked` suspends it as it is made.
+ * Every chime the page rings builds one compressor, so window.__chimes counts the chimes without playing them.
+ */
+async function openDisplay(browser, w, { locked = false } = {}) {
+	const room = await (await browser.newContext({ locale: 'es-CL' })).newPage()
+	await room.addInitScript((startLocked) => {
+		window.__chimes = 0
+		const Native = window.AudioContext
+		window.AudioContext = class extends Native {
+			constructor(...args) {
+				super(...args)
+				window.__audio = this
+				if (startLocked) this.suspend()
+			}
+
+			createDynamicsCompressor() {
+				window.__chimes += 1
+				return super.createDynamicsCompressor()
+			}
+		}
+	}, locked)
+	await room.goto('/apps/totem/display/' + w.screen.slug)
+	// The caption names the Pantalla's own sound once the first feed answer is in: from here a llamado is new.
+	await expect(room.locator('.d-foot .cap')).toHaveText(/^Sonido activado/)
+	return room
+}
+
+/** The chimes `room` (from openDisplay) has rung so far. */
+const chimes = (room) => room.evaluate(() => window.__chimes)
+
+/** Frees the box of its called turno, takes a new one and calls it; answers its label. */
+async function callNew(page, w) {
+	const { current } = await call(page, 'GET', `/apps/totem/console/${w.box.id}/state`)
+	if (current?.estado === 'called') await call(page, 'POST', `/apps/totem/console/${w.box.id}/absent`)
+	const turno = await call(page, 'POST', '/apps/totem/turnos', { servicioId: w.servicio.id, preferente: false })
+	await call(page, 'POST', `/apps/totem/console/${w.box.id}/call`)
+	return turno.label
+}
+
+module.exports = { call, callNew, chimes, kiosk, login, openDisplay, waitOutDoubleTap, world }
