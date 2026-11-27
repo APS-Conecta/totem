@@ -6,7 +6,7 @@
 // context itself: suspend() is what an audio-session interruption or a screen lock does to it, and
 // resume() without a tap is a context that starts running by itself.
 //
-// The pantalla has sound but no voice, so an Aviso is the chime alone; the page counts the chimes it
+// The Pantalla has sound but no voice, so an Aviso is the chime alone; the page counts the chimes it
 // rings (each one builds one compressor) instead of playing them through the speakers.
 
 const { test, expect } = require('@playwright/test')
@@ -14,7 +14,7 @@ const { call, login, world } = require('./helpers')
 
 const UNLOCK = 'Toque aquí para activar el sonido'
 
-/** The display of `w`'s pantalla, its AudioContext kept on window.__audio; `locked` suspends it as it is made. */
+/** The display of `w`'s Pantalla, its AudioContext kept on window.__audio; `locked` suspends it as it is made. */
 async function openDisplay(browser, w, { locked = false } = {}) {
 	const room = await (await browser.newContext({ locale: 'es-CL' })).newPage()
 	await room.addInitScript((startLocked) => {
@@ -34,7 +34,7 @@ async function openDisplay(browser, w, { locked = false } = {}) {
 		}
 	}, locked)
 	await room.goto('/apps/totem/display/' + w.screen.slug)
-	// The caption names the pantalla's own sound once the first feed answer is in: from here a llamado is new.
+	// The caption names the Pantalla's own sound once the first feed answer is in: from here a llamado is new.
 	await expect(room.locator('.d-foot .cap')).toHaveText('Sonido activado')
 	return room
 }
