@@ -8,7 +8,7 @@ The display announces each llamado with chimes and a Spanish voice. The voice is
 
 **Licenses.** Piper is MIT, the two voices CC0 and Apache-2.0, eSpeak-ng GPL-3.0-or-later, which is compatible with this app's AGPL-3.0-or-later. Voices needing attribution or share-alike (Sharvard, Daniela) were rejected.
 
-**Fallback chain.** Model fails to load, or the worker does not answer a phrase within 20 s (it is then ended, as after a failed load) → `speechSynthesis` → chimes only. A failed load is not final: a later call loads the model again with a fresh worker, at most once per retry interval (10 minutes), without waiting for that load, so until a load succeeds llamados fall back. A load that has not answered within 60 s keeps running, but its callers stop waiting and fall back; its later success makes the voice available, and a load still unanswered one retry interval after that limit is ended and replaced at the next call. The gold frame and the written caption never depend on sound.
+**Fallback chain.** Model fails to load, or the worker does not answer a phrase within 20 s (it is then ended, as after a failed load) → `speechSynthesis` → chimes only. A failed load is not final: a later call loads the model again with a fresh worker, at most once per retry interval (10 minutes), without waiting for that load, so until a load succeeds llamados fall back. A load that has not answered within 60 s keeps running, but its callers stop waiting and fall back; its later success makes the voice available, and a load still unanswered one retry interval after that limit is ended and replaced at the next call. The pulsing frame and the written caption never depend on sound.
 
 
 

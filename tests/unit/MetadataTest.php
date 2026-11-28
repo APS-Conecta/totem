@@ -96,12 +96,14 @@ class MetadataTest extends TestCase {
 	}
 
 	/** @dataProvider icons */
-	public function testIconIsASingleTintGlyphNamingItsSurface(string $file, string $tint): void {
+	public function testIconIsOneSingleTintMaterialDesignGlyphNamingItsSurface(string $file, string $tint): void {
 		$path = self::APP_DIR . '/img/' . $file;
 		$this->assertFileExists($path);
 		$xml = @simplexml_load_file($path);
 		$this->assertInstanceOf(SimpleXMLElement::class, $xml, "$file must parse as XML");
 		$this->assertSame('svg', $xml->getName());
+		$this->assertSame('0 0 24 24', (string)$xml['viewBox'], "$file must keep Material Design Icons' 24-unit viewBox");
+		$this->assertCount(1, $xml->path, "$file must be one glyph");
 		$source = (string)file_get_contents($path);
 		$this->assertStringContainsString('Surface:', $source);
 		preg_match_all('/fill="([^"]+)"/', $source, $fills);

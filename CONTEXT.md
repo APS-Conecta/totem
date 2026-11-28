@@ -28,4 +28,4 @@ The domain's words, fixed so the code says what the team says. **On screen two o
 
 **Estadísticas**: the staff page of absolute counts of turnos for a day, a week (Monday to Sunday) or a month, by sector or servicio and by preferente or general, with how each ended (atendidos, no se presentó, sin atender). It counts turnos, never people (`docs/adr/0007`). _Avoid_: analítica, reporte.
 
-**Aviso**: how a llamado is announced: two ding-dong chimes, then the voice twice, plus a gold frame on the display.
+**Aviso**: how a llamado is announced: two ding-dong chimes, then the voice twice, plus a pulsing frame on the display.

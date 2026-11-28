@@ -13,7 +13,7 @@ The staff side was three separate pages (box, statistics, administration) with n
 
 ## Look
 
-The staff pages are ordinary Nextcloud pages and take everything from Nextcloud's variables, so theming and dark mode need no code. A test (`src/staff/design.test.js`) reads every staff style and refuses a pixel font size or a literal colour. Spacing is a multiple of `--default-grid-baseline`; the content is at most 1100px wide, and its left inset always clears the navigation toggle Nextcloud floats over the content's corner.
+The staff pages are ordinary Nextcloud pages and take everything from Nextcloud's variables, so theming and dark mode need no code. The org's shared style check (the `style` job of `.github/workflows/ci.yml`) refuses a pixel font size, a literal colour or a plain `<button>` in any of the app's styles and templates; `src/staff/design.test.js` holds the staff sheet's own rules. Spacing is a multiple of `--default-grid-baseline`; the content is at most 1100px wide, and its left inset always clears the navigation toggle Nextcloud floats over the content's corner.
 
 Control size: Nextcloud's standard control is **34px** (the mockup had assumed 44). A mouse keeps it so the app looks like the rest of Nextcloud; on a touch screen (`pointer: coarse`) the whole app switches to the platform's large size, **48px**, through one variable. The end-to-end audit reads the real token and checks both.
 
