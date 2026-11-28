@@ -2,7 +2,8 @@
  * The look every staff section shares, in Nextcloud's own tokens so it follows the theme and dark mode.
  * Rules: no pixel font sizes (em, rem, clamp() and Nextcloud's font variables); spacing in multiples of the
  * grid baseline; controls at least --default-clickable-area high; content at most 1100px wide.
- * A test reads this file and every staff component's <style> to keep it that way.
+ * src/staff/design.test.js checks this sheet's coarse-pointer clickable area and navigation-toggle inset, and the
+ * `style` job in .github/workflows/ci.yml keeps pixel font sizes and literal colours out of every style.
  */
 
 /* The page of a section: the content column, centred, with the same breathing room everywhere. */

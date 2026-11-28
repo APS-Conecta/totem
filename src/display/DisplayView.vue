@@ -2,7 +2,7 @@
 <!--
 	The waiting-room display. Public, read-only, no personal data: it polls the feed and shows the
 	latest call large, the earlier ones in a list, and announces each new call (chimes + voice) while
-	a gold frame breathes for people who cannot hear; the calls missed during a feed outage are shown
+	a pulsing frame breathes for people who cannot hear; the calls missed during a feed outage are shown
 	but only the newest is announced. Sized from --k, one design pixel fitted to the screen, and laid
 	out by aspect ratio (docs/adr/0006); the approved mockup is docs/mockups/index.html.
 -->
