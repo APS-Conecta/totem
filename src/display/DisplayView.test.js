@@ -158,7 +158,7 @@ describe('DisplayView', () => {
 		expect(readFeed).toHaveBeenNthCalledWith(2, 'sala_farmacia', 7)
 	})
 
-	it('pulses a gold frame for six seconds after a new call, then stops', async () => {
+	it('pulses a frame for six seconds after a new call, then stops', async () => {
 		const wrapper = await open(feed([llamado(1, 'FAR-P-012')]))
 		expect(wrapper.get('[role="status"]').classes()).not.toContain('pulse')
 

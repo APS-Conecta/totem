@@ -33,9 +33,9 @@
 			<div class="d-foot">
 				<span class="clock">{{ clock }}</span>
 				<span v-if="offline" class="d-offline">Sin conexión con el servidor. Reintentando…</span>
-				<button v-if="!soundReady" class="d-unlock" type="button" @click="unlock">
+				<NcButton v-if="!soundReady" size="large" variant="primary" class="d-unlock" @click="unlock">
 					Toque aquí para activar el sonido
-				</button>
+				</NcButton>
 				<span class="cap">{{ caption }}</span>
 			</div>
 		</div>
@@ -44,6 +44,7 @@
 
 <script setup>
 import { loadState } from '@nextcloud/initial-state'
+import NcButton from '@nextcloud/vue/components/NcButton'
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { readFeed, warnError } from '../api.js'
 import { announce, hasVoice, warmUp } from '../lib/announce.js'
@@ -151,15 +152,14 @@ onBeforeUnmount(() => {
 </script>
 
 <style>
-/* The product's own look (not Nextcloud's): the page is chromeless and fills the screen. */
+/* The page is chromeless and fills the screen. Its colours are Nextcloud's variables and its fonts the theme's: body
+   text through --font-face, headings through the theme's heading font. A unidad's colour is data, set on its card. */
 .stage {
-	--ink: #13202b; --gold: #f2b134;
-	position: fixed; inset: 0; z-index: 10000; container: scr / size; background: var(--ink); overflow: hidden;
-	font-family: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+	position: fixed; inset: 0; z-index: 10000; container: scr / size; background: var(--color-main-background); overflow: hidden;
 }
 .display {
 	--k: min(100cqw / 1920, 100cqh / 1080);
-	width: 100%; height: 100%; background: var(--ink); color: #fff; overflow: hidden;
+	width: 100%; height: 100%; background: var(--color-main-background); color: var(--color-main-text); overflow: hidden;
 	display: grid; grid-template-columns: minmax(0, 66fr) minmax(0, 34fr); grid-template-rows: minmax(0, 1fr) calc(92 * var(--k));
 }
 .display * { box-sizing: border-box; }
@@ -167,23 +167,24 @@ onBeforeUnmount(() => {
 .d-now .srv { font-size: calc(68 * var(--k)); font-weight: 700; letter-spacing: .04em; text-wrap: balance; }
 .d-now .num { font-size: calc(162 * var(--k)); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .d-now .box { font-size: calc(150 * var(--k)); font-weight: 700; line-height: 1.05; text-wrap: balance; overflow-wrap: anywhere; }
-.d-now .chip { align-self: flex-start; background: var(--gold); color: var(--ink); font-size: calc(52 * var(--k)); font-weight: 700; padding: calc(8 * var(--k)) calc(26 * var(--k)); margin-top: calc(16 * var(--k)); }
-/* New-call cue for people who cannot hear: a gold frame breathing at 1 Hz for 6 s (static under reduced motion). */
+.d-now .chip { align-self: flex-start; background: var(--color-main-background); color: var(--color-main-text); font-size: calc(52 * var(--k)); font-weight: 700; padding: calc(8 * var(--k)) calc(26 * var(--k)); margin-top: calc(16 * var(--k)); }
+/* New-call cue for people who cannot hear: a frame in the card's text colour breathing at 1 Hz for 6 s (static under
+   reduced motion). */
 .d-now.pulse { animation: ring 1s ease-in-out 6; }
 @keyframes ring {
-	0%, 100% { box-shadow: inset 0 0 0 calc(10 * var(--k)) var(--gold); }
-	50% { box-shadow: inset 0 0 0 calc(36 * var(--k)) var(--gold); }
+	0%, 100% { box-shadow: inset 0 0 0 calc(10 * var(--k)) currentColor; }
+	50% { box-shadow: inset 0 0 0 calc(36 * var(--k)) currentColor; }
 }
 .d-list { grid-row: 1; min-width: 0; min-height: 0; overflow: hidden; padding: calc(48 * var(--k)) calc(40 * var(--k)); display: flex; flex-direction: column; gap: calc(4 * var(--k)); }
-.d-list h3 { margin: 0 0 calc(16 * var(--k)); font-size: calc(44 * var(--k)); font-weight: 400; color: #9fb0bf; }
-.d-row { display: flex; align-items: center; gap: calc(18 * var(--k)); padding: calc(14 * var(--k)) 0; border-top: calc(2 * var(--k)) solid #2a3b4a; font-size: calc(60 * var(--k)); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.d-list h3 { margin: 0 0 calc(16 * var(--k)); font-size: calc(44 * var(--k)); font-weight: 400; color: var(--color-text-maxcontrast); }
+.d-row { display: flex; align-items: center; gap: calc(18 * var(--k)); padding: calc(14 * var(--k)) 0; border-top: calc(2 * var(--k)) solid var(--color-border); font-size: calc(60 * var(--k)); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .d-row .sw { width: calc(18 * var(--k)); height: calc(60 * var(--k)); flex: none; }
-.d-row .b { margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 400; font-size: calc(48 * var(--k)); color: #c9d5df; }
-.d-foot { grid-column: 1 / -1; background: #0d1720; display: flex; align-items: center; justify-content: space-between; gap: calc(32 * var(--k)); padding: 0 calc(48 * var(--k)); font-size: calc(34 * var(--k)); color: #9fb0bf; min-width: 0; }
+.d-row .b { margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 400; font-size: calc(48 * var(--k)); color: var(--color-text-maxcontrast); }
+.d-foot { grid-column: 1 / -1; background: var(--color-background-dark); display: flex; align-items: center; justify-content: space-between; gap: calc(32 * var(--k)); padding: 0 calc(48 * var(--k)); font-size: calc(34 * var(--k)); color: var(--color-text-maxcontrast); min-width: 0; }
 .d-foot .cap { margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.d-offline { color: var(--gold); white-space: nowrap; }
-/* Under .stage: Nextcloud's core CSS styles buttons with higher specificity than a single class. */
-.stage .d-unlock { font: inherit; font-weight: 700; color: var(--ink); background: var(--gold); border: 0; padding: calc(10 * var(--k)) calc(28 * var(--k)); cursor: pointer; min-height: calc(64 * var(--k)); }
+.d-offline { color: var(--color-warning-text); white-space: nowrap; }
+/* Under .stage .d-foot, so it wins over NcButton's own sizes. */
+.stage .d-foot .d-unlock { font: inherit; font-weight: 700; padding: calc(10 * var(--k)) calc(28 * var(--k)); min-height: calc(64 * var(--k)); }
 @container scr (aspect-ratio <= 1) {
 	.display { --k: min(100cqw / 1080, 100cqh / 1920); grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 56fr) minmax(0, 44fr) calc(84 * var(--k)); }
 	.d-now { grid-row: 1; padding: 0 calc(56 * var(--k)); }
@@ -197,6 +198,6 @@ onBeforeUnmount(() => {
 	.d-foot { grid-row: 3; font-size: calc(30 * var(--k)); padding: 0 calc(40 * var(--k)); }
 }
 @media (prefers-reduced-motion: reduce) {
-	.d-now.pulse { animation: none; box-shadow: inset 0 0 0 calc(24 * var(--k)) var(--gold); }
+	.d-now.pulse { animation: none; box-shadow: inset 0 0 0 calc(24 * var(--k)) currentColor; }
 }
 </style>

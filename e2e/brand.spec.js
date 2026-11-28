@@ -34,9 +34,6 @@ function backgroundAt(page, x, y) {
 	}, [x, y])
 }
 
-const fontOf = (locator) => locator.evaluate((node) => getComputedStyle(node).fontFamily)
-const backgroundOf = (locator) => locator.evaluate((node) => getComputedStyle(node).backgroundColor)
-
 let w
 
 test.beforeEach(async ({ page }) => {
@@ -57,18 +54,20 @@ test('a patient takes a turno at the kiosk in the theme\'s colours and fonts, on
 		await expect(bar).toBeVisible()
 
 		expect(await backgroundAt(screen, 5, 5)).toBe(MAIN_BACKGROUND)
-		expect(await fontOf(heading)).toContain('Probe Display')
-		expect(await fontOf(bar)).toContain('Probe Body')
-		expect(await backgroundOf(bar)).toBe(UNIDAD)
+		await expect(heading).toHaveCSS('font-family', /Probe Display/)
+		await expect(bar).toHaveCSS('font-family', /Probe Body/)
+		await expect(bar).toHaveCSS('background-color', UNIDAD)
 
 		await openQuestion(screen, w.servicio.name)
-		expect(await backgroundOf(screen.getByRole('button', { name: 'Sí', exact: true }))).toBe(PRIMARY)
+		// The tap's pointer stays where Sí now is: off it, Sí fades to its resting colour, not its hover.
+		await screen.mouse.move(0, 0)
+		await expect(screen.getByRole('button', { name: 'Sí', exact: true })).toHaveCSS('background-color', PRIMARY)
 
 		await answerQuestion(screen, 'No')
-		const ticket = screen.getByRole('main')
-		await expect(ticket).toContainText(`${w.prefix}-001`)
-		expect(await backgroundOf(ticket)).toBe(UNIDAD)
-		expect(await fontOf(ticket)).toContain('Probe Body')
+		const ticket = screen.locator('main.t-ticket')
+		await expect(ticket).toContainText(`${w.prefix}-G-001`)
+		await expect(ticket).toHaveCSS('background-color', UNIDAD)
+		await expect(ticket).toHaveCSS('font-family', /Probe Body/)
 	} finally {
 		await patient.close()
 	}
@@ -84,9 +83,9 @@ test('the display calls a turno in the theme\'s colours and fonts, on the unidad
 
 		const viewport = room.viewportSize()
 		expect(await backgroundAt(room, viewport.width - 5, 5)).toBe(MAIN_BACKGROUND)
-		expect(await fontOf(room.getByRole('heading', { name: 'Últimos llamados' }))).toContain('Probe Display')
-		expect(await fontOf(card)).toContain('Probe Body')
-		expect(await backgroundOf(card)).toBe(UNIDAD)
+		await expect(room.getByRole('heading', { name: 'Últimos llamados' })).toHaveCSS('font-family', /Probe Display/)
+		await expect(card).toHaveCSS('font-family', /Probe Body/)
+		await expect(card).toHaveCSS('background-color', UNIDAD)
 	} finally {
 		await room.context().close()
 	}

@@ -13,7 +13,6 @@
         "e2e": "playwright test"
     },
     "dependencies": {
-        "@fontsource/atkinson-hyperlegible": "^5.0.0",
         "@nextcloud/axios": "^2.5.0",
         "@nextcloud/initial-state": "^3.0.0",
         "@nextcloud/router": "^3.0.1",

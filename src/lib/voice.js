@@ -6,7 +6,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
  * Say `text` twice (a room is noisy and a voice is gone once spoken) with the first engine that
  * can. An engine is `{ name, available(), say(text, volume) }`; an unavailable or failing one
  * hands over to the next. Answers the name of the engine that spoke, or null when none could:
- * the chime, the gold frame and the caption still announce, so this never throws.
+ * the chime, the pulsing frame and the caption still announce, so this never throws.
  */
 export async function speak(text, { engines, volume, pauseMs = 700, times = 2 }) {
 	if (volume <= 0) return null
