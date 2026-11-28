@@ -165,7 +165,9 @@ onBeforeUnmount(() => {
 .display * { box-sizing: border-box; }
 .d-now { grid-row: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; padding: 0 calc(56 * var(--k)); gap: calc(8 * var(--k)); }
 .d-now .srv { font-size: calc(68 * var(--k)); font-weight: 700; letter-spacing: .04em; text-wrap: balance; }
-.d-now .num { font-size: calc(162 * var(--k)); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* The label sizes fit the widest label, WWWW-G-nnn, set in DejaVu Sans Bold: what --font-face falls back to in a Linux
+   browser, the one e2e/responsive.spec.js audits. */
+.d-now .num { font-size: calc(140 * var(--k)); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .d-now .box { font-size: calc(150 * var(--k)); font-weight: 700; line-height: 1.05; text-wrap: balance; overflow-wrap: anywhere; }
 .d-now .chip { align-self: flex-start; background: var(--color-main-background); color: var(--color-main-text); font-size: calc(52 * var(--k)); font-weight: 700; padding: calc(8 * var(--k)) calc(26 * var(--k)); margin-top: calc(16 * var(--k)); }
 /* New-call cue for people who cannot hear: a frame in the card's text colour breathing at 1 Hz for 6 s (static under
@@ -189,7 +191,7 @@ onBeforeUnmount(() => {
 	.display { --k: min(100cqw / 1080, 100cqh / 1920); grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 56fr) minmax(0, 44fr) calc(84 * var(--k)); }
 	.d-now { grid-row: 1; padding: 0 calc(56 * var(--k)); }
 	.d-now .srv { font-size: calc(56 * var(--k)); }
-	.d-now .num { font-size: calc(136 * var(--k)); }
+	.d-now .num { font-size: calc(116 * var(--k)); }
 	.d-now .box { font-size: calc(124 * var(--k)); }
 	.d-now .chip { font-size: calc(44 * var(--k)); }
 	.d-list { grid-row: 2; padding: calc(36 * var(--k)) calc(56 * var(--k)); }
